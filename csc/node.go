@@ -35,14 +35,14 @@ var nodeCmds = []*cmd{
 	&cmd{
 		Name:    "probenode",
 		Aliases: []string{"p", "probe"},
-		Action:  nil,
-		Flags:   nil,
+		Action:  probeNode,
+		Flags:   flagsProbeNode,
 	},
 	&cmd{
 		Name:    "nodegetcapabilities",
-		Aliases: []string{"n", "node"},
-		Action:  nil,
-		Flags:   nil,
+		Aliases: []string{"n", "node", "nget"},
+		Action:  nodeGetCapabilities,
+		Flags:   flagsNodeGetCapabilities,
 	},
 }
 
@@ -277,11 +277,6 @@ func nodeUnpublishVolume(
 ///////////////////////////////////////////////////////////////////////////////
 //                                GetNodeID                                  //
 ///////////////////////////////////////////////////////////////////////////////
-var argsGetNodeID struct {
-	volumeMD   mapOfStringArg
-	targetPath string
-}
-
 func flagsGetNodeID(
 	ctx context.Context, rpc string) *flag.FlagSet {
 
@@ -330,6 +325,93 @@ func getNodeID(
 	if err = tpl.Execute(
 		os.Stdout, nodeID.GetValues()); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                ProbeNode                                  //
+///////////////////////////////////////////////////////////////////////////////
+func flagsProbeNode(
+	ctx context.Context, rpc string) *flag.FlagSet {
+
+	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
+	flagsGlobal(fs, "", "")
+
+	fs.Usage = func() {
+		fmt.Fprintf(
+			os.Stderr,
+			"usage: %s %s [ARGS...]\n",
+			appName, rpc)
+		fs.PrintDefaults()
+	}
+	return fs
+}
+
+func probeNode(
+	ctx context.Context,
+	fs *flag.FlagSet,
+	cc *grpc.ClientConn) error {
+
+	// initialize the csi client
+	client := csi.NewNodeClient(cc)
+
+	// execute the rpc
+	err := gocsi.ProbeNode(ctx, client, args.version)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Success")
+
+	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                              NodeGetCapabilities                          //
+///////////////////////////////////////////////////////////////////////////////
+func flagsNodeGetCapabilities(
+	ctx context.Context, rpc string) *flag.FlagSet {
+
+	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
+	flagsGlobal(fs, capFormat, "*csi.nodeGetCapabilitiesResponse_Result")
+
+	fs.Usage = func() {
+		fmt.Fprintf(
+			os.Stderr,
+			"usage: %s %s [ARGS...]\n",
+			appName, rpc)
+		fs.PrintDefaults()
+	}
+	return fs
+}
+
+func nodeGetCapabilities(
+	ctx context.Context,
+	fs *flag.FlagSet,
+	cc *grpc.ClientConn) error {
+
+	// initialize the csi client
+	client := csi.NewNodeClient(cc)
+
+	// execute the rpc
+	caps, err := gocsi.NodeGetCapabilities(ctx, client, args.version)
+	if err != nil {
+		return err
+	}
+
+	// create a template for emitting the output
+	tpl := template.New("template")
+	if tpl, err = tpl.Parse(args.format); err != nil {
+		return err
+	}
+	// emit the results
+	for _, c := range caps {
+		if err = tpl.Execute(
+			os.Stdout, c); err != nil {
+			return err
+		}
 	}
 
 	return nil

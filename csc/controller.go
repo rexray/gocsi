@@ -25,8 +25,8 @@ var controllerCmds = []*cmd{
 	&cmd{
 		Name:    "deletevolume",
 		Aliases: []string{"d", "rm", "del"},
-		Action:  nil,
-		Flags:   nil,
+		Action:  deleteVolume,
+		Flags:   flagsDeleteVolume,
 	},
 	&cmd{
 		Name:    "controllerpublishvolume",
@@ -43,8 +43,8 @@ var controllerCmds = []*cmd{
 	&cmd{
 		Name:    "validatevolumecapabilities",
 		Aliases: []string{"v", "validate"},
-		Action:  nil,
-		Flags:   nil,
+		Action:  validateVolumeCapabilities,
+		Flags:   flagsValidateVolumeCapabilities,
 	},
 	&cmd{
 		Name:    "listvolumes",
@@ -55,8 +55,8 @@ var controllerCmds = []*cmd{
 	&cmd{
 		Name:    "getcapacity",
 		Aliases: []string{"getc", "capacity"},
-		Action:  nil,
-		Flags:   nil,
+		Action:  getCapacity,
+		Flags:   flagsGetCapacity,
 	},
 	&cmd{
 		Name:    "controllergetcapabilities",
@@ -167,6 +167,78 @@ func createVolume(
 	if err = tpl.Execute(os.Stdout, result); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                              DeleteVolume                                 //
+///////////////////////////////////////////////////////////////////////////////
+var argsDeleteVolume struct {
+	volumeMD mapOfStringArg
+}
+
+func flagsDeleteVolume(ctx context.Context, rpc string) *flag.FlagSet {
+	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
+	flagsGlobal(fs, "", "")
+
+	fs.Var(
+		&argsDeleteVolume.volumeMD,
+		"metadata",
+		"The metadata of the volume to be deleted.")
+
+	fs.Usage = func() {
+		fmt.Fprintf(
+			os.Stderr,
+			"usage: %s %s [ARGS...] ID_KEY[=ID_VAL] [ID_KEY[=ID_VAL]...]\n",
+			appName, rpc)
+		fs.PrintDefaults()
+	}
+
+	return fs
+}
+
+func deleteVolume(
+	ctx context.Context,
+	fs *flag.FlagSet,
+	cc *grpc.ClientConn) error {
+
+	if fs.NArg() == 0 {
+		return &errUsage{"missing volume ID"}
+	}
+
+	var (
+		client csi.ControllerClient
+		err    error
+
+		volumeMD *csi.VolumeMetadata
+		volumeID = &csi.VolumeID{Values: map[string]string{}}
+
+		version = args.version
+	)
+
+	// parse the volume ID into a map
+	for x := 0; x < fs.NArg(); x++ {
+		a := fs.Arg(x)
+		kv := strings.SplitN(a, "=", 2)
+		switch len(kv) {
+		case 1:
+			volumeID.Values[kv[0]] = ""
+		case 2:
+			volumeID.Values[kv[0]] = kv[1]
+		}
+	}
+
+	// initialize the csi client
+	client = csi.NewControllerClient(cc)
+
+	// execute the rpc
+	err = gocsi.DeleteVolume(ctx, client, version, volumeID, volumeMD)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Success")
 
 	return nil
 }
@@ -376,6 +448,129 @@ func controllerUnpublishVolume(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//                        ValidateVolumeCapabilities                         //
+///////////////////////////////////////////////////////////////////////////////
+var argsValidateVolumeCapabilities struct {
+	fsType   string
+	mntFlags stringSliceArg
+}
+
+func flagsValidateVolumeCapabilities(
+	ctx context.Context, rpc string) *flag.FlagSet {
+
+	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
+	flagsGlobal(fs, valCapFormat,
+		"*csi.ValidateVolumeCapabilitiesResponse_Result")
+
+	fs.StringVar(
+		&argsValidateVolumeCapabilities.fsType,
+		"t",
+		"",
+		"The file system type")
+
+	fs.Var(
+		&argsValidateVolumeCapabilities.mntFlags,
+		"o",
+		"The mount flags")
+
+	fs.Usage = func() {
+		fmt.Fprintf(
+			os.Stderr,
+			"usage: %s %s [ARGS...] ID_KEY[=ID_VAL] [ID_KEY[=ID_VAL]...]\n",
+			appName, rpc)
+		fs.PrintDefaults()
+	}
+
+	return fs
+}
+
+func validateVolumeCapabilities(
+	ctx context.Context,
+	fs *flag.FlagSet,
+	cc *grpc.ClientConn) error {
+
+	if fs.NArg() == 0 {
+		return &errUsage{"missing volume ID"}
+	}
+
+	var (
+		client csi.ControllerClient
+
+		volumeID = &csi.VolumeID{Values: map[string]string{}}
+		caps     []*csi.VolumeCapability
+		fsType   = argsValidateVolumeCapabilities.fsType
+		mntFlags = argsCreateVolume.mntFlags.vals
+
+		format  = args.format
+		tpl     *template.Template
+		version = args.version
+	)
+
+	// parse the volume ID into a map
+	for x := 0; x < fs.NArg(); x++ {
+		a := fs.Arg(x)
+		kv := strings.SplitN(a, "=", 2)
+		switch len(kv) {
+		case 1:
+			volumeID.Values[kv[0]] = ""
+		case 2:
+			volumeID.Values[kv[0]] = kv[1]
+		}
+	}
+
+	// put the volumeID into a volumeInfo struct
+	info := &csi.VolumeInfo{
+		Id: volumeID,
+	}
+
+	if fsType != "" {
+		caps = append(caps,
+			&csi.VolumeCapability{
+				Value: &csi.VolumeCapability_Mount{
+					Mount: &csi.VolumeCapability_MountVolume{
+						FsType: fsType,
+					},
+				},
+			})
+	}
+
+	if len(mntFlags) > 0 {
+		caps = append(caps,
+			&csi.VolumeCapability{
+				Value: &csi.VolumeCapability_Mount{
+					Mount: &csi.VolumeCapability_MountVolume{
+						MountFlags: mntFlags,
+					},
+				},
+			})
+	}
+
+	// initialize the csi client
+	client = csi.NewControllerClient(cc)
+
+	// execute the rpc
+	res, err := gocsi.ValidateVolumeCapabilities(
+		ctx, client, version, info, caps)
+	if err != nil {
+		return err
+	}
+
+	// create a template for emitting the output
+	tpl = template.New("template")
+	if tpl, err = tpl.Parse(format); err != nil {
+		return err
+	}
+
+	// emit the results
+	if err = tpl.Execute(
+		os.Stdout, res); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //                              ListVolumes                                  //
 ///////////////////////////////////////////////////////////////////////////////
 var argsListVolumes struct {
@@ -515,13 +710,52 @@ func listVolumes(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//                              GetCapacity                                  //
+///////////////////////////////////////////////////////////////////////////////
+func flagsGetCapacity(
+	ctx context.Context, rpc string) *flag.FlagSet {
+
+	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
+	flagsGlobal(fs, "", "")
+
+	fs.Usage = func() {
+		fmt.Fprintf(
+			os.Stderr,
+			"usage: %s %s [ARGS...]\n",
+			appName, rpc)
+		fs.PrintDefaults()
+	}
+	return fs
+}
+
+func getCapacity(
+	ctx context.Context,
+	fs *flag.FlagSet,
+	cc *grpc.ClientConn) error {
+
+	// initialize the csi client
+	client := csi.NewControllerClient(cc)
+
+	// execute the rpc
+	cap, err := gocsi.GetCapacity(ctx, client, args.version)
+	if err != nil {
+		return err
+	}
+
+	// emit the results
+	fmt.Printf("TotalCapcity: %v\n", cap)
+
+	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //                              ControllerGetCapabilities                    //
 ///////////////////////////////////////////////////////////////////////////////
 func flagsControllerGetCapabilities(
 	ctx context.Context, rpc string) *flag.FlagSet {
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
-	flagsGlobal(fs, ctrlCapFormat, "*csi.ControllerGetCapabilitiesResponse_Result")
+	flagsGlobal(fs, capFormat, "*csi.ControllerGetCapabilitiesResponse_Result")
 
 	fs.Usage = func() {
 		fmt.Fprintf(

@@ -193,3 +193,86 @@ func NodeUnpublishVolume(
 
 	return nil
 }
+
+// ProbeNode issues a
+// ProbeNode request
+// to a CSI controller.
+func ProbeNode(
+	ctx context.Context,
+	c csi.NodeClient,
+	version *csi.Version,
+	callOpts ...grpc.CallOption) error {
+
+	if version == nil {
+		return ErrVersionRequired
+	}
+
+	req := &csi.ProbeNodeRequest{
+		Version: version,
+	}
+
+	res, err := c.ProbeNode(ctx, req, callOpts...)
+	if err != nil {
+		return err
+	}
+
+	// check to see if there is a csi error
+	if cerr := res.GetError(); cerr != nil {
+		if err := cerr.GetProbeNodeError(); err != nil {
+			return fmt.Errorf(
+				"error: ProbeNode failed: %d: %s",
+				err.GetErrorCode(),
+				err.GetErrorDescription())
+		}
+		if err := cerr.GetGeneralError(); err != nil {
+			return fmt.Errorf(
+				"error: ProbeNode failed: %d: %s",
+				err.GetErrorCode(),
+				err.GetErrorDescription())
+		}
+		return errors.New(cerr.String())
+	}
+
+	return nil
+}
+
+// NodeGetCapabilities issues a NodeGetCapabilities request to a
+// CSI controller.
+func NodeGetCapabilities(
+	ctx context.Context,
+	c csi.NodeClient,
+	version *csi.Version,
+	callOpts ...grpc.CallOption) (
+	capabilties []*csi.NodeServiceCapability, err error) {
+
+	if version == nil {
+		return nil, ErrVersionRequired
+	}
+
+	req := &csi.NodeGetCapabilitiesRequest{
+		Version: version,
+	}
+
+	res, err := c.NodeGetCapabilities(ctx, req, callOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// check to see if there is a csi error
+	if cerr := res.GetError(); cerr != nil {
+		if err := cerr.GetGeneralError(); err != nil {
+			return nil, fmt.Errorf(
+				"error: NodeGetCapabilities failed: %d: %s",
+				err.GetErrorCode(),
+				err.GetErrorDescription())
+		}
+		return nil, errors.New(cerr.String())
+	}
+
+	result := res.GetResult()
+	if result == nil {
+		return nil, ErrNilResult
+	}
+
+	return result.GetCapabilities(), nil
+}
