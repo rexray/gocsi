@@ -178,7 +178,20 @@ const pluginInfoFormat = `{{.Name}}{{print "\t"}}{{.VendorVersion}}{{print "\t"}
 	`{{with .GetManifest}}{{range $k, $v := .}}` +
 	`{{printf "%s=%s\t" $k $v}}{{end}}{{end}}{{"\n"}}`
 
-const ctrlCapFormat = `{{.GetType}}{{"\n"}}`
+// capFormat is the default Go template for emitting a
+// *csi.{Controller,Node}ServiceCapability
+const capFormat = `{{with .GetRpc}}{{.}}{{end}}` +
+	`{{with .GetVolumeCapability}}` +
+	`{{with .GetBlock}}{{.}}{{end}}{{with .GetMount}}MountVolume` +
+	`{{with .GetFsType}}{{print "\n\tfs_type: "}}{{.}}{{end}}` +
+	`{{with .GetMountFlags}}{{print "\n\tmount_flags: "}}{{.}}{{end}}` +
+	`{{end}}{{end}}{{"\n"}}`
+
+// valCapFormat is the default Go tempate for emitting a
+// *csi.ValidateVolumeCapabilitiesResponse_Result
+const valCapFormat = `{{with .GetSupported}}{{print "supported: "}}{{.}}` +
+	`{{print "\n"}}{{end}}{{with .GetMessage}}{{print "\tmessage: "}}` +
+	`{{.}}{{end}}{{"\n"}}`
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                Commands                                   //
