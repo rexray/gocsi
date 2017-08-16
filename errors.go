@@ -39,6 +39,10 @@ var ErrVersionRequired = errors.New("version is required")
 // volumeID argument.
 var ErrVolumeIDRequired = errors.New("volumeID is required")
 
+// ErrVolumeInfoRequired occurs when an RPC call is made with a nil
+// volumeI argument.
+var ErrVolumeInfoRequired = errors.New("volumeInfo is required")
+
 // ErrVolumeCapabilityRequired occurs when an RPC call is made with
 // a nil volumeCapability argument.
 var ErrVolumeCapabilityRequired = errors.New("volumeCapability is required")

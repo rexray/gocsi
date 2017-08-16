@@ -115,6 +115,54 @@ func CreateVolume(
 	return data, nil
 }
 
+// DeleteVolume issues a DeleteVolume request to a CSI controller.
+func DeleteVolume(
+	ctx context.Context,
+	c csi.ControllerClient,
+	version *csi.Version,
+	volumeID *csi.VolumeID,
+	volumeMetadata *csi.VolumeMetadata,
+	callOpts ...grpc.CallOption) error {
+
+	if version == nil {
+		return ErrVersionRequired
+	}
+
+	if volumeID == nil {
+		return ErrVolumeIDRequired
+	}
+
+	req := &csi.DeleteVolumeRequest{
+		Version:        version,
+		VolumeId:       volumeID,
+		VolumeMetadata: volumeMetadata,
+	}
+
+	res, err := c.DeleteVolume(ctx, req, callOpts...)
+	if err != nil {
+		return err
+	}
+
+	// check to see if there is a csi error
+	if cerr := res.GetError(); cerr != nil {
+		if err := cerr.GetDeleteVolumeError(); err != nil {
+			return fmt.Errorf(
+				"error: DeleteVolume failed: %d: %s",
+				err.GetErrorCode(),
+				err.GetErrorDescription())
+		}
+		if err := cerr.GetGeneralError(); err != nil {
+			return fmt.Errorf(
+				"error: DeleteVolume failed: %d: %s",
+				err.GetErrorCode(),
+				err.GetErrorDescription())
+		}
+		return errors.New(cerr.String())
+	}
+
+	return nil
+}
+
 // ControllerPublishVolume issues a
 // ControllerPublishVolume request
 // to a CSI controller.
@@ -237,6 +285,62 @@ func ControllerUnpublishVolume(
 	return nil
 }
 
+// ValidateVolumeCapabilities issues a ValidateVolumeCapabilities
+// request to a CSI controller
+func ValidateVolumeCapabilities(
+	ctx context.Context,
+	c csi.ControllerClient,
+	version *csi.Version,
+	volumeInfo *csi.VolumeInfo,
+	volumeCapabilities []*csi.VolumeCapability,
+	callOpts ...grpc.CallOption) (*csi.ValidateVolumeCapabilitiesResponse_Result, error) {
+
+	if version == nil {
+		return nil, ErrVersionRequired
+	}
+	if volumeInfo == nil {
+		return nil, ErrVolumeInfoRequired
+	}
+	if volumeCapabilities == nil {
+		return nil, ErrVolumeCapabilityRequired
+	}
+
+	req := &csi.ValidateVolumeCapabilitiesRequest{
+		Version:            version,
+		VolumeInfo:         volumeInfo,
+		VolumeCapabilities: volumeCapabilities,
+	}
+
+	res, err := c.ValidateVolumeCapabilities(ctx, req, callOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// check to see if there is a csi error
+	if cerr := res.GetError(); cerr != nil {
+		if err := cerr.GetValidateVolumeCapabilitiesError(); err != nil {
+			return nil, fmt.Errorf(
+				"error: ValidateVolumeCapabilities failed: %d: %s",
+				err.GetErrorCode(),
+				err.GetErrorDescription())
+		}
+		if err := cerr.GetGeneralError(); err != nil {
+			return nil, fmt.Errorf(
+				"error: ValidateVolumeCapabilities failed: %d: %s",
+				err.GetErrorCode(),
+				err.GetErrorDescription())
+		}
+		return nil, errors.New(cerr.String())
+	}
+
+	result := res.GetResult()
+	if result == nil {
+		return nil, ErrNilResult
+	}
+
+	return result, nil
+}
+
 // ListVolumes issues a ListVolumes request to a CSI controller.
 func ListVolumes(
 	ctx context.Context,
@@ -295,6 +399,48 @@ func ListVolumes(
 	}
 
 	return volumes, nextToken, nil
+}
+
+// GetCapacity issues a GetCapacity
+// request to a CSI controller
+func GetCapacity(
+	ctx context.Context,
+	c csi.ControllerClient,
+	version *csi.Version,
+	callOpts ...grpc.CallOption) (uint64, error) {
+
+	if version == nil {
+		return 0, ErrVersionRequired
+	}
+
+	req := &csi.GetCapacityRequest{
+		Version: version,
+	}
+
+	res, err := c.GetCapacity(ctx, req, callOpts...)
+	if err != nil {
+		return 0, err
+	}
+
+	// check to see if there is a csi error
+	if cerr := res.GetError(); cerr != nil {
+		if err := cerr.GetGeneralError(); err != nil {
+			return 0, fmt.Errorf(
+				"error: GetCapacity failed: %d: %s",
+				err.GetErrorCode(),
+				err.GetErrorDescription())
+		}
+		return 0, errors.New(cerr.String())
+	}
+
+	result := res.GetResult()
+	if result == nil {
+		return 0, ErrNilResult
+	}
+
+	cap := result.GetTotalCapacity()
+
+	return cap, nil
 }
 
 // ControllerGetCapabilities issues a ControllerGetCapabilities request to a
