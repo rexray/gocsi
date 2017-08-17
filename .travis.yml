@@ -37,23 +37,25 @@ jobs:
           - make csi/csi.proto
           # Verify the Go language binding file is up-to-date.
           - make csi/csi.pb.go
+        after_success:
           # Print a warning if the vendorered CSI spec does not
           # produce the same protobuf as the master CSI spec.
           - make csi-spec-comp-master
 
       # Verify GoCSI builds without errors
-      - stage:  build
-        env:    PROG=gocsi.a
-        script: make $PROG
+      - stage:   build
+        env:     PROG=gocsi.a
+        script:  make $PROG
 
-      - stage:  build
-        env:    PROG=csc
-        script: make -C $PROG
+      - stage:   build
+        env:     PROG=csc
+        script:  make -C $PROG
 
-      - stage:  build
-        env:    PROG=mock
-        script: make -C $PROG
+      - stage:   build
+        env:     PROG=mock
+        script:  make -C $PROG
 
       # Test GoCSI using the Mock CSI plug-in.
-      - stage:  test
-        script: true
+      - stage:   test
+        install: make ginkgo
+        script:  make test

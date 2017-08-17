@@ -9,5 +9,11 @@ import (
 	_ "github.com/codedellemc/gocsi/csi"
 )
 
-// Namespace is the namesapce used by the protobuf.
-const Namespace = "csi"
+const (
+	// Namespace is the namesapce used by the protobuf.
+	Namespace = "csi"
+
+	// CSIEndpoint is the name of the environment variable that
+	// contains the CSI endpoint.
+	CSIEndpoint = "CSI_ENDPOINT"
+)

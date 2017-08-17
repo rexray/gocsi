@@ -62,7 +62,7 @@ func CompareVersions(a, b Version) int8 {
 // GetCSIEndpoint returns the network address specified by the
 // environment variable CSI_ENDPOINT.
 func GetCSIEndpoint() (network, addr string, err error) {
-	protoAddr := os.Getenv("CSI_ENDPOINT")
+	protoAddr := os.Getenv(CSIEndpoint)
 	if protoAddr == "" {
 		return "", "", ErrMissingCSIEndpoint
 	}
