@@ -1,80 +1,77 @@
-package gocsi
+package gocsi_test
 
 import (
 	"os"
-	"testing"
+
+	"github.com/codedellemc/gocsi"
 )
 
-func TestGetCSIEndpoint(t *testing.T) {
-	tests := []struct {
-		endpoint string
-		proto    string
-		addr     string
-	}{
-		{
-			endpoint: "unix://path/to/sock.sock",
-			proto:    "unix",
-			addr:     "path/to/sock.sock",
-		},
-		{
-			endpoint: "unix:///path/to/sock.sock",
-			proto:    "unix",
-			addr:     "/path/to/sock.sock",
-		},
-	}
+var _ = Describe("GetCSIEndpoint", func() {
+	var (
+		err         error
+		proto       string
+		addr        string
+		expEndpoint string
+		expProto    string
+		expAddr     string
+	)
+	BeforeEach(func() {
+		expEndpoint = CurrentGinkgoTestDescription().ComponentTexts[2]
+		os.Setenv(gocsi.CSIEndpoint, expEndpoint)
+	})
+	AfterEach(func() {
+		proto = ""
+		addr = ""
+		expEndpoint = ""
+		expProto = ""
+		expAddr = ""
+		os.Unsetenv(gocsi.CSIEndpoint)
+	})
+	JustBeforeEach(func() {
+		proto, addr, err = gocsi.GetCSIEndpoint()
+	})
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run("", func(st *testing.T) {
-			os.Setenv("CSI_ENDPOINT", tt.endpoint)
-			p, a, err := GetCSIEndpoint()
-			if err != nil {
-				t.Errorf("Parsing of CSI_ENDPOINT returned err: %v", err)
-			}
-			if p != tt.proto || a != tt.addr {
-				t.Errorf("Parsing of CSI_ENDPOINT incorrect, got: (%s,%s) want: (%s,%s)",
-					p, a, tt.proto, tt.addr)
-			}
+	Context("Valid Endpoint", func() {
+		shouldBeValid := func() {
+			Ω(os.Getenv(gocsi.CSIEndpoint)).Should(Equal(expEndpoint))
+			Ω(proto).Should(Equal(expProto))
+			Ω(addr).Should(Equal(expAddr))
+		}
+		Context("unix://path/to/sock.sock", func() {
+			BeforeEach(func() {
+				expProto = "unix"
+				expAddr = "path/to/sock.sock"
+			})
+			It("Should Be Valid", shouldBeValid)
 		})
-	}
-}
-
-func TestMissingCSIEndpoint(t *testing.T) {
-	os.Unsetenv("CSI_ENDPOINT")
-	_, _, err := GetCSIEndpoint()
-	if err == nil {
-		t.Fatal("No error returned when CSI_ENDPOINT not set")
-	}
-	if err != ErrMissingCSIEndpoint {
-		t.Fatalf("Received unexpected error when CSI_ENDPOINT not set, got: %s want: %s",
-			err, ErrMissingCSIEndpoint)
-	}
-}
-
-func TestInvalidCSIEndpoint(t *testing.T) {
-	tests := []struct {
-		endpoint string
-	}{
-		{
-			endpoint: "tcp5://localhost:5000",
-		},
-		{
-			endpoint: "unixpcket://path/to/sock.sock",
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run("", func(st *testing.T) {
-			os.Setenv("CSI_ENDPOINT", tt.endpoint)
-			_, _, err := GetCSIEndpoint()
-			if err == nil {
-				st.Fatal("No error returned when CSI_ENDPOINT is invalid")
-			}
-			if err != ErrInvalidCSIEndpoint {
-				st.Fatalf("Received unexpected error when CSI_ENDPOINT set to invalid valud, got: %s want: %s",
-					err, ErrInvalidCSIEndpoint)
-			}
+		Context("unix:///path/to/sock.sock", func() {
+			BeforeEach(func() {
+				expProto = "unix"
+				expAddr = "/path/to/sock.sock"
+			})
+			It("Should Be Valid", shouldBeValid)
 		})
-	}
-}
+	})
+
+	Context("Missing Endpoint", func() {
+		Context("", func() {
+			It("Should Be Missing", func() {
+				Ω(err).Should(HaveOccurred())
+				Ω(err).Should(Equal(gocsi.ErrMissingCSIEndpoint))
+			})
+		})
+	})
+
+	Context("Invalid Endpoint", func() {
+		shouldBeInvalid := func() {
+			Ω(err).Should(HaveOccurred())
+			Ω(err).Should(Equal(gocsi.ErrInvalidCSIEndpoint))
+		}
+		Context("tcp5://localhost:5000", func() {
+			It("Should Be An Invalid Endpoint", shouldBeInvalid)
+		})
+		Context("unixpcket://path/to/sock.sock", func() {
+			It("Should Be An Invalid Endpoint", shouldBeInvalid)
+		})
+	})
+})
