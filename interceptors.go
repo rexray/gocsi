@@ -9,6 +9,8 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
+	"github.com/codedellemc/gocsi/csi"
 )
 
 // ChainUnaryServerOpt chains one or more unary, server interceptors
@@ -57,6 +59,91 @@ func ChainUnaryServer(
 		}
 		return c(ctx, req)
 	}
+}
+
+type hasGetVersion interface {
+	GetVersion() *csi.Version
+}
+
+// VersionValidator validates an incoming message's version against
+// the plug-in's supported versions.
+type VersionValidator struct {
+	// SupportedVersions is a list of the versions supported by the
+	// plug-in.
+	SupportedVersions []Version
+}
+
+// Handle is a unary, server interceptor function.
+func (v *VersionValidator) Handle(
+	ctx context.Context,
+	req interface{},
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler) (interface{}, error) {
+
+	treq, ok := req.(hasGetVersion)
+	if !ok {
+		return handler(ctx, req)
+	}
+
+	rv := treq.GetVersion()
+
+	for _, sv := range v.SupportedVersions {
+		if CompareVersions(rv, sv) == 0 {
+			return handler(ctx, req)
+		}
+	}
+
+	msg := fmt.Sprintf(
+		"unsupported request version: %s", SprintfVersion(rv))
+
+	switch info.FullMethod {
+	case FMControllerGetCapabilities:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrControllerGetCapabilities(2, msg), nil
+	case FMControllerPublishVolume:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrControllerPublishVolumeGeneral(2, msg), nil
+	case FMControllerUnpublishVolume:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrControllerUnpublishVolumeGeneral(2, msg), nil
+	case FMCreateVolume:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrCreateVolumeGeneral(2, msg), nil
+	case FMDeleteVolume:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrDeleteVolumeGeneral(2, msg), nil
+	case FMGetCapacity:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrGetCapacity(2, msg), nil
+	case FMGetNodeID:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrGetNodeIDGeneral(2, msg), nil
+	case FMGetPluginInfo:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrGetPluginInfo(2, msg), nil
+	case FMListVolumes:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrListVolumes(2, msg), nil
+	case FMGetSupportedVersions:
+		panic("Version Check Unsupported for GetSupportedVersions")
+	case FMNodeGetCapabilities:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrNodeGetCapabilities(2, msg), nil
+	case FMNodePublishVolume:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrNodePublishVolumeGeneral(2, msg), nil
+	case FMNodeUnpublishVolume:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrNodeUnpublishVolumeGeneral(2, msg), nil
+	case FMProbeNode:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrProbeNodeGeneral(2, msg), nil
+	case FMValidateVolumeCapabilities:
+		// UNSUPPORTED_REQUEST_VERSION
+		return ErrValidateVolumeCapabilitiesGeneral(2, msg), nil
+	}
+
+	panic("Version Check Unsupported")
 }
 
 var requestIDVal uint64

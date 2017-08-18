@@ -238,7 +238,13 @@ func deleteVolume(
 		return err
 	}
 
-	fmt.Println("Success")
+	for k, v := range volumeID.Values {
+		fmt.Print(k)
+		if v != "" {
+			fmt.Printf("=%s", v)
+		}
+	}
+	fmt.Println()
 
 	return nil
 }

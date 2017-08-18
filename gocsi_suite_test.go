@@ -12,6 +12,8 @@ func TestGocsi(t *testing.T) {
 	RunSpecs(t, "GoCSI Suite")
 }
 
+var CTest = ginkgo.CurrentGinkgoTestDescription
+
 // Declarations for Ginkgo DSL
 type Done ginkgo.Done
 type Benchmarker ginkgo.Benchmarker

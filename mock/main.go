@@ -76,6 +76,8 @@ func trapSignals(onExit, onAbort func()) {
 	signal.Notify(sigc)
 	go func() {
 		for s := range sigc {
+			louti.Printf("OUT received signal: %v\n", s)
+			lerri.Printf("ERR received signal: %v\n", s)
 			ok, graceful := isExitSignal(s)
 			if !ok {
 				continue
@@ -127,6 +129,9 @@ type sp struct {
 
 func getServerInterceptors() grpc.ServerOption {
 
+	// Create the version validator.
+	versionValidator := newVersionValidator()
+
 	// Create a new server-side input validator. It will be
 	// initialized with sensible defaults, but it is possible to
 	// replace the validation logic per-message by replacing
@@ -139,6 +144,7 @@ func getServerInterceptors() grpc.ServerOption {
 	serverSideMsgLogger := &gocsi.ServerSideMessageLogger{Log: louti.Printf}
 
 	return gocsi.ChainUnaryServerOpt(
+		versionValidator.Handle,
 		gocsi.RequestIDInjector,
 		serverSideMsgLogger.Handle,
 		serverSideInputValidator.Handle)
@@ -245,19 +251,7 @@ func (s *sp) DeleteVolume(
 	req *csi.DeleteVolumeRequest) (
 	*csi.DeleteVolumeResponse, error) {
 
-	idObj := req.GetVolumeId()
-	if idObj == nil {
-		// INVALID_VOLUME_ID
-		return gocsi.ErrDeleteVolume(3, "missing id obj"), nil
-	}
-
-	idVals := idObj.GetValues()
-	if len(idVals) == 0 {
-		// INVALID_VOLUME_ID
-		return gocsi.ErrDeleteVolume(3, "missing id map"), nil
-	}
-
-	id, ok := idVals["id"]
+	id, ok := req.VolumeId.Values["id"]
 	if !ok {
 		// INVALID_VOLUME_ID
 		return gocsi.ErrDeleteVolume(3, "missing id val"), nil
@@ -276,7 +270,7 @@ func (s *sp) DeleteVolume(
 		vols = vols[:len(vols)-1]
 	}
 
-	return nil, nil
+	return &csi.DeleteVolumeResponse{}, nil
 }
 
 func (s *sp) ControllerPublishVolume(
@@ -564,6 +558,42 @@ func (s *sp) ControllerGetCapabilities(
 //                             Identity Service                               //
 ////////////////////////////////////////////////////////////////////////////////
 
+var supportedVersions = []*csi.Version{
+	&csi.Version{
+		Major: 0,
+		Minor: 1,
+		Patch: 0,
+	},
+	&csi.Version{
+		Major: 0,
+		Minor: 2,
+		Patch: 0,
+	},
+	&csi.Version{
+		Major: 1,
+		Minor: 0,
+		Patch: 0,
+	},
+	&csi.Version{
+		Major: 1,
+		Minor: 1,
+		Patch: 0,
+	},
+}
+
+func newVersionValidator() *gocsi.VersionValidator {
+	vv := &gocsi.VersionValidator{}
+	vv.SupportedVersions = make([]gocsi.Version, len(supportedVersions))
+	for x, v := range supportedVersions {
+		vv.SupportedVersions[x] = &csi.Version{
+			Major: v.GetMajor(),
+			Minor: v.GetMinor(),
+			Patch: v.GetPatch(),
+		}
+	}
+	return vv
+}
+
 func (s *sp) GetSupportedVersions(
 	ctx context.Context,
 	req *csi.GetSupportedVersionsRequest) (
@@ -572,13 +602,7 @@ func (s *sp) GetSupportedVersions(
 	return &csi.GetSupportedVersionsResponse{
 		Reply: &csi.GetSupportedVersionsResponse_Result_{
 			Result: &csi.GetSupportedVersionsResponse_Result{
-				SupportedVersions: []*csi.Version{
-					&csi.Version{
-						Major: 0,
-						Minor: 1,
-						Patch: 0,
-					},
-				},
+				SupportedVersions: supportedVersions,
 			},
 		},
 	}, nil
@@ -593,7 +617,7 @@ func (s *sp) GetPluginInfo(
 		Reply: &csi.GetPluginInfoResponse_Result_{
 			Result: &csi.GetPluginInfoResponse_Result{
 				Name:          s.name,
-				VendorVersion: "0.1.0",
+				VendorVersion: gocsi.SprintfVersion(req.Version),
 				Manifest:      nil,
 			},
 		},

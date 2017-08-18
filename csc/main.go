@@ -25,7 +25,7 @@ import (
 const (
 	// defaultVersion is the default CSI_VERSION string if none
 	// is provided via a CLI argument or environment variable
-	defaultVersion = "0.0.0"
+	defaultVersion = "0.1.0"
 
 	// maxUint32 is the maximum value for a uint32. this is
 	// defined as math.MaxUint32, but it's redefined here

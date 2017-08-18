@@ -6,6 +6,40 @@ import (
 	"github.com/codedellemc/gocsi"
 )
 
+var _ = Describe("ParseVersion", func() {
+	shouldParse := func() gocsi.Version {
+		v, err := gocsi.ParseVersion(
+			CurrentGinkgoTestDescription().ComponentTexts[1])
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(v).ShouldNot(BeNil())
+		return v
+	}
+	Context("0.0.0", func() {
+		It("Should Parse", func() {
+			v := shouldParse()
+			Ω(v.GetMajor()).Should(Equal(uint32(0)))
+			Ω(v.GetMinor()).Should(Equal(uint32(0)))
+			Ω(v.GetPatch()).Should(Equal(uint32(0)))
+		})
+	})
+	Context("0.1.0", func() {
+		It("Should Parse", func() {
+			v := shouldParse()
+			Ω(v.GetMajor()).Should(Equal(uint32(0)))
+			Ω(v.GetMinor()).Should(Equal(uint32(1)))
+			Ω(v.GetPatch()).Should(Equal(uint32(0)))
+		})
+	})
+	Context("1.1.0", func() {
+		It("Should Parse", func() {
+			v := shouldParse()
+			Ω(v.GetMajor()).Should(Equal(uint32(1)))
+			Ω(v.GetMinor()).Should(Equal(uint32(1)))
+			Ω(v.GetPatch()).Should(Equal(uint32(0)))
+		})
+	})
+})
+
 var _ = Describe("GetCSIEndpoint", func() {
 	var (
 		err         error
