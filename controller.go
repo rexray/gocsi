@@ -39,6 +39,17 @@ const (
 		"ControllerGetCapabilities"
 )
 
+func init() {
+	ssvCreateVolume = func(
+		ctx context.Context, req interface{}) (interface{}, error) {
+		if req.(hasGetNameAsString).GetName() == "" {
+			// INVALID_VOLUME_NAME
+			return ErrCreateVolume(3, "missing name"), nil
+		}
+		return nil, nil
+	}
+}
+
 // CreateVolume issues a CreateVolume request to a CSI controller.
 func CreateVolume(
 	ctx context.Context,
@@ -115,6 +126,34 @@ func CreateVolume(
 	return data, nil
 }
 
+func init() {
+	ssvDeleteVolume = func(
+		ctx context.Context, reqObj interface{}) (interface{}, error) {
+
+		req := reqObj.(*csi.DeleteVolumeRequest)
+
+		idObj := req.GetVolumeId()
+		if idObj == nil {
+			// INVALID_VOLUME_ID
+			return ErrDeleteVolume(3, "missing id obj"), nil
+		}
+
+		idVals := idObj.GetValues()
+		if len(idVals) == 0 {
+			// INVALID_VOLUME_ID
+			return ErrDeleteVolume(3, "missing id map"), nil
+		}
+
+		_, ok := idVals["id"]
+		if !ok {
+			// INVALID_VOLUME_ID
+			return ErrDeleteVolume(3, "missing id val"), nil
+		}
+
+		return nil, nil
+	}
+}
+
 // DeleteVolume issues a DeleteVolume request to a CSI controller.
 func DeleteVolume(
 	ctx context.Context,
@@ -123,14 +162,6 @@ func DeleteVolume(
 	volumeID *csi.VolumeID,
 	volumeMetadata *csi.VolumeMetadata,
 	callOpts ...grpc.CallOption) error {
-
-	if version == nil {
-		return ErrVersionRequired
-	}
-
-	if volumeID == nil {
-		return ErrVolumeIDRequired
-	}
 
 	req := &csi.DeleteVolumeRequest{
 		Version:        version,
@@ -482,20 +513,4 @@ func ControllerGetCapabilities(
 	}
 
 	return result.GetCapabilities(), nil
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//                                 VALIDATORS                                 //
-////////////////////////////////////////////////////////////////////////////////
-func init() {
-	ssvCreateVolume = validateCreateVolume
-}
-
-func validateCreateVolume(
-	ctx context.Context, req interface{}) (interface{}, error) {
-	if req.(hasGetNameAsString).GetName() == "" {
-		// INVALID_VOLUME_NAME
-		return ErrCreateVolume(3, "missing name"), nil
-	}
-	return nil, nil
 }

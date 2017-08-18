@@ -57,5 +57,8 @@ jobs:
 
       # Test GoCSI using the Mock CSI plug-in.
       - stage:   test
-        install: make ginkgo
-        script:  make test
+        install:
+          - make ginkgo
+          - make -C mock
+        script:
+          - GOCSI_MOCK=$(pwd)/mock/mock make test
