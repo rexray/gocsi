@@ -48,10 +48,6 @@ func GetPluginInfo(
 	version *csi.Version,
 	callOpts ...grpc.CallOption) (*csi.GetPluginInfoResponse_Result, error) {
 
-	if version == nil {
-		return nil, ErrVersionRequired
-	}
-
 	req := &csi.GetPluginInfoRequest{
 		Version: version,
 	}

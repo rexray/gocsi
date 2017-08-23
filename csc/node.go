@@ -236,13 +236,6 @@ func nodeUnpublishVolume(
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
 
-	if fs.NArg() == 0 {
-		return &errUsage{"missing volume ID"}
-	}
-	if argsNodeUnpublishVolume.targetPath == "" {
-		return &errUsage{"missing targetPath"}
-	}
-
 	var (
 		client csi.NodeClient
 
