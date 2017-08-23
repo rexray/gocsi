@@ -138,7 +138,7 @@ func main() {
 	}
 
 	// initialize a grpc client
-	gclient, err := newGrpcClient(ctx, args.endpoint)
+	gclient, err := newGrpcClient(ctx, args.endpoint, args.insecure)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -163,10 +163,10 @@ func main() {
 
 func newGrpcClient(
 	ctx context.Context,
-	endpoint string) (*grpc.ClientConn, error) {
+	endpoint string,
+	insecure bool) (*grpc.ClientConn, error) {
 
 	dialOpts := []grpc.DialOption{
-		grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(gocsi.ChainUnaryClient(
 			gocsi.ClientCheckReponseError,
 			gocsi.ClientResponseValidator)),
@@ -178,6 +178,10 @@ func newGrpcClient(
 				}
 				return net.DialTimeout(proto, addr, timeout)
 			}),
+	}
+
+	if insecure {
+		dialOpts = append(dialOpts, grpc.WithInsecure())
 	}
 
 	return grpc.DialContext(ctx, endpoint, dialOpts...)

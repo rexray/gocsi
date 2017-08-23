@@ -512,6 +512,47 @@ func sreqvCreateVolume(
 			csi.Error_CreateVolumeError_INVALID_VOLUME_NAME,
 			"missing name"), nil
 	}
+
+	if len(req.VolumeCapabilities) == 0 {
+		return ErrCreateVolume(
+			csi.Error_CreateVolumeError_UNKNOWN,
+			"missing volume capabilities"), nil
+	}
+
+	for i, cap := range req.VolumeCapabilities {
+		if cap.AccessMode == nil {
+			return ErrCreateVolume(
+				csi.Error_CreateVolumeError_UNKNOWN,
+				fmt.Sprintf("missing access mode: index %d", i)), nil
+		}
+		atype := cap.GetAccessType()
+		if atype == nil {
+			return ErrCreateVolume(
+				csi.Error_CreateVolumeError_UNKNOWN,
+				fmt.Sprintf("missing access type: index %d", i)), nil
+		}
+		switch tatype := atype.(type) {
+		case *csi.VolumeCapability_Block:
+			if tatype.Block == nil {
+				return ErrCreateVolume(
+					csi.Error_CreateVolumeError_UNKNOWN,
+					fmt.Sprintf("missing block type: index %d", i)), nil
+			}
+		case *csi.VolumeCapability_Mount:
+			if tatype.Mount == nil {
+				return ErrCreateVolume(
+					csi.Error_CreateVolumeError_UNKNOWN,
+					fmt.Sprintf("missing mount type: index %d", i)), nil
+			}
+		default:
+			return ErrCreateVolume(
+				csi.Error_CreateVolumeError_UNKNOWN,
+				fmt.Sprintf(
+					"invalid access type: index %d, type=%T",
+					i, atype)), nil
+		}
+	}
+
 	return nil, nil
 }
 
@@ -554,6 +595,42 @@ func sreqvControllerPublishVolume(
 			"missing id map"), nil
 	}
 
+	if req.VolumeCapability == nil {
+		return ErrControllerPublishVolume(
+			csi.Error_ControllerPublishVolumeError_UNKNOWN,
+			"missing volume capability"), nil
+	}
+
+	if req.VolumeCapability.AccessMode == nil {
+		return ErrControllerPublishVolume(
+			csi.Error_ControllerPublishVolumeError_UNKNOWN,
+			"missing access mode"), nil
+	}
+	atype := req.VolumeCapability.GetAccessType()
+	if atype == nil {
+		return ErrControllerPublishVolume(
+			csi.Error_ControllerPublishVolumeError_UNKNOWN,
+			"missing access type"), nil
+	}
+	switch tatype := atype.(type) {
+	case *csi.VolumeCapability_Block:
+		if tatype.Block == nil {
+			return ErrControllerPublishVolume(
+				csi.Error_ControllerPublishVolumeError_UNKNOWN,
+				"missing block type"), nil
+		}
+	case *csi.VolumeCapability_Mount:
+		if tatype.Mount == nil {
+			return ErrControllerPublishVolume(
+				csi.Error_ControllerPublishVolumeError_UNKNOWN,
+				"missing mount type"), nil
+		}
+	default:
+		return ErrControllerPublishVolume(
+			csi.Error_ControllerPublishVolumeError_UNKNOWN,
+			fmt.Sprintf("invalid access type: %T", atype)), nil
+	}
+
 	return nil, nil
 }
 
@@ -588,6 +665,58 @@ func sreqvValidateVolumeCapabilities(
 		return ErrValidateVolumeCapabilities(
 			csi.Error_ValidateVolumeCapabilitiesError_INVALID_VOLUME_INFO,
 			"missing volume info"), nil
+	}
+
+	if req.VolumeInfo.Id == nil {
+		return ErrValidateVolumeCapabilities(
+			csi.Error_ValidateVolumeCapabilitiesError_UNKNOWN,
+			"missing id obj"), nil
+	}
+
+	if len(req.VolumeInfo.Id.Values) == 0 {
+		return ErrValidateVolumeCapabilities(
+			csi.Error_ValidateVolumeCapabilitiesError_UNKNOWN,
+			"missing id map"), nil
+	}
+
+	if len(req.VolumeCapabilities) == 0 {
+		return ErrValidateVolumeCapabilities(
+			csi.Error_ValidateVolumeCapabilitiesError_UNKNOWN,
+			"missing volume capabilities"), nil
+	}
+
+	for i, cap := range req.VolumeCapabilities {
+		if cap.AccessMode == nil {
+			return ErrValidateVolumeCapabilities(
+				csi.Error_ValidateVolumeCapabilitiesError_UNKNOWN,
+				fmt.Sprintf("missing access mode: index %d", i)), nil
+		}
+		atype := cap.GetAccessType()
+		if atype == nil {
+			return ErrValidateVolumeCapabilities(
+				csi.Error_ValidateVolumeCapabilitiesError_UNKNOWN,
+				fmt.Sprintf("missing access type: index %d", i)), nil
+		}
+		switch tatype := atype.(type) {
+		case *csi.VolumeCapability_Block:
+			if tatype.Block == nil {
+				return ErrValidateVolumeCapabilities(
+					csi.Error_ValidateVolumeCapabilitiesError_UNKNOWN,
+					fmt.Sprintf("missing block type: index %d", i)), nil
+			}
+		case *csi.VolumeCapability_Mount:
+			if tatype.Mount == nil {
+				return ErrValidateVolumeCapabilities(
+					csi.Error_ValidateVolumeCapabilitiesError_UNKNOWN,
+					fmt.Sprintf("missing mount type: index %d", i)), nil
+			}
+		default:
+			return ErrValidateVolumeCapabilities(
+				csi.Error_ValidateVolumeCapabilitiesError_UNKNOWN,
+				fmt.Sprintf(
+					"invalid access type: index %d, type=%T",
+					i, atype)), nil
+		}
 	}
 
 	return nil, nil
@@ -664,6 +793,48 @@ func sreqvNodePublishVolume(
 			"missing id map"), nil
 	}
 
+	if req.VolumeCapability == nil {
+		return ErrNodePublishVolume(
+			csi.Error_NodePublishVolumeError_UNKNOWN,
+			"missing volume capability"), nil
+	}
+
+	if req.VolumeCapability.AccessMode == nil {
+		return ErrNodePublishVolume(
+			csi.Error_NodePublishVolumeError_UNKNOWN,
+			"missing access mode"), nil
+	}
+	atype := req.VolumeCapability.GetAccessType()
+	if atype == nil {
+		return ErrNodePublishVolume(
+			csi.Error_NodePublishVolumeError_UNKNOWN,
+			"missing access type"), nil
+	}
+	switch tatype := atype.(type) {
+	case *csi.VolumeCapability_Block:
+		if tatype.Block == nil {
+			return ErrNodePublishVolume(
+				csi.Error_NodePublishVolumeError_UNKNOWN,
+				"missing block type"), nil
+		}
+	case *csi.VolumeCapability_Mount:
+		if tatype.Mount == nil {
+			return ErrNodePublishVolume(
+				csi.Error_NodePublishVolumeError_UNKNOWN,
+				"missing mount type"), nil
+		}
+	default:
+		return ErrNodePublishVolume(
+			csi.Error_NodePublishVolumeError_UNKNOWN,
+			fmt.Sprintf("invalid access type: %T", atype)), nil
+	}
+
+	if req.TargetPath == "" {
+		return ErrNodePublishVolume(
+			csi.Error_NodePublishVolumeError_UNKNOWN,
+			"missing target path"), nil
+	}
+
 	return nil, nil
 }
 
@@ -683,6 +854,12 @@ func sreqvNodeUnpublishVolume(
 		return ErrNodeUnpublishVolume(
 			csi.Error_NodeUnpublishVolumeError_INVALID_VOLUME_ID,
 			"missing id map"), nil
+	}
+
+	if req.TargetPath == "" {
+		return ErrNodeUnpublishVolume(
+			csi.Error_NodeUnpublishVolumeError_UNKNOWN,
+			"missing target path"), nil
 	}
 
 	return nil, nil

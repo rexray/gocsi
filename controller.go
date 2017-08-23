@@ -64,18 +64,15 @@ func NewMountCapability(
 	fsType string,
 	mountFlags []string) *csi.VolumeCapability {
 
-	acccessType := &csi.VolumeCapability_MountVolume{}
-	acccessType.FsType = fsType
-	if len(mountFlags) > 0 {
-		acccessType.MountFlags = mountFlags
-	}
-
 	return &csi.VolumeCapability{
 		AccessMode: &csi.VolumeCapability_AccessMode{
 			Mode: mode,
 		},
 		AccessType: &csi.VolumeCapability_Mount{
-			Mount: acccessType,
+			Mount: &csi.VolumeCapability_MountVolume{
+				FsType:     fsType,
+				MountFlags: mountFlags,
+			},
 		},
 	}
 }
@@ -165,10 +162,6 @@ func ControllerPublishVolume(
 	callOpts ...grpc.CallOption) (
 	*csi.PublishVolumeInfo, error) {
 
-	if volumeID == nil {
-		return nil, ErrVolumeIDRequired
-	}
-
 	req := &csi.ControllerPublishVolumeRequest{
 		Version:        version,
 		VolumeId:       volumeID,
@@ -197,10 +190,6 @@ func ControllerUnpublishVolume(
 	nodeID *csi.NodeID,
 	callOpts ...grpc.CallOption) error {
 
-	if volumeID == nil {
-		return ErrVolumeIDRequired
-	}
-
 	req := &csi.ControllerUnpublishVolumeRequest{
 		Version:        version,
 		VolumeId:       volumeID,
@@ -225,13 +214,6 @@ func ValidateVolumeCapabilities(
 	volumeInfo *csi.VolumeInfo,
 	volumeCapabilities []*csi.VolumeCapability,
 	callOpts ...grpc.CallOption) (*csi.ValidateVolumeCapabilitiesResponse_Result, error) {
-
-	if volumeInfo == nil {
-		return nil, ErrVolumeInfoRequired
-	}
-	if volumeCapabilities == nil {
-		return nil, ErrVolumeCapabilityRequired
-	}
 
 	req := &csi.ValidateVolumeCapabilitiesRequest{
 		Version:            version,

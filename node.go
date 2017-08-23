@@ -48,10 +48,6 @@ func GetNodeID(
 	version *csi.Version,
 	callOpts ...grpc.CallOption) (*csi.NodeID, error) {
 
-	if version == nil {
-		return nil, ErrVersionRequired
-	}
-
 	req := &csi.GetNodeIDRequest{
 		Version: version,
 	}
@@ -78,22 +74,6 @@ func NodePublishVolume(
 	volumeCapability *csi.VolumeCapability,
 	readonly bool,
 	callOpts ...grpc.CallOption) error {
-
-	if version == nil {
-		return ErrVersionRequired
-	}
-
-	if volumeID == nil {
-		return ErrVolumeIDRequired
-	}
-
-	if volumeCapability == nil {
-		return ErrVolumeCapabilityRequired
-	}
-
-	if targetPath == "" {
-		return ErrInvalidTargetPath
-	}
 
 	req := &csi.NodePublishVolumeRequest{
 		Version:           version,
@@ -125,18 +105,6 @@ func NodeUnpublishVolume(
 	targetPath string,
 	callOpts ...grpc.CallOption) error {
 
-	if version == nil {
-		return ErrVersionRequired
-	}
-
-	if volumeID == nil {
-		return ErrVolumeIDRequired
-	}
-
-	if targetPath == "" {
-		return ErrInvalidTargetPath
-	}
-
 	req := &csi.NodeUnpublishVolumeRequest{
 		Version:        version,
 		VolumeId:       volumeID,
@@ -161,10 +129,6 @@ func ProbeNode(
 	version *csi.Version,
 	callOpts ...grpc.CallOption) error {
 
-	if version == nil {
-		return ErrVersionRequired
-	}
-
 	req := &csi.ProbeNodeRequest{
 		Version: version,
 	}
@@ -185,10 +149,6 @@ func NodeGetCapabilities(
 	version *csi.Version,
 	callOpts ...grpc.CallOption) (
 	capabilties []*csi.NodeServiceCapability, err error) {
-
-	if version == nil {
-		return nil, ErrVersionRequired
-	}
 
 	req := &csi.NodeGetCapabilitiesRequest{
 		Version: version,

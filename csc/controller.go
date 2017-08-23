@@ -152,7 +152,7 @@ func createVolume(
 		fsType   = argsCreateVolume.fsType
 		mntFlags = argsCreateVolume.mntFlags.vals
 		params   = argsCreateVolume.params.vals
-		caps     = make([]*csi.VolumeCapability, 1)
+		caps     = []*csi.VolumeCapability{}
 
 		format  = args.format
 		version = args.version
@@ -174,9 +174,9 @@ func createVolume(
 	client = csi.NewControllerClient(cc)
 
 	if block {
-		caps[0] = gocsi.NewBlockCapability(mode)
+		caps = append(caps, gocsi.NewBlockCapability(mode))
 	} else {
-		caps[0] = gocsi.NewMountCapability(mode, fsType, mntFlags)
+		caps = append(caps, gocsi.NewMountCapability(mode, fsType, mntFlags))
 	}
 
 	// execute the rpc
@@ -227,10 +227,6 @@ func deleteVolume(
 	ctx context.Context,
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
-
-	if fs.NArg() == 0 {
-		return &errUsage{"missing volume ID"}
-	}
 
 	var (
 		client csi.ControllerClient
@@ -321,10 +317,6 @@ func controllerPublishVolume(
 	ctx context.Context,
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
-
-	if fs.NArg() == 0 {
-		return &errUsage{"missing volume ID"}
-	}
 
 	var (
 		client csi.ControllerClient
@@ -428,10 +420,6 @@ func controllerUnpublishVolume(
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
 
-	if fs.NArg() == 0 {
-		return &errUsage{"missing volume ID"}
-	}
-
 	var (
 		client csi.ControllerClient
 
@@ -534,17 +522,13 @@ func validateVolumeCapabilities(
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
 
-	if fs.NArg() == 0 {
-		return &errUsage{"missing volume ID"}
-	}
-
 	var (
 		client csi.ControllerClient
 
 		mode csi.VolumeCapability_AccessMode_Mode
 
+		caps     = []*csi.VolumeCapability{}
 		volumeID = &csi.VolumeID{Values: map[string]string{}}
-		caps     = make([]*csi.VolumeCapability, 1)
 		block    = argsValidateVolumeCapabilities.block
 		fsType   = argsValidateVolumeCapabilities.fsType
 		mntFlags = argsCreateVolume.mntFlags.vals
@@ -578,9 +562,9 @@ func validateVolumeCapabilities(
 	}
 
 	if block {
-		caps[0] = gocsi.NewBlockCapability(mode)
+		caps = append(caps, gocsi.NewBlockCapability(mode))
 	} else {
-		caps[0] = gocsi.NewMountCapability(mode, fsType, mntFlags)
+		caps = append(caps, gocsi.NewMountCapability(mode, fsType, mntFlags))
 	}
 
 	// initialize the csi client

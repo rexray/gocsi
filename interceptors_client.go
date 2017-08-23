@@ -293,15 +293,27 @@ func crepvCreateVolume(
 	rep *csi.CreateVolumeResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	if rep.GetResult().VolumeInfo == nil {
-		return ErrNilVolumeInfo
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilVolumeInfo,
+		}
 	}
 
 	if rep.GetResult().VolumeInfo.Id == nil {
-		return ErrNilVolumeID
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilVolumeID,
+		}
 	}
 
 	return nil
@@ -313,7 +325,11 @@ func crepvDeleteVolume(
 	rep *csi.DeleteVolumeResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -325,15 +341,27 @@ func crepvControllerPublishVolume(
 	rep *csi.ControllerPublishVolumeResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	if rep.GetResult().PublishVolumeInfo == nil {
-		return ErrNilPublishVolumeInfo
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilPublishVolumeInfo,
+		}
 	}
 
 	if len(rep.GetResult().PublishVolumeInfo.Values) == 0 {
-		return ErrEmptyPublishVolumeInfo
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrEmptyPublishVolumeInfo,
+		}
 	}
 
 	return nil
@@ -345,7 +373,11 @@ func crepvControllerUnpublishVolume(
 	rep *csi.ControllerUnpublishVolumeResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -357,7 +389,11 @@ func crepvValidateVolumeCapabilities(
 	rep *csi.ValidateVolumeCapabilitiesResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -369,7 +405,11 @@ func crepvListVolumes(
 	rep *csi.ListVolumesResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -381,7 +421,11 @@ func crepvGetCapacity(
 	rep *csi.GetCapacityResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -393,7 +437,11 @@ func crepvControllerGetCapabilities(
 	rep *csi.ControllerGetCapabilitiesResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -409,7 +457,11 @@ func crepvGetSupportedVersions(
 	rep *csi.GetSupportedVersionsResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -421,7 +473,11 @@ func crepvGetPluginInfo(
 	rep *csi.GetPluginInfoResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -437,7 +493,11 @@ func crepvNodePublishVolume(
 	rep *csi.NodePublishVolumeResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -449,7 +509,11 @@ func crepvNodeUnpublishVolume(
 	rep *csi.NodeUnpublishVolumeResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -461,11 +525,19 @@ func crepvGetNodeID(
 	rep *csi.GetNodeIDResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	if rep.GetResult().NodeId == nil {
-		return ErrNilNodeID
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilNodeID,
+		}
 	}
 
 	return nil
@@ -477,7 +549,11 @@ func crepvProbeNode(
 	rep *csi.ProbeNodeResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
@@ -489,7 +565,11 @@ func crepvNodeGetCapabilities(
 	rep *csi.NodeGetCapabilitiesResponse) error {
 
 	if rep.GetResult() == nil {
-		return ErrNilResult
+		return &Error{
+			Code:       ErrorNoCode,
+			FullMethod: method,
+			InnerError: ErrNilResult,
+		}
 	}
 
 	return nil
