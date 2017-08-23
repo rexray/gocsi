@@ -1,10 +1,78 @@
 package gocsi
 
 import (
+	"bytes"
+	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/codedellemc/gocsi/csi"
 )
+
+// ErrorNoCode is the value that indicates the error code is not set.
+const ErrorNoCode int32 = -1
+
+// Error is a client-side representation of the error message
+// data returned from a CSI endpoint.
+type Error struct {
+	// Code is the error code.
+	Code int32
+	// Description is the error description.
+	Description string
+	// FullMethod is the full name of the CSI method that returned the error.
+	FullMethod string
+	// InnerError is an optional inner error wrapped by this error.
+	InnerError error
+}
+
+func (e *Error) Error() string {
+	w := &bytes.Buffer{}
+	fmt.Fprintf(w, "%s failed", e.ErrorMethod())
+	if e.Code > ErrorNoCode {
+		fmt.Fprintf(w, ": %d", e.Code)
+	}
+	if e.Description != "" {
+		fmt.Fprintf(w, ": %s", e.Description)
+	}
+	if e.InnerError != nil {
+		fmt.Fprintf(w, ": %v", e.InnerError)
+	}
+	return w.String()
+}
+
+func (e *Error) String() string {
+	return e.Error()
+}
+
+// MarshalText encodes the receiver into UTF-8-encoded text
+// and returns the result.
+func (e *Error) MarshalText() (text []byte, err error) {
+	return []byte(e.String()), nil
+}
+
+// ErrorCode returns the CSI error code.
+func (e *Error) ErrorCode() int32 {
+	return e.Code
+}
+
+// ErrorDescription returns the CSI error description.
+func (e *Error) ErrorDescription() string {
+	return e.Description
+}
+
+// ErrorFullMethod returns  the full name of the CSI method that
+// returned the error.
+func (e *Error) ErrorFullMethod() string {
+	return e.FullMethod
+}
+
+// ErrorMethod returns the name-only of the CSI method that
+// returned the error.
+func (e *Error) ErrorMethod() string {
+	parts := strings.Split(e.FullMethod, "/")
+	return parts[len(parts)-1]
+}
 
 // ErrEmptyServices occurs when a Server's Services list is empty.
 var ErrEmptyServices = errors.New("services list is empty")
@@ -20,9 +88,17 @@ var ErrInvalidCSIEndpoint = errors.New("invalid CSI_ENDPOINT")
 // ErrNilVolumeInfo occurs when a gRPC call returns a nil VolumeInfo.
 var ErrNilVolumeInfo = errors.New("volumeInfo is nil")
 
+// ErrNilVolumeID occurs when a gRPC call returns a VolumeInfo with
+// a nil Id field.
+var ErrNilVolumeID = errors.New("volumeInfo.Id is nil")
+
 // ErrNilPublishVolumeInfo occurs when a gRPC call returns
 // a nil PublishVolumeInfo.
 var ErrNilPublishVolumeInfo = errors.New("publishVolumeInfo is nil")
+
+// ErrEmptyPublishVolumeInfo occurs when a gRPC call returns
+// a PublishVolumeInfo with an empty Values field.
+var ErrEmptyPublishVolumeInfo = errors.New("publishVolumeInfo is empty")
 
 // ErrNilNodeID occurs when a gRPC call returns
 // a nil NodeID.
@@ -561,5 +637,561 @@ func ErrNodeGetCapabilities(
 				},
 			},
 		},
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//                       RESPONSE ERROR - CONTROLLER                          //
+////////////////////////////////////////////////////////////////////////////////
+
+// CheckResponseErrCreateVolume returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrCreateVolume(
+	ctx context.Context,
+	method string,
+	response *csi.CreateVolumeResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMCreateVolume
+	}
+
+	if err := rErr.GetCreateVolumeError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrDeleteVolume returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrDeleteVolume(
+	ctx context.Context,
+	method string,
+	response *csi.DeleteVolumeResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMDeleteVolume
+	}
+
+	if err := rErr.GetDeleteVolumeError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrControllerPublishVolume returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrControllerPublishVolume(
+	ctx context.Context,
+	method string,
+	response *csi.ControllerPublishVolumeResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMControllerPublishVolume
+	}
+
+	if err := rErr.GetControllerPublishVolumeError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrControllerUnpublishVolume returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrControllerUnpublishVolume(
+	ctx context.Context,
+	method string,
+	response *csi.ControllerUnpublishVolumeResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMControllerUnpublishVolume
+	}
+
+	if err := rErr.GetControllerUnpublishVolumeError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrValidateVolumeCapabilities returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrValidateVolumeCapabilities(
+	ctx context.Context,
+	method string,
+	response *csi.ValidateVolumeCapabilitiesResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMValidateVolumeCapabilities
+	}
+
+	if err := rErr.GetValidateVolumeCapabilitiesError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrListVolumes returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrListVolumes(
+	ctx context.Context,
+	method string,
+	response *csi.ListVolumesResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMListVolumes
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrGetCapacity returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrGetCapacity(
+	ctx context.Context,
+	method string,
+	response *csi.GetCapacityResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMGetCapacity
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrControllerGetCapabilities returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrControllerGetCapabilities(
+	ctx context.Context,
+	method string,
+	response *csi.ControllerGetCapabilitiesResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMControllerGetCapabilities
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//                       RESPONSE ERROR - IDENTITY                            //
+////////////////////////////////////////////////////////////////////////////////
+
+// CheckResponseErrGetSupportedVersions returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrGetSupportedVersions(
+	ctx context.Context,
+	method string,
+	response *csi.GetSupportedVersionsResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMGetSupportedVersions
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrGetPluginInfo returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrGetPluginInfo(
+	ctx context.Context,
+	method string,
+	response *csi.GetPluginInfoResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMGetPluginInfo
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//                        RESPONSE ERROR - NODE                               //
+////////////////////////////////////////////////////////////////////////////////
+
+// CheckResponseErrNodePublishVolume returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrNodePublishVolume(
+	ctx context.Context,
+	method string,
+	response *csi.NodePublishVolumeResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMNodePublishVolume
+	}
+
+	if err := rErr.GetNodePublishVolumeError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrNodeUnpublishVolume returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrNodeUnpublishVolume(
+	ctx context.Context,
+	method string,
+	response *csi.NodeUnpublishVolumeResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMNodeUnpublishVolume
+	}
+
+	if err := rErr.GetNodeUnpublishVolumeError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrGetNodeID returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrGetNodeID(
+	ctx context.Context,
+	method string,
+	response *csi.GetNodeIDResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMGetNodeID
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrProbeNode returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrProbeNode(
+	ctx context.Context,
+	method string,
+	response *csi.ProbeNodeResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMProbeNode
+	}
+
+	if err := rErr.GetProbeNodeError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
+	}
+}
+
+// CheckResponseErrNodeGetCapabilities returns a Go error for the
+// error message inside of a CSI response if present; otherwise nil
+// is returned.
+func CheckResponseErrNodeGetCapabilities(
+	ctx context.Context,
+	method string,
+	response *csi.NodeGetCapabilitiesResponse) error {
+
+	rErr := response.GetError()
+	if rErr == nil {
+		return nil
+	}
+
+	if method == "" {
+		method = FMNodeGetCapabilities
+	}
+
+	if err := rErr.GetGeneralError(); err != nil {
+		return &Error{
+			FullMethod:  method,
+			Code:        int32(err.ErrorCode),
+			Description: err.ErrorDescription,
+		}
+	}
+
+	return &Error{
+		FullMethod:  method,
+		Code:        ErrorNoCode,
+		Description: rErr.String(),
 	}
 }

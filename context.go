@@ -4,9 +4,12 @@ import (
 	"golang.org/x/net/context"
 )
 
-type requestIDKeyType uint64
+type contextKey uint64
 
-var requestIDKey interface{} = requestIDKeyType(0)
+var (
+	requestIDKey      interface{} = contextKey(0)
+	fullMethodNameKey interface{} = contextKey(1)
+)
 
 // GetRequestID gets the gRPC request ID from the provided context.
 func GetRequestID(ctx context.Context) (uint64, bool) {

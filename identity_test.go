@@ -58,10 +58,12 @@ var _ = Describe("Identity", func() {
 		shouldNotBeValid := func() {
 			Ω(res).Should(BeNil())
 			Ω(err).Should(HaveOccurred())
-			Ω(err).Should(Equal(fmt.Errorf(
-				"error: GetPluginInfo failed: 2: "+
-					"unsupported request version: %s",
-				CTest().ComponentTexts[3])))
+			Ω(err).Should(Σ(&gocsi.Error{
+				FullMethod: "/csi.Identity/GetPluginInfo",
+				Code:       2,
+				Description: fmt.Sprintf("unsupported request version: %s",
+					CTest().ComponentTexts[3]),
+			}))
 		}
 		Context("With Request Version", func() {
 			Context("0.0.0", func() {

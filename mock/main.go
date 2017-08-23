@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net"
@@ -76,8 +78,6 @@ func trapSignals(onExit, onAbort func()) {
 	signal.Notify(sigc)
 	go func() {
 		for s := range sigc {
-			louti.Printf("OUT received signal: %v\n", s)
-			lerri.Printf("ERR received signal: %v\n", s)
 			ok, graceful := isExitSignal(s)
 			if !ok {
 				continue
@@ -127,27 +127,15 @@ type sp struct {
 	closed bool
 }
 
-func getServerInterceptors() grpc.ServerOption {
-
-	// Create the version validator.
-	versionValidator := newVersionValidator()
-
-	// Create a new server-side input validator. It will be
-	// initialized with sensible defaults, but it is possible to
-	// replace the validation logic per-message by replacing
-	// the key/value pair in the validator's map using
-	// gocsi.FMxxx values as the key and a
-	// gocsi.ServerSideInputValidatorFunc as the value.
-	serverSideInputValidator := gocsi.NewServerSideInputValidator()
-
-	// Create a new server-side interceptor that logs incoming msgs.
-	serverSideMsgLogger := &gocsi.ServerSideMessageLogger{Log: louti.Printf}
-
-	return gocsi.ChainUnaryServerOpt(
-		versionValidator.Handle,
-		gocsi.RequestIDInjector,
-		serverSideMsgLogger.Handle,
-		serverSideInputValidator.Handle)
+func newGrpcServer() *grpc.Server {
+	lout := newLogger(louti.Printf)
+	lerr := newLogger(lerre.Printf)
+	return grpc.NewServer(grpc.UnaryInterceptor(gocsi.ChainUnaryServer(
+		gocsi.ServerRequestIDInjector,
+		gocsi.NewServerRequestLogger(lout, lerr),
+		gocsi.NewServerResponseLogger(lout, lerr),
+		gocsi.NewServerRequestVersionValidator(supportedVersions),
+		gocsi.ServerRequestValidator)))
 }
 
 // ServiceProvider.Serve
@@ -162,7 +150,7 @@ func (s *sp) Serve(ctx context.Context, li net.Listener) error {
 			return errServerStarted
 		}
 		louti.Printf("%s.Serve: %s\n", s.name, li.Addr())
-		s.server = grpc.NewServer(getServerInterceptors())
+		s.server = newGrpcServer()
 		return nil
 	}(); err != nil {
 		return errServerStarted
@@ -222,13 +210,16 @@ func (s *sp) CreateVolume(
 	// the creation process is idempotent: if the volume
 	// does not already exist then create it, otherwise
 	// just return the existing volume
-	name := req.GetName()
+	name := req.Name
 	_, v := findVolByName(name)
 	if v == nil {
 		capacity := gib100
-		if cr := req.GetCapacityRange(); cr != nil {
-			if rb := cr.GetRequiredBytes(); rb != 0 {
+		if cr := req.CapacityRange; cr != nil {
+			if rb := cr.RequiredBytes; rb > 0 {
 				capacity = rb
+			}
+			if lb := cr.LimitBytes; lb > 0 {
+				capacity = lb
 			}
 		}
 		v = newVolume(name, capacity)
@@ -270,7 +261,11 @@ func (s *sp) DeleteVolume(
 		vols = vols[:len(vols)-1]
 	}
 
-	return &csi.DeleteVolumeResponse{}, nil
+	return &csi.DeleteVolumeResponse{
+		Reply: &csi.DeleteVolumeResponse_Result_{
+			Result: &csi.DeleteVolumeResponse_Result{},
+		},
+	}, nil
 }
 
 func (s *sp) ControllerPublishVolume(
@@ -431,7 +426,11 @@ func (s *sp) ValidateVolumeCapabilities(
 	req *csi.ValidateVolumeCapabilitiesRequest) (
 	*csi.ValidateVolumeCapabilitiesResponse, error) {
 
-	return nil, nil
+	return &csi.ValidateVolumeCapabilitiesResponse{
+		Reply: &csi.ValidateVolumeCapabilitiesResponse_Result_{
+			Result: &csi.ValidateVolumeCapabilitiesResponse_Result{},
+		},
+	}, nil
 }
 
 func (s *sp) ListVolumes(
@@ -579,19 +578,6 @@ var supportedVersions = []*csi.Version{
 		Minor: 1,
 		Patch: 0,
 	},
-}
-
-func newVersionValidator() *gocsi.VersionValidator {
-	vv := &gocsi.VersionValidator{}
-	vv.SupportedVersions = make([]gocsi.Version, len(supportedVersions))
-	for x, v := range supportedVersions {
-		vv.SupportedVersions[x] = &csi.Version{
-			Major: v.GetMajor(),
-			Minor: v.GetMinor(),
-			Patch: v.GetPatch(),
-		}
-	}
-	return vv
 }
 
 func (s *sp) GetSupportedVersions(
@@ -862,4 +848,26 @@ func findVol(field, val string) (int, *csi.VolumeInfo) {
 		}
 	}
 	return -1, nil
+}
+
+type logger struct {
+	f func(msg string, args ...interface{})
+	w io.Writer
+}
+
+func newLogger(f func(msg string, args ...interface{})) *logger {
+	l := &logger{f: f}
+	r, w := io.Pipe()
+	l.w = w
+	go func() {
+		scan := bufio.NewScanner(r)
+		for scan.Scan() {
+			f(scan.Text())
+		}
+	}()
+	return l
+}
+
+func (l *logger) Write(data []byte) (int, error) {
+	return l.w.Write(data)
 }

@@ -175,6 +175,9 @@ $(GINKGO):
 # the test run to exit with a status set to the value Ginkgo
 # uses if it detects programmatic involvement. Please see
 # https://goo.gl/CKz4La for more information.
+ifneq (true,$(TRAVIS))
+test: build
+endif
 test: | $(GINKGO)
 	$(GINKGO) -v . || test "$$?" -eq "197"
 
@@ -203,4 +206,4 @@ clobber: clean
 glide-up glide-install:
 	glide $(@:glide-%=%) -v
 
-.PHONY: clean clobber glide-up glide-install
+.PHONY: build test clean clobber glide-up glide-install
