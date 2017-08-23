@@ -428,7 +428,10 @@ func (s *sp) ValidateVolumeCapabilities(
 
 	return &csi.ValidateVolumeCapabilitiesResponse{
 		Reply: &csi.ValidateVolumeCapabilitiesResponse_Result_{
-			Result: &csi.ValidateVolumeCapabilitiesResponse_Result{},
+			Result: &csi.ValidateVolumeCapabilitiesResponse_Result{
+				Supported: true,
+				Message:   "Yip yip yip yip!",
+			},
 		},
 	}, nil
 }
@@ -740,18 +743,9 @@ func (s *sp) NodeGetCapabilities(
 			Result: &csi.NodeGetCapabilitiesResponse_Result{
 				Capabilities: []*csi.NodeServiceCapability{
 					&csi.NodeServiceCapability{
-						Type: &csi.NodeServiceCapability_VolumeCapability{
-							VolumeCapability: &csi.VolumeCapability{
-								Value: &csi.VolumeCapability_Mount{
-									Mount: &csi.VolumeCapability_MountVolume{
-										FsType: "ext4",
-										MountFlags: []string{
-											"norootsquash",
-											"uid=500",
-											"gid=500",
-										},
-									},
-								},
+						Type: &csi.NodeServiceCapability_Rpc{
+							Rpc: &csi.NodeServiceCapability_RPC{
+								Type: csi.NodeServiceCapability_RPC_UNKNOWN,
 							},
 						},
 					},

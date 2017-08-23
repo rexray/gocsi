@@ -1,8 +1,8 @@
-hash: fe904fb2f7955e606849498bdb4f9c628ce27f68ec718f1a6a4654314505d0bd
-updated: 2017-08-16T21:32:57.14745793-05:00
+hash: 08ec06af0cff4aa08905316d0fe83ee217ef2c64d5ed4b00137e8e64ce8a916d
+updated: 2017-08-23T12:31:45.03781031-05:00
 imports:
 - name: github.com/container-storage-interface/spec
-  version: 660624263eb68705f393ee70773e5dbbdde77391
+  version: 70e7ca5be45bd1c87c2a46836b9e930e9fcdc128
 - name: github.com/golang/protobuf
   version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
   subpackages:

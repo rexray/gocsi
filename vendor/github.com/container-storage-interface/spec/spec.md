@@ -293,6 +293,39 @@ The error code `OPERATION_PENDING_FOR_VOLUME` may be returned by the plugin in t
 
 ### Identity Service RPC
 
+Identity service RPCs allow a CO to negotiate an API protocol version that MAY be used for subsequent RPCs across all CSI services with respect to a particular CSI plugin.
+The general flow of the success case is as follows (protos illustrated in YAML for brevity):
+
+1. CO queries supported versions via Identity RPC. The CO is expected to gracefully handle, in the manner of its own choosing, the case wherein the returned `supported_versions` from the plugin are not supported by the CO.
+
+```
+   # CO --(GetSupportedVersions)--> Plugin
+   request: {}
+   response:
+     result:
+       supported_versions:
+         - major: 0
+           minor: 1
+           patch: 0
+```
+
+2. CO queries metadata via Identity RPC, using a supported API protocol version (as per the reply from the prior step): the requested `version` MUST match an entry from the aforementioned `supported_versions` array.
+
+```
+   # CO --(GetPluginInfo)--> Plugin
+   request:
+     version:
+       major: 0
+       minor: 1
+       patch: 0
+   response:
+     result:
+       name: org.foo.whizbang/super-plugin
+       vendor_version: blue-green
+       manifest:
+         baz: qaz
+```
+
 #### `GetSupportedVersions`
 
 A Plugin SHALL reply with a list of supported CSI versions.
@@ -426,9 +459,12 @@ message CreateVolumeResponse {
 
 // Specify a capability of a volume.
 message VolumeCapability {
+  // Indicate that the volume will be accessed via the block device API.
   message BlockVolume {
     // Intentionally empty, for now.
   }
+
+  // Indicate that the volume will be accessed via the filesystem API.
   message MountVolume {
     // The filesystem type. This field is OPTIONAL.
     string fs_type = 1;
@@ -440,11 +476,41 @@ message VolumeCapability {
     repeated string mount_flags = 2;    
   }
 
-  // One of the following fields MUST be specified.
-  oneof value {
+  // Specify how a volume can be accessed.
+  message AccessMode {
+    enum Mode {
+      UNKNOWN = 0;
+
+      // Can be published as read/write at one node at a time.
+      SINGLE_NODE_WRITER = 1;
+
+      // Can be published as readonly at one node at a time.
+      SINGLE_NODE_READER_ONLY = 2;
+
+      // Can be published as readonly at multiple nodes simultaneously.
+      MULTI_NODE_READER_ONLY = 3;
+
+      // Can be published at multiple nodes simultaneously. Only one of
+      // the node can be used as read/write. The rest will be readonly.
+      MULTI_NODE_SINGLE_WRITER = 4;
+
+      // Can be published as read/write at multiple nodes simultaneously.
+      MULTI_NODE_MULTI_WRITER = 5;
+    }
+
+    // This field is REQUIRED.
+    Mode mode = 1;
+  }
+
+  // Specifies what API the volume will be accessed using. One of the
+  // following fields MUST be specified.
+  oneof access_type {
     BlockVolume block = 1;
     MountVolume mount = 2;
   }
+
+  // This is a REQUIRED field.
+  AccessMode access_mode = 3;
 }
 
 // The capacity of the storage space in bytes. To specify an exact size,
@@ -465,10 +531,6 @@ message VolumeInfo {
   // NFS share). If set, it MUST be non-zero.
   uint64 capacity_bytes = 1;
 
-  // Contains information about how the volume can be accessed. This
-  // field is REQUIRED.
-  AccessMode access_mode = 2;
-
   // Contains identity information for the created volume. This field is  
   // REQUIRED. The identity information will be used by the CO in
   // subsequent calls to refer to the provisioned volume.
@@ -478,32 +540,6 @@ message VolumeInfo {
   // CO SHALL pass this information along with the `id` to subsequent
   // calls.
   VolumeMetadata metadata = 5;
-}
-
-// Specify how a volume can be accessed.
-message AccessMode {
-  enum Mode {
-    UNKNOWN = 0;
-    
-    // Can be published as read/write at one node at a time.
-    SINGLE_NODE_WRITER = 1;
-
-    // Can be published as readonly at one node at a time.
-    SINGLE_NODE_READER_ONLY = 2;
-
-    // Can be published as readonly at multiple nodes simultaneously.
-    MULTI_NODE_READER_ONLY = 3;
-
-    // Can be published at multiple nodes simultaneously. Only one of
-    // the node can be used as read/write. The rest will be readonly.
-    MULTI_NODE_SINGLE_WRITER = 4;
-
-    // Can be published as read/write at multiple nodes simultaneously.    
-    MULTI_NODE_MULTI_WRITER = 5;
-  }
-
-  // This field is REQUIRED.
-  Mode mode = 1;
 }
 
 // The identity of the volume.
@@ -562,7 +598,7 @@ message DeleteVolumeResponse {
 
 #### `ControllerPublishVolume`
 
-A Controller Plugin MUST implement this RPC call if it has `PUBLISH_UNPUBLISH_VOLUME`controller capability.
+A Controller Plugin MUST implement this RPC call if it has `PUBLISH_UNPUBLISH_VOLUME` controller capability.
 This RPC will be called by the CO when it wants to place a workload that uses the volume onto a node.
 The Plugin SHOULD perform the work that is necessary for making the volume available on the given node.
 The Plugin MUST NOT assume that this RPC will be executed on the node where the volume will be used.
@@ -570,7 +606,7 @@ The Plugin MUST NOT assume that this RPC will be executed on the node where the 
 This operation MUST be idempotent.
 If the operation failed or the CO does not know if the operation has failed or not, it MAY choose to call `ControllerPublishVolume` again or choose to call `ControllerUnpublishVolume`.
 
-The CO MAY call this RPC for publishing a volume to multiple nodes if `multiple_nodes` is set to true in `AccessMode` for the volume.
+The CO MAY call this RPC for publishing a volume to multiple nodes if the volume has `MULTI_NODE` capability (i.e., `MULTI_NODE_READER_ONLY`, `MULTI_NODE_SINGLE_WRITER` or `MULTI_NODE_MULTI_WRITER`).
 
 ```protobuf
 message ControllerPublishVolumeRequest {
@@ -589,6 +625,10 @@ message ControllerPublishVolumeRequest {
   // `GetNodeID` is allowed to omit `NodeID` from a successful `Result`;
   // in such cases the CO SHALL NOT specify this field.
   NodeID node_id = 4;
+
+  // The capability of the volume the CO expects the volume to have.
+  // This is a REQUIRED field.
+  VolumeCapability volume_capability = 6;
 
   // Whether to publish the volume in readonly mode. This field is
   // REQUIRED.
@@ -833,12 +873,6 @@ message ControllerServiceCapability {
   oneof type {
     // RPC that the controller supports.
     RPC rpc = 1;
-    
-    // Volume capability the Controller Plugin supports. An SP SHOULD
-    // avoid setting different volume capability for Controller and Node
-    // Plugins if possible. If this happens during the upgrade of the
-    // Plugins, the behavior is UNDEFINED. 
-    VolumeCapability volume_capability = 2;
   }
 }
 ```
@@ -850,8 +884,7 @@ message ControllerServiceCapability {
 A Node Plugin MUST implement this RPC call.
 This RPC is typically called by the CO when it wants to place a workload that wants to use the volume on a node.
 The Plugin SHALL assume that this RPC will be executed on the node where the volume will be used.
-If the corresponding Controller Plugin has `PUBLISH_UNPUBLISH_VOLUME` controller capability, the CO MUST guarantee that this RPC is called after `ControllerPublishVolume` is
-called for the given volume on the given node and returns a success.
+If the corresponding Controller Plugin has `PUBLISH_UNPUBLISH_VOLUME` controller capability, the CO MUST guarantee that this RPC is called after `ControllerPublishVolume` is called for the given volume on the given node and returns a success.
 
 This operation MUST be idempotent.
 If this RPC failed, or the CO does not know if it failed or not, it MAY choose to call `NodePublishVolume` again, or choose to call `NodeUnpublishVolume`.
@@ -879,8 +912,8 @@ message NodePublishVolumeRequest {
   // request. This is a REQUIRED field.
   string target_path = 5;
 
-  // The capability of the volume to be published. This is a REQUIRED
-  // field.
+  // The capability of the volume the CO expects the volume to have.
+  // This is a REQUIRED field.
   VolumeCapability volume_capability = 6;
 
   // Whether to publish the volume in readonly mode. This field is
@@ -1033,12 +1066,6 @@ message NodeServiceCapability {
   oneof type {
     // RPC that the controller supports.
     RPC rpc = 1;
-    
-    // Volume capability the Node Plugin supports. An SP SHOULD avoid
-    // setting different volume capability for Controller and Node
-    // Plugins if possible. If this happens during the upgrade of the
-    // Plugins, the behavior is UNDEFINED. 
-    VolumeCapability volume_capability = 2;
   }
 }
 ```
@@ -1350,6 +1377,10 @@ message Error {
       // information to detach the volume from one other node before
       // retrying with exponential backoff.
       MAX_ATTACHED_NODES = 8;
+
+      UNSUPPORTED_MOUNT_FLAGS = 10;
+      UNSUPPORTED_VOLUME_TYPE = 11;
+      UNSUPPORTED_FS_TYPE = 12;
 
       // Indicates that the specified `NodeID` is not allowed or
       // understood by the Plugin, or the Plugin does not support the

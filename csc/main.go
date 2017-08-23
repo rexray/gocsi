@@ -32,6 +32,12 @@ const (
 	// in order to avoid importing the math package for just
 	// a constant value
 	maxUint32 = 4294967295
+
+	// maxInt32 is the maximum value for an int32. this is
+	// defined as math.MaxInt32, but it's redefined here
+	// in order to avoid importing the math package for just
+	// a constant value
+	maxInt32 = 2147483647
 )
 
 var appName = path.Base(os.Args[0])

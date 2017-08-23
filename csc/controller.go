@@ -72,7 +72,9 @@ var controllerCmds = []*cmd{
 var argsCreateVolume struct {
 	reqBytes uint64
 	limBytes uint64
+	block    bool
 	fsType   string
+	mode     int64
 	mntFlags stringSliceArg
 	params   mapOfStringArg
 }
@@ -93,16 +95,28 @@ func flagsCreateVolume(ctx context.Context, rpc string) *flag.FlagSet {
 		0,
 		"The maximum volume size in bytes")
 
+	fs.BoolVar(
+		&argsCreateVolume.block,
+		"block",
+		false,
+		"A flag that marks the volume for raw device access")
+
+	fs.Int64Var(
+		&argsCreateVolume.mode,
+		"mode",
+		0,
+		"The volume access mode")
+
 	fs.StringVar(
 		&argsCreateVolume.fsType,
 		"t",
 		"",
-		"The file system type")
+		"The file system type. Ignored when -block is set")
 
 	fs.Var(
 		&argsCreateVolume.mntFlags,
 		"o",
-		"The mount flags")
+		"The mount flags. Ignored when -block is set")
 
 	fs.Var(
 		&argsCreateVolume.params,
@@ -129,17 +143,26 @@ func createVolume(
 		client csi.ControllerClient
 		err    error
 		tpl    *template.Template
+		mode   csi.VolumeCapability_AccessMode_Mode
 
 		name     = fs.Arg(0)
 		reqBytes = argsCreateVolume.reqBytes
 		limBytes = argsCreateVolume.limBytes
+		block    = argsCreateVolume.block
 		fsType   = argsCreateVolume.fsType
 		mntFlags = argsCreateVolume.mntFlags.vals
 		params   = argsCreateVolume.params.vals
+		caps     = make([]*csi.VolumeCapability, 1)
 
 		format  = args.format
 		version = args.version
 	)
+
+	// make sure maxEntries doesn't exceed int32
+	if max := argsCreateVolume.mode; max > maxInt32 {
+		return fmt.Errorf("error: max entries > int32: %v", max)
+	}
+	mode = csi.VolumeCapability_AccessMode_Mode(argsCreateVolume.mode)
 
 	// create a template for emitting the output
 	tpl = template.New("template")
@@ -150,11 +173,17 @@ func createVolume(
 	// initialize the csi client
 	client = csi.NewControllerClient(cc)
 
+	if block {
+		caps[0] = gocsi.NewBlockCapability(mode)
+	} else {
+		caps[0] = gocsi.NewMountCapability(mode, fsType, mntFlags)
+	}
+
 	// execute the rpc
 	result, err := gocsi.CreateVolume(
 		ctx, client, version, name,
 		reqBytes, limBytes,
-		fsType, mntFlags, params)
+		caps, params)
 	if err != nil {
 		return err
 	}
@@ -453,6 +482,8 @@ func controllerUnpublishVolume(
 //                        ValidateVolumeCapabilities                         //
 ///////////////////////////////////////////////////////////////////////////////
 var argsValidateVolumeCapabilities struct {
+	mode     int64
+	block    bool
 	fsType   string
 	mntFlags stringSliceArg
 }
@@ -463,6 +494,18 @@ func flagsValidateVolumeCapabilities(
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
 	flagsGlobal(fs, valCapFormat,
 		"*csi.ValidateVolumeCapabilitiesResponse_Result")
+
+	fs.BoolVar(
+		&argsValidateVolumeCapabilities.block,
+		"block",
+		false,
+		"A flag that marks the volume for raw device access")
+
+	fs.Int64Var(
+		&argsValidateVolumeCapabilities.mode,
+		"mode",
+		0,
+		"The volume access mode")
 
 	fs.StringVar(
 		&argsValidateVolumeCapabilities.fsType,
@@ -498,8 +541,11 @@ func validateVolumeCapabilities(
 	var (
 		client csi.ControllerClient
 
+		mode csi.VolumeCapability_AccessMode_Mode
+
 		volumeID = &csi.VolumeID{Values: map[string]string{}}
-		caps     []*csi.VolumeCapability
+		caps     = make([]*csi.VolumeCapability, 1)
+		block    = argsValidateVolumeCapabilities.block
 		fsType   = argsValidateVolumeCapabilities.fsType
 		mntFlags = argsCreateVolume.mntFlags.vals
 
@@ -507,6 +553,12 @@ func validateVolumeCapabilities(
 		tpl     *template.Template
 		version = args.version
 	)
+
+	// make sure maxEntries doesn't exceed int32
+	if max := argsValidateVolumeCapabilities.mode; max > maxInt32 {
+		return fmt.Errorf("error: max entries > int32: %v", max)
+	}
+	mode = csi.VolumeCapability_AccessMode_Mode(argsValidateVolumeCapabilities.mode)
 
 	// parse the volume ID into a map
 	for x := 0; x < fs.NArg(); x++ {
@@ -525,26 +577,10 @@ func validateVolumeCapabilities(
 		Id: volumeID,
 	}
 
-	if fsType != "" {
-		caps = append(caps,
-			&csi.VolumeCapability{
-				Value: &csi.VolumeCapability_Mount{
-					Mount: &csi.VolumeCapability_MountVolume{
-						FsType: fsType,
-					},
-				},
-			})
-	}
-
-	if len(mntFlags) > 0 {
-		caps = append(caps,
-			&csi.VolumeCapability{
-				Value: &csi.VolumeCapability_Mount{
-					Mount: &csi.VolumeCapability_MountVolume{
-						MountFlags: mntFlags,
-					},
-				},
-			})
+	if block {
+		caps[0] = gocsi.NewBlockCapability(mode)
+	} else {
+		caps[0] = gocsi.NewMountCapability(mode, fsType, mntFlags)
 	}
 
 	// initialize the csi client
@@ -644,9 +680,9 @@ func listVolumes(
 		version       = args.version
 	)
 
-	// make sure maxEntries doesn't exceed uin32
+	// make sure maxEntries doesn't exceed uint32
 	if max := argsListVolumes.maxEntries; max > maxUint32 {
-		return fmt.Errorf("error: max entries > uin32: %v", max)
+		return fmt.Errorf("error: max entries > uint32: %v", max)
 	}
 	maxEntries = uint32(argsListVolumes.maxEntries)
 

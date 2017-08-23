@@ -6,7 +6,7 @@ import:
     version: v1.5.1
 
   - package: github.com/container-storage-interface/spec
-    version: 660624263eb68705f393ee70773e5dbbdde77391
+    version: 70e7ca5be45bd1c87c2a46836b9e930e9fcdc128
 
   - package: github.com/golang/protobuf
     version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
