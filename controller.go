@@ -57,6 +57,44 @@ const (
 		"ControllerGetCapabilities"
 )
 
+// NewMountCapability returns a new *csi.VolumeCapability for a
+// volume that is to be mounted.
+func NewMountCapability(
+	mode csi.VolumeCapability_AccessMode_Mode,
+	fsType string,
+	mountFlags []string) *csi.VolumeCapability {
+
+	acccessType := &csi.VolumeCapability_MountVolume{}
+	acccessType.FsType = fsType
+	if len(mountFlags) > 0 {
+		acccessType.MountFlags = mountFlags
+	}
+
+	return &csi.VolumeCapability{
+		AccessMode: &csi.VolumeCapability_AccessMode{
+			Mode: mode,
+		},
+		AccessType: &csi.VolumeCapability_Mount{
+			Mount: acccessType,
+		},
+	}
+}
+
+// NewBlockCapability returns a new *csi.VolumeCapability for a
+// volume that is to be accessed as a raw device.
+func NewBlockCapability(
+	mode csi.VolumeCapability_AccessMode_Mode) *csi.VolumeCapability {
+
+	return &csi.VolumeCapability{
+		AccessMode: &csi.VolumeCapability_AccessMode{
+			Mode: mode,
+		},
+		AccessType: &csi.VolumeCapability_Block{
+			Block: &csi.VolumeCapability_BlockVolume{},
+		},
+	}
+}
+
 // CreateVolume issues a CreateVolume request to a CSI controller.
 func CreateVolume(
 	ctx context.Context,
@@ -64,33 +102,21 @@ func CreateVolume(
 	version *csi.Version,
 	name string,
 	requiredBytes, limitBytes uint64,
-	fsType string, mountFlags []string,
+	capabilities []*csi.VolumeCapability,
 	params map[string]string,
 	callOpts ...grpc.CallOption) (volume *csi.VolumeInfo, err error) {
 
 	req := &csi.CreateVolumeRequest{
-		Name:       name,
-		Version:    version,
-		Parameters: params,
+		Name:               name,
+		Version:            version,
+		Parameters:         params,
+		VolumeCapabilities: capabilities,
 	}
 
 	if requiredBytes > 0 || limitBytes > 0 {
 		req.CapacityRange = &csi.CapacityRange{
 			LimitBytes:    limitBytes,
 			RequiredBytes: requiredBytes,
-		}
-	}
-
-	if fsType != "" || len(mountFlags) > 0 {
-		cap := &csi.VolumeCapability_MountVolume{}
-		cap.FsType = fsType
-		if len(mountFlags) > 0 {
-			cap.MountFlags = mountFlags
-		}
-		req.VolumeCapabilities = []*csi.VolumeCapability{
-			&csi.VolumeCapability{
-				Value: &csi.VolumeCapability_Mount{Mount: cap},
-			},
 		}
 	}
 

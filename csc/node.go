@@ -56,6 +56,8 @@ var argsNodePublishVolume struct {
 	fsType            string
 	mntFlags          stringSliceArg
 	readOnly          bool
+	mode              int64
+	block             bool
 }
 
 func flagsNodePublishVolume(
@@ -79,6 +81,18 @@ func flagsNodePublishVolume(
 		"targetPath",
 		"",
 		"The path to which the volume will be published.")
+
+	fs.BoolVar(
+		&argsNodePublishVolume.block,
+		"block",
+		false,
+		"A flag that marks the volume for raw device access")
+
+	fs.Int64Var(
+		&argsNodePublishVolume.mode,
+		"mode",
+		0,
+		"The volume access mode")
 
 	fs.StringVar(
 		&argsNodePublishVolume.fsType,
@@ -114,39 +128,36 @@ func nodePublishVolume(
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
 
-	if fs.NArg() == 0 {
-		return &errUsage{"missing volume ID"}
-	}
-	if argsNodePublishVolume.targetPath == "" {
-		return &errUsage{"missing targetPath"}
-	}
-	if argsNodePublishVolume.fsType == "" {
-		return &errUsage{"missing fsType"}
-	}
-	if len(argsNodePublishVolume.mntFlags.vals) == 0 {
-		return &errUsage{"missing mount flags (-o)"}
-	}
-
 	var (
 		client csi.NodeClient
 
 		volumeMD   *csi.VolumeMetadata
 		pubVolInfo *csi.PublishVolumeInfo
+		mode       csi.VolumeCapability_AccessMode_Mode
+		capability *csi.VolumeCapability
 
-		capability = &csi.VolumeCapability{
-			Value: &csi.VolumeCapability_Mount{
-				Mount: &csi.VolumeCapability_MountVolume{
-					FsType:     argsNodePublishVolume.fsType,
-					MountFlags: argsNodePublishVolume.mntFlags.vals,
-				},
-			},
-		}
+		block    = argsNodePublishVolume.block
+		fsType   = argsNodePublishVolume.fsType
+		mntFlags = argsNodePublishVolume.mntFlags.vals
+
 		volumeID   = &csi.VolumeID{Values: map[string]string{}}
 		targetPath = argsNodePublishVolume.targetPath
 		readOnly   = argsNodePublishVolume.readOnly
 
 		version = args.version
 	)
+
+	// make sure maxEntries doesn't exceed int32
+	if max := argsNodePublishVolume.mode; max > maxInt32 {
+		return fmt.Errorf("error: max entries > int32: %v", max)
+	}
+	mode = csi.VolumeCapability_AccessMode_Mode(argsNodePublishVolume.mode)
+
+	if block {
+		capability = gocsi.NewBlockCapability(mode)
+	} else {
+		capability = gocsi.NewMountCapability(mode, fsType, mntFlags)
+	}
 
 	// parse the volume ID into a map
 	for x := 0; x < fs.NArg(); x++ {

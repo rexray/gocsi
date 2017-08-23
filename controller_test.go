@@ -68,8 +68,9 @@ var _ = Describe("Controller", func() {
 			volName,
 			reqBytes,
 			limBytes,
-			fsType,
-			mntFlags,
+			[]*csi.VolumeCapability{
+				gocsi.NewMountCapability(0, fsType, mntFlags),
+			},
 			params)
 	}
 
