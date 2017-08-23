@@ -141,10 +141,6 @@ func createVolume(
 		version = args.version
 	)
 
-	if name == "" {
-		return &errUsage{"missing volume name"}
-	}
-
 	// create a template for emitting the output
 	tpl = template.New("template")
 	if tpl, err = tpl.Parse(format); err != nil {

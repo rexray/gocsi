@@ -1,9 +1,6 @@
 package gocsi
 
 import (
-	"errors"
-	"fmt"
-
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -11,44 +8,54 @@ import (
 )
 
 const (
-	fmCtrlrPfx = "/" + Namespace + ".Controller/"
-
-	// FMCreateVolume is the eponymous, full method name.
-	FMCreateVolume = fmCtrlrPfx +
+	// FMCreateVolume is the full method name for the
+	// eponymous RPC message.
+	FMCreateVolume = "/" + Namespace +
+		".Controller/" +
 		"CreateVolume"
-	// FMDeleteVolume is the eponymous, full method name.
-	FMDeleteVolume = fmCtrlrPfx +
+
+	// FMDeleteVolume is the full method name for the
+	// eponymous RPC message.
+	FMDeleteVolume = "/" + Namespace +
+		".Controller/" +
 		"DeleteVolume"
-	// FMControllerPublishVolume is the eponymous, full method name.
-	FMControllerPublishVolume = fmCtrlrPfx +
+
+	// FMControllerPublishVolume is the full method name for the
+	// eponymous RPC message.
+	FMControllerPublishVolume = "/" + Namespace +
+		".Controller/" +
 		"ControllerPublishVolume"
-	// FMControllerUnpublishVolume is the eponymous, full method name.
-	FMControllerUnpublishVolume = fmCtrlrPfx +
+
+	// FMControllerUnpublishVolume is the full method name for the
+	// eponymous RPC message.
+	FMControllerUnpublishVolume = "/" + Namespace +
+		".Controller/" +
 		"ControllerUnpublishVolume"
-	// FMValidateVolumeCapabilities is the eponymous, full method name.
-	FMValidateVolumeCapabilities = fmCtrlrPfx +
+
+	// FMValidateVolumeCapabilities is the full method name for the
+	// eponymous RPC message.
+	FMValidateVolumeCapabilities = "/" + Namespace +
+		".Controller/" +
 		"ValidateVolumeCapabilities"
-	// FMListVolumes is the eponymous, full method name.
-	FMListVolumes = fmCtrlrPfx +
+
+	// FMListVolumes is the full method name for the
+	// eponymous RPC message.
+	FMListVolumes = "/" + Namespace +
+		".Controller/" +
 		"ListVolumes"
-	// FMGetCapacity is the eponymous, full method name.
-	FMGetCapacity = fmCtrlrPfx +
+
+	// FMGetCapacity is the full method name for the
+	// eponymous RPC message.
+	FMGetCapacity = "/" + Namespace +
+		".Controller/" +
 		"GetCapacity"
-	// FMControllerGetCapabilities is the eponymous, full method name.
-	FMControllerGetCapabilities = fmCtrlrPfx +
+
+	// FMControllerGetCapabilities is the full method name for the
+	// eponymous RPC message.
+	FMControllerGetCapabilities = "/" + Namespace +
+		".Controller/" +
 		"ControllerGetCapabilities"
 )
-
-func init() {
-	ssvCreateVolume = func(
-		ctx context.Context, req interface{}) (interface{}, error) {
-		if req.(hasGetNameAsString).GetName() == "" {
-			// INVALID_VOLUME_NAME
-			return ErrCreateVolume(3, "missing name"), nil
-		}
-		return nil, nil
-	}
-}
 
 // CreateVolume issues a CreateVolume request to a CSI controller.
 func CreateVolume(
@@ -60,10 +67,6 @@ func CreateVolume(
 	fsType string, mountFlags []string,
 	params map[string]string,
 	callOpts ...grpc.CallOption) (volume *csi.VolumeInfo, err error) {
-
-	if version == nil {
-		return nil, ErrVersionRequired
-	}
 
 	req := &csi.CreateVolumeRequest{
 		Name:       name,
@@ -96,62 +99,7 @@ func CreateVolume(
 		return nil, err
 	}
 
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetCreateVolumeError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: CreateVolume failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		if err := cerr.GetGeneralError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: CreateVolume failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return nil, errors.New(cerr.String())
-	}
-
-	result := res.GetResult()
-	if result == nil {
-		return nil, ErrNilResult
-	}
-
-	data := result.GetVolumeInfo()
-	if data == nil {
-		return nil, ErrNilVolumeInfo
-	}
-
-	return data, nil
-}
-
-func init() {
-	ssvDeleteVolume = func(
-		ctx context.Context, reqObj interface{}) (interface{}, error) {
-
-		req := reqObj.(*csi.DeleteVolumeRequest)
-
-		idObj := req.GetVolumeId()
-		if idObj == nil {
-			// INVALID_VOLUME_ID
-			return ErrDeleteVolume(3, "missing id obj"), nil
-		}
-
-		idVals := idObj.GetValues()
-		if len(idVals) == 0 {
-			// INVALID_VOLUME_ID
-			return ErrDeleteVolume(3, "missing id map"), nil
-		}
-
-		_, ok := idVals["id"]
-		if !ok {
-			// INVALID_VOLUME_ID
-			return ErrDeleteVolume(3, "missing id val"), nil
-		}
-
-		return nil, nil
-	}
+	return res.GetResult().VolumeInfo, nil
 }
 
 // DeleteVolume issues a DeleteVolume request to a CSI controller.
@@ -169,26 +117,9 @@ func DeleteVolume(
 		VolumeMetadata: volumeMetadata,
 	}
 
-	res, err := c.DeleteVolume(ctx, req, callOpts...)
+	_, err := c.DeleteVolume(ctx, req, callOpts...)
 	if err != nil {
 		return err
-	}
-
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetDeleteVolumeError(); err != nil {
-			return fmt.Errorf(
-				"error: DeleteVolume failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		if err := cerr.GetGeneralError(); err != nil {
-			return fmt.Errorf(
-				"error: DeleteVolume failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return errors.New(cerr.String())
 	}
 
 	return nil
@@ -208,10 +139,6 @@ func ControllerPublishVolume(
 	callOpts ...grpc.CallOption) (
 	*csi.PublishVolumeInfo, error) {
 
-	if version == nil {
-		return nil, ErrVersionRequired
-	}
-
 	if volumeID == nil {
 		return nil, ErrVolumeIDRequired
 	}
@@ -229,34 +156,7 @@ func ControllerPublishVolume(
 		return nil, err
 	}
 
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetControllerPublishVolumeError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: ControllerPublishVolume failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		if err := cerr.GetGeneralError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: ControllerPublishVolume failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return nil, errors.New(cerr.String())
-	}
-
-	result := res.GetResult()
-	if result == nil {
-		return nil, ErrNilResult
-	}
-
-	data := result.GetPublishVolumeInfo()
-	if data == nil {
-		return nil, ErrNilPublishVolumeInfo
-	}
-
-	return data, nil
+	return res.GetResult().PublishVolumeInfo, nil
 }
 
 // ControllerUnpublishVolume issues a
@@ -271,10 +171,6 @@ func ControllerUnpublishVolume(
 	nodeID *csi.NodeID,
 	callOpts ...grpc.CallOption) error {
 
-	if version == nil {
-		return ErrVersionRequired
-	}
-
 	if volumeID == nil {
 		return ErrVolumeIDRequired
 	}
@@ -286,31 +182,9 @@ func ControllerUnpublishVolume(
 		NodeId:         nodeID,
 	}
 
-	res, err := c.ControllerUnpublishVolume(ctx, req, callOpts...)
+	_, err := c.ControllerUnpublishVolume(ctx, req, callOpts...)
 	if err != nil {
 		return err
-	}
-
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetControllerUnpublishVolumeError(); err != nil {
-			return fmt.Errorf(
-				"error: ControllerUnpublishVolume failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		if err := cerr.GetGeneralError(); err != nil {
-			return fmt.Errorf(
-				"error: ControllerUnpublishVolume failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return errors.New(cerr.String())
-	}
-
-	result := res.GetResult()
-	if result == nil {
-		return ErrNilResult
 	}
 
 	return nil
@@ -326,9 +200,6 @@ func ValidateVolumeCapabilities(
 	volumeCapabilities []*csi.VolumeCapability,
 	callOpts ...grpc.CallOption) (*csi.ValidateVolumeCapabilitiesResponse_Result, error) {
 
-	if version == nil {
-		return nil, ErrVersionRequired
-	}
 	if volumeInfo == nil {
 		return nil, ErrVolumeInfoRequired
 	}
@@ -347,29 +218,7 @@ func ValidateVolumeCapabilities(
 		return nil, err
 	}
 
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetValidateVolumeCapabilitiesError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: ValidateVolumeCapabilities failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		if err := cerr.GetGeneralError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: ValidateVolumeCapabilities failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return nil, errors.New(cerr.String())
-	}
-
-	result := res.GetResult()
-	if result == nil {
-		return nil, ErrNilResult
-	}
-
-	return result, nil
+	return res.GetResult(), nil
 }
 
 // ListVolumes issues a ListVolumes request to a CSI controller.
@@ -382,10 +231,6 @@ func ListVolumes(
 	callOpts ...grpc.CallOption) (
 	volumes []*csi.VolumeInfo, nextToken string, err error) {
 
-	if version == nil {
-		return nil, "", ErrVersionRequired
-	}
-
 	req := &csi.ListVolumesRequest{
 		MaxEntries:    maxEntries,
 		StartingToken: startingToken,
@@ -397,27 +242,12 @@ func ListVolumes(
 		return nil, "", err
 	}
 
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetGeneralError(); err != nil {
-			return nil, "", fmt.Errorf(
-				"error: ListVolumes failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return nil, "", errors.New(cerr.String())
-	}
-
 	result := res.GetResult()
-	if result == nil {
-		return nil, "", ErrNilResult
-	}
-
-	nextToken = result.GetNextToken()
-	entries := result.GetEntries()
+	nextToken = result.NextToken
+	entries := result.Entries
 
 	// check to see if there are zero entries
-	if len(entries) == 0 {
+	if len(result.Entries) == 0 {
 		return nil, nextToken, nil
 	}
 
@@ -440,10 +270,6 @@ func GetCapacity(
 	version *csi.Version,
 	callOpts ...grpc.CallOption) (uint64, error) {
 
-	if version == nil {
-		return 0, ErrVersionRequired
-	}
-
 	req := &csi.GetCapacityRequest{
 		Version: version,
 	}
@@ -453,25 +279,7 @@ func GetCapacity(
 		return 0, err
 	}
 
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetGeneralError(); err != nil {
-			return 0, fmt.Errorf(
-				"error: GetCapacity failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return 0, errors.New(cerr.String())
-	}
-
-	result := res.GetResult()
-	if result == nil {
-		return 0, ErrNilResult
-	}
-
-	cap := result.GetTotalCapacity()
-
-	return cap, nil
+	return res.GetResult().TotalCapacity, nil
 }
 
 // ControllerGetCapabilities issues a ControllerGetCapabilities request to a
@@ -483,10 +291,6 @@ func ControllerGetCapabilities(
 	callOpts ...grpc.CallOption) (
 	capabilties []*csi.ControllerServiceCapability, err error) {
 
-	if version == nil {
-		return nil, ErrVersionRequired
-	}
-
 	req := &csi.ControllerGetCapabilitiesRequest{
 		Version: version,
 	}
@@ -496,21 +300,5 @@ func ControllerGetCapabilities(
 		return nil, err
 	}
 
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetGeneralError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: ControllerGetCapabilities failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return nil, errors.New(cerr.String())
-	}
-
-	result := res.GetResult()
-	if result == nil {
-		return nil, ErrNilResult
-	}
-
-	return result.GetCapabilities(), nil
+	return res.GetResult().Capabilities, nil
 }

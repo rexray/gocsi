@@ -1,9 +1,6 @@
 package gocsi
 
 import (
-	"errors"
-	"fmt"
-
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -11,13 +8,16 @@ import (
 )
 
 const (
-	fmIdentPfx = "/" + Namespace + ".Identity/"
-
-	// FMGetSupportedVersions is the eponymous, full method name.
-	FMGetSupportedVersions = fmIdentPfx +
+	// FMGetSupportedVersions is the full method name for the
+	// eponymous RPC message.
+	FMGetSupportedVersions = "/" + Namespace +
+		".Identity/" +
 		"GetSupportedVersions"
-	// FMGetPluginInfo is the eponymous, full method name.
-	FMGetPluginInfo = fmIdentPfx +
+
+	// FMGetPluginInfo is the full method name for the
+	// eponymous RPC message.
+	FMGetPluginInfo = "/" + Namespace +
+		".Identity/" +
 		"GetPluginInfo"
 )
 
@@ -36,28 +36,7 @@ func GetSupportedVersions(
 		return nil, err
 	}
 
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetGeneralError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: GetSupportedVersions failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return nil, errors.New(cerr.String())
-	}
-
-	result := res.GetResult()
-	if result == nil {
-		return nil, ErrNilResult
-	}
-
-	data := result.GetSupportedVersions()
-	if data == nil {
-		return nil, ErrNilSupportedVersions
-	}
-
-	return data, nil
+	return res.GetResult().SupportedVersions, nil
 }
 
 // GetPluginInfo issues a
@@ -82,21 +61,5 @@ func GetPluginInfo(
 		return nil, err
 	}
 
-	// check to see if there is a csi error
-	if cerr := res.GetError(); cerr != nil {
-		if err := cerr.GetGeneralError(); err != nil {
-			return nil, fmt.Errorf(
-				"error: GetPluginInfo failed: %d: %s",
-				err.GetErrorCode(),
-				err.GetErrorDescription())
-		}
-		return nil, errors.New(cerr.String())
-	}
-
-	result := res.GetResult()
-	if result == nil {
-		return nil, ErrNilResult
-	}
-
-	return result, nil
+	return res.GetResult(), nil
 }
