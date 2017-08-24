@@ -1,0 +1,25 @@
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+[[constraint]]
+  name = "github.com/container-storage-interface/spec"
+  revision = "70e7ca5be45bd1c87c2a46836b9e930e9fcdc128"
+
+[[constraint]]
+  name = "github.com/golang/protobuf"
+  revision = "1909bc2f63dc92bb931deace8b8312c4db72d12f"
+
+[[constraint]]
+  name = "github.com/onsi/ginkgo"
+  version = "1.4.0"
+
+[[constraint]]
+  name = "github.com/onsi/gomega"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "golang.org/x/net"
+  revision = "1c05540f6879653db88113bc4a2b70aec4bd491f"
+
+[[constraint]]
+  name = "google.golang.org/grpc"
+  version = "1.5.1"

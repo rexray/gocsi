@@ -203,7 +203,4 @@ clobber: clean
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@
 
-glide-up glide-install:
-	glide $(@:glide-%=%) -v
-
-.PHONY: build test clean clobber glide-up glide-install
+.PHONY: build test clean clobber
