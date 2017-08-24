@@ -8,8 +8,9 @@ project in order to obtain the CSI specification.
 In order to update the CSI specification version used by GoCSI, please
 follow the steps below starting from the root of the GoCSI project:
 
-1. Update `glide.yaml` with the desired CSI specification version.
-2. Run `make glide-up` to update the vendored dependencies.
+1. Update `Gopkg.toml` with the desired CSI specification version.
+2. Run `dep ensure` to update the vendored dependencies. This requires
+the official Go dependency manager, [Dep](https://github.com/golang/dep).
 3. Run `make test` to update the generated protobuf source and execute
 the test suite using the Mock plug-in.
 
