@@ -531,7 +531,7 @@ func validateVolumeCapabilities(
 		volumeID = &csi.VolumeID{Values: map[string]string{}}
 		block    = argsValidateVolumeCapabilities.block
 		fsType   = argsValidateVolumeCapabilities.fsType
-		mntFlags = argsCreateVolume.mntFlags.vals
+		mntFlags = argsValidateVolumeCapabilities.mntFlags.vals
 
 		format  = args.format
 		tpl     *template.Template
@@ -734,11 +734,41 @@ func listVolumes(
 ///////////////////////////////////////////////////////////////////////////////
 //                              GetCapacity                                  //
 ///////////////////////////////////////////////////////////////////////////////
+var argsGetCapacity struct {
+	mode     int64
+	block    bool
+	fsType   string
+	mntFlags stringSliceArg
+}
+
 func flagsGetCapacity(
 	ctx context.Context, rpc string) *flag.FlagSet {
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
 	flagsGlobal(fs, "", "")
+
+	fs.BoolVar(
+		&argsGetCapacity.block,
+		"block",
+		false,
+		"A flag that marks the volume for raw device access")
+
+	fs.Int64Var(
+		&argsGetCapacity.mode,
+		"mode",
+		0,
+		"The volume access mode")
+
+	fs.StringVar(
+		&argsGetCapacity.fsType,
+		"t",
+		"",
+		"The file system type")
+
+	fs.Var(
+		&argsGetCapacity.mntFlags,
+		"o",
+		"The mount flags")
 
 	fs.Usage = func() {
 		fmt.Fprintf(
@@ -755,17 +785,33 @@ func getCapacity(
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
 
+	var (
+		mode csi.VolumeCapability_AccessMode_Mode
+
+		caps     = []*csi.VolumeCapability{}
+		block    = argsGetCapacity.block
+		fsType   = argsGetCapacity.fsType
+		mntFlags = argsGetCapacity.mntFlags.vals
+	)
+
+	mode = csi.VolumeCapability_AccessMode_Mode(argsGetCapacity.mode)
+	if block {
+		caps = append(caps, gocsi.NewBlockCapability(mode))
+	} else {
+		caps = append(caps, gocsi.NewMountCapability(mode, fsType, mntFlags))
+	}
+
 	// initialize the csi client
 	client := csi.NewControllerClient(cc)
 
 	// execute the rpc
-	cap, err := gocsi.GetCapacity(ctx, client, args.version)
+	cap, err := gocsi.GetCapacity(ctx, client, args.version, caps)
 	if err != nil {
 		return err
 	}
 
 	// emit the results
-	fmt.Printf("TotalCapcity: %v\n", cap)
+	fmt.Printf("AvailableCapacity: %v\n", cap)
 
 	return nil
 }

@@ -737,6 +737,44 @@ func sreqvGetCapacity(
 	req *csi.GetCapacityRequest) (
 	*csi.GetCapacityResponse, error) {
 
+	if len(req.VolumeCapabilities) == 0 {
+		return nil, nil
+	}
+
+	for i, cap := range req.VolumeCapabilities {
+		if cap.AccessMode == nil {
+			return ErrGetCapacity(
+				csi.Error_GeneralError_UNDEFINED,
+				fmt.Sprintf("missing access mode: index %d", i)), nil
+		}
+		atype := cap.GetAccessType()
+		if atype == nil {
+			return ErrGetCapacity(
+				csi.Error_GeneralError_UNDEFINED,
+				fmt.Sprintf("missing access type: index %d", i)), nil
+		}
+		switch tatype := atype.(type) {
+		case *csi.VolumeCapability_Block:
+			if tatype.Block == nil {
+				return ErrGetCapacity(
+					csi.Error_GeneralError_UNDEFINED,
+					fmt.Sprintf("missing block type: index %d", i)), nil
+			}
+		case *csi.VolumeCapability_Mount:
+			if tatype.Mount == nil {
+				return ErrGetCapacity(
+					csi.Error_GeneralError_UNDEFINED,
+					fmt.Sprintf("missing mount type: index %d", i)), nil
+			}
+		default:
+			return ErrGetCapacity(
+				csi.Error_GeneralError_UNDEFINED,
+				fmt.Sprintf(
+					"invalid access type: index %d, type=%T",
+					i, atype)), nil
+		}
+	}
+
 	return nil, nil
 }
 

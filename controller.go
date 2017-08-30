@@ -276,10 +276,12 @@ func GetCapacity(
 	ctx context.Context,
 	c csi.ControllerClient,
 	version *csi.Version,
+	volumeCapabilities []*csi.VolumeCapability,
 	callOpts ...grpc.CallOption) (uint64, error) {
 
 	req := &csi.GetCapacityRequest{
-		Version: version,
+		Version:            version,
+		VolumeCapabilities: volumeCapabilities,
 	}
 
 	res, err := c.GetCapacity(ctx, req, callOpts...)
@@ -287,7 +289,7 @@ func GetCapacity(
 		return 0, err
 	}
 
-	return res.GetResult().TotalCapacity, nil
+	return res.GetResult().AvailableCapacity, nil
 }
 
 // ControllerGetCapabilities issues a ControllerGetCapabilities request to a
