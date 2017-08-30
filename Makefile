@@ -1,5 +1,34 @@
 all: build
 
+################################################################################
+##                                   DEP                                      ##
+################################################################################
+DEP := ./dep
+DEP_VER ?= 0.3.0
+DEP_ZIP := dep-$$GOHOSTOS-$$GOHOSTARCH.zip
+DEP_URL := https://github.com/golang/dep/releases/download/v$(DEP_VER)/$$DEP_ZIP
+
+$(DEP):
+	GOVERSION=$$(go version | awk '{print $$4}') && \
+	GOHOSTOS=$$(echo $$GOVERSION | awk -F/ '{print $$1}') && \
+	GOHOSTARCH=$$(echo $$GOVERSION | awk -F/ '{print $$2}') && \
+	DEP_ZIP="$(DEP_ZIP)" && \
+	DEP_URL="$(DEP_URL)" && \
+	mkdir -p .dep && \
+	cd .dep && \
+	curl -sSLO $$DEP_URL && \
+	unzip "$$DEP_ZIP" && \
+	mv $(@F) ../ && \
+	cd ../ && \
+	rm -fr .dep
+ifneq (./dep,$(DEP))
+dep: $(DEP)
+endif
+
+dep-ensure: | $(DEP)
+	$(DEP) ensure -v
+
+
 ########################################################################
 ##                             PROTOC                                 ##
 ########################################################################
@@ -156,7 +185,7 @@ csi-spec-comp-master: $(CSI_SPEC_MASTER) $(CSI_PROTO)
 ########################################################################
 
 GOCSI_A := gocsi.a
-$(GOCSI_A): $(CSI_GOSRC) *.go csi/*.go
+$(GOCSI_A): $(CSI_GOSRC) *.go
 	@go install .
 	go build -o "$@" .
 
@@ -203,7 +232,4 @@ clobber: clean
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@
 
-glide-up glide-install:
-	glide $(@:glide-%=%) -v
-
-.PHONY: build test clean clobber glide-up glide-install
+.PHONY: build test clean clobber

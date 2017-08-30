@@ -1,3 +1,8 @@
+# The dep binary and temp directory used to
+# download the dep binary.
+/dep
+/.dep/
+
 # The ginkgo test binary
 /ginkgo
 

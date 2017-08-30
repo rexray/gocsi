@@ -503,7 +503,7 @@ func (s *sp) GetCapacity(
 	return &csi.GetCapacityResponse{
 		Reply: &csi.GetCapacityResponse_Result_{
 			Result: &csi.GetCapacityResponse_Result{
-				TotalCapacity: tib100,
+				AvailableCapacity: tib100,
 			},
 		},
 	}, nil
