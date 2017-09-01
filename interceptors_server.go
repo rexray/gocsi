@@ -1,6 +1,7 @@
 package gocsi
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"reflect"
@@ -257,19 +258,21 @@ func (v *serverRepLogger) handle(
 	}
 
 	w := v.stdout
-	fmt.Fprintf(w, "%s: ", info.FullMethod)
+	b := &bytes.Buffer{}
+
+	fmt.Fprintf(b, "%s: ", info.FullMethod)
 	if rid, ok := GetRequestID(ctx); ok {
-		fmt.Fprintf(w, "REP %04d", rid)
+		fmt.Fprintf(b, "REP %04d", rid)
 	}
 
 	rep, err := handler(ctx, req)
 	if err != nil {
-		fmt.Fprintf(w, ": %v", &Error{
+		fmt.Fprintf(b, ": %v", &Error{
 			FullMethod: info.FullMethod,
 			Code:       ErrorNoCode,
 			InnerError: err,
 		})
-		fmt.Fprintln(w)
+		fmt.Fprintln(w, b.String())
 		return rep, err
 	}
 
@@ -335,14 +338,14 @@ func (v *serverRepLogger) handle(
 
 	// Check to see if the reply has an error or is an error itself.
 	if gocsiErr != nil {
-		fmt.Fprintf(w, ": %v", gocsiErr)
-		fmt.Fprintln(w)
+		fmt.Fprintf(b, ": %v", gocsiErr)
+		fmt.Fprintln(w, b.String())
 		return rep, err
 	}
 
 	// At this point the reply must be valid. Format and print it.
-	rprintReqOrRep(w, rep)
-	fmt.Fprintln(w)
+	rprintReqOrRep(b, rep)
+	fmt.Fprintln(w, b.String())
 	return rep, err
 }
 
