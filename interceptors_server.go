@@ -553,6 +553,12 @@ func sreqvCreateVolume(
 		}
 	}
 
+	if req.UserCredentials != nil && len(req.UserCredentials.Data) == 0 {
+		return ErrCreateVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"empty credentials package specified"), nil
+	}
+
 	return nil, nil
 }
 
@@ -572,6 +578,12 @@ func sreqvDeleteVolume(
 		return ErrDeleteVolume(
 			csi.Error_DeleteVolumeError_INVALID_VOLUME_ID,
 			"missing id map"), nil
+	}
+
+	if req.UserCredentials != nil && len(req.UserCredentials.Data) == 0 {
+		return ErrDeleteVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"empty credentials package specified"), nil
 	}
 
 	return nil, nil
@@ -631,6 +643,12 @@ func sreqvControllerPublishVolume(
 			fmt.Sprintf("invalid access type: %T", atype)), nil
 	}
 
+	if req.UserCredentials != nil && len(req.UserCredentials.Data) == 0 {
+		return ErrControllerPublishVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"empty credentials package specified"), nil
+	}
+
 	return nil, nil
 }
 
@@ -650,6 +668,12 @@ func sreqvControllerUnpublishVolume(
 		return ErrControllerUnpublishVolume(
 			csi.Error_ControllerUnpublishVolumeError_INVALID_VOLUME_ID,
 			"missing id map"), nil
+	}
+
+	if req.UserCredentials != nil && len(req.UserCredentials.Data) == 0 {
+		return ErrControllerUnpublishVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"empty credentials package specified"), nil
 	}
 
 	return nil, nil
@@ -873,6 +897,12 @@ func sreqvNodePublishVolume(
 			"missing target path"), nil
 	}
 
+	if req.UserCredentials != nil && len(req.UserCredentials.Data) == 0 {
+		return ErrNodePublishVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"empty credentials package specified"), nil
+	}
+
 	return nil, nil
 }
 
@@ -898,6 +928,12 @@ func sreqvNodeUnpublishVolume(
 		return ErrNodeUnpublishVolume(
 			csi.Error_NodeUnpublishVolumeError_UNKNOWN,
 			"missing target path"), nil
+	}
+
+	if req.UserCredentials != nil && len(req.UserCredentials.Data) == 0 {
+		return ErrNodeUnpublishVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"empty credentials package specified"), nil
 	}
 
 	return nil, nil

@@ -10,7 +10,7 @@ required = [
 
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
-  revision = "2f0d5fbc4abfd09903d6e84799c9e996a5f9dcb3"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/golang/protobuf"
