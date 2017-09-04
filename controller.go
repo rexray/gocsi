@@ -158,16 +158,18 @@ func ControllerPublishVolume(
 	volumeID *csi.VolumeID,
 	volumeMetadata *csi.VolumeMetadata,
 	nodeID *csi.NodeID,
+	volumeCapability *csi.VolumeCapability,
 	readonly bool,
 	callOpts ...grpc.CallOption) (
 	*csi.PublishVolumeInfo, error) {
 
 	req := &csi.ControllerPublishVolumeRequest{
-		Version:        version,
-		VolumeId:       volumeID,
-		VolumeMetadata: volumeMetadata,
-		NodeId:         nodeID,
-		Readonly:       readonly,
+		Version:          version,
+		VolumeId:         volumeID,
+		VolumeMetadata:   volumeMetadata,
+		NodeId:           nodeID,
+		Readonly:         readonly,
+		VolumeCapability: volumeCapability,
 	}
 
 	res, err := c.ControllerPublishVolume(ctx, req, callOpts...)

@@ -202,7 +202,7 @@ const volumeInfoFormat = `{{with .GetId}}{{range $k, $v := .GetValues}}` +
 	`{{printf "%s=%s\t" $k $v}}{{end}}{{end}}{{"\n"}}`
 
 // versionFormat is the default Go template format for emitting a *csi.Version
-const versionFormat = `{{.GetMajor}}.{{.GetMinor}}.{{.GetPatch}}`
+const versionFormat = `{{.GetMajor}}.{{.GetMinor}}.{{.GetPatch}}{{"\n"}}`
 
 // pluginInfoFormat is the default Go template format for
 // emitting a *csi.GetPluginInfoResponse_Result
@@ -212,12 +212,7 @@ const pluginInfoFormat = `{{.Name}}{{print "\t"}}{{.VendorVersion}}{{print "\t"}
 
 // capFormat is the default Go template for emitting a
 // *csi.{Controller,Node}ServiceCapability
-const capFormat = `{{with .GetRpc}}{{.}}{{end}}` +
-	`{{with .GetVolumeCapability}}` +
-	`{{with .GetBlock}}{{.}}{{end}}{{with .GetMount}}MountVolume` +
-	`{{with .GetFsType}}{{print "\n\tfs_type: "}}{{.}}{{end}}` +
-	`{{with .GetMountFlags}}{{print "\n\tmount_flags: "}}{{.}}{{end}}` +
-	`{{end}}{{end}}{{"\n"}}`
+const capFormat = `{{with .GetRpc}}{{.Type}}{{end}}{{"\n"}}`
 
 // valCapFormat is the default Go tempate for emitting a
 // *csi.ValidateVolumeCapabilitiesResponse_Result

@@ -277,6 +277,10 @@ var argsControllerPublishVolume struct {
 	volumeMD mapOfStringArg
 	nodeID   mapOfStringArg
 	readOnly bool
+	fsType   string
+	mntFlags stringSliceArg
+	mode     int64
+	block    bool
 }
 
 func flagsControllerPublishVolume(
@@ -302,6 +306,29 @@ func flagsControllerPublishVolume(
 		"A flag indicating whether or not to "+
 			"publish the volume in read-only mode.")
 
+	fs.BoolVar(
+		&argsControllerPublishVolume.block,
+		"block",
+		false,
+		"A flag that marks the volume for raw device access")
+
+	fs.Int64Var(
+		&argsControllerPublishVolume.mode,
+		"mode",
+		0,
+		"The volume access mode")
+
+	fs.StringVar(
+		&argsControllerPublishVolume.fsType,
+		"t",
+		"",
+		"The file system type")
+
+	fs.Var(
+		&argsControllerPublishVolume.mntFlags,
+		"o",
+		"The mount flags")
+
 	fs.Usage = func() {
 		fmt.Fprintf(
 			os.Stderr,
@@ -323,9 +350,14 @@ func controllerPublishVolume(
 		err    error
 		tpl    *template.Template
 
-		volumeMD *csi.VolumeMetadata
-		nodeID   *csi.NodeID
+		volumeMD   *csi.VolumeMetadata
+		nodeID     *csi.NodeID
+		mode       csi.VolumeCapability_AccessMode_Mode
+		capability *csi.VolumeCapability
 
+		block    = argsControllerPublishVolume.block
+		fsType   = argsControllerPublishVolume.fsType
+		mntFlags = argsControllerPublishVolume.mntFlags.vals
 		volumeID = &csi.VolumeID{Values: map[string]string{}}
 		readOnly = argsControllerPublishVolume.readOnly
 
@@ -355,6 +387,14 @@ func controllerPublishVolume(
 		nodeID = &csi.NodeID{Values: v}
 	}
 
+	mode = csi.VolumeCapability_AccessMode_Mode(argsControllerPublishVolume.mode)
+
+	if block {
+		capability = gocsi.NewBlockCapability(mode)
+	} else {
+		capability = gocsi.NewMountCapability(mode, fsType, mntFlags)
+	}
+
 	// create a template for emitting the output
 	tpl = template.New("template")
 	if tpl, err = tpl.Parse(format); err != nil {
@@ -367,7 +407,7 @@ func controllerPublishVolume(
 	// execute the rpc
 	result, err := gocsi.ControllerPublishVolume(
 		ctx, client, version, volumeID,
-		volumeMD, nodeID, readOnly)
+		volumeMD, nodeID, capability, readOnly)
 	if err != nil {
 		return err
 	}
@@ -811,7 +851,7 @@ func getCapacity(
 	}
 
 	// emit the results
-	fmt.Printf("AvailableCapacity: %v\n", cap)
+	fmt.Println(cap)
 
 	return nil
 }
@@ -823,7 +863,7 @@ func flagsControllerGetCapabilities(
 	ctx context.Context, rpc string) *flag.FlagSet {
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
-	flagsGlobal(fs, capFormat, "*csi.ControllerGetCapabilitiesResponse_Result")
+	flagsGlobal(fs, capFormat, "[]*csi.ControllerServiceCapability")
 
 	fs.Usage = func() {
 		fmt.Fprintf(

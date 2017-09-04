@@ -273,6 +273,10 @@ func (v *serverRepLogger) handle(
 		return rep, err
 	}
 
+	if rep == nil {
+		return nil, nil
+	}
+
 	var gocsiErr error
 
 	switch trep := rep.(type) {

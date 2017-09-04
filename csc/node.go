@@ -379,7 +379,7 @@ func flagsNodeGetCapabilities(
 	ctx context.Context, rpc string) *flag.FlagSet {
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
-	flagsGlobal(fs, capFormat, "*csi.nodeGetCapabilitiesResponse_Result")
+	flagsGlobal(fs, capFormat, "[]*csi.NodeServiceCapability")
 
 	fs.Usage = func() {
 		fmt.Fprintf(
