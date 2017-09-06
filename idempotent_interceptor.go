@@ -25,8 +25,7 @@ type IdempotencyProvider interface {
 	GetVolumeInfo(name string) (*csi.VolumeInfo, error)
 
 	// IsControllerPublished should return publication info about
-	// the volume specified by the provided volume name or ID. If the
-	// volume does not exist then a nil value should be returned.
+	// the volume specified by the provided volume name or ID.
 	IsControllerPublished(id *csi.VolumeID) (*csi.PublishVolumeInfo, error)
 
 	// IsNodePublished should return a flag indicating whether or
