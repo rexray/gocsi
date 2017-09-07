@@ -20,12 +20,6 @@ var (
 	bindRemountOpts = []string{"remount"}
 )
 
-func init() {
-	if _, err := os.Stat(procSelfMountInfo); !os.IsNotExist(err) {
-		MountNamespaceSupportEnabled = true
-	}
-}
-
 // getDiskFormat uses 'lsblk' to see if the given disk is unformatted
 func getDiskFormat(disk string) (string, error) {
 	args := []string{"-n", "-o", "FSTYPE", disk}
