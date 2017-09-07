@@ -85,12 +85,7 @@ func readProcMountsFrom(
 				expectedFields, len(fields), line)
 		}
 
-		// Skip any lines where the source does not start with a leading
-		// slash. This means this is not a mount on a "real" device.
 		source := fields[7]
-		if !strings.HasPrefix(source, "/") {
-			continue
-		}
 
 		fmt.Fprintf(hash, "%s", line)
 
