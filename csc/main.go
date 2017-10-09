@@ -198,8 +198,11 @@ const mapSzOfSzFormat = `{{range $k, $v := .}}` +
 
 // volumeInfoFormat is the default Go template format for
 // emitting a *csi.VolumeInfo
-const volumeInfoFormat = `{{with .GetId}}{{range $k, $v := .GetValues}}` +
-	`{{printf "%s=%s\t" $k $v}}{{end}}{{end}}{{"\n"}}`
+const volumeInfoFormat = `{{with .Id}}{{range $k, $v := .Values}}` +
+	`{{printf "%s=%s\t" $k $v}}{{end}}{{end}}` +
+	`{{if .Metadata}}{{with .Metadata}}{{range $k, $v := .Values}}` +
+	`{{printf "%s=%s\t" $k $v}}{{end}}{{end}}{{end}}` +
+	`{{"\n"}}`
 
 // versionFormat is the default Go template format for emitting a *csi.Version
 const versionFormat = `{{.GetMajor}}.{{.GetMinor}}.{{.GetPatch}}{{"\n"}}`
