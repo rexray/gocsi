@@ -1,6 +1,7 @@
 package mount
 
 import (
+	"context"
 	"errors"
 )
 
@@ -45,8 +46,12 @@ type Info struct {
 }
 
 // GetDiskFormat uses 'lsblk' to see if the given disk is unformatted.
-func GetDiskFormat(disk string) (string, error) {
-	return getDiskFormat(disk)
+func GetDiskFormat(
+	ctx context.Context,
+	disk string,
+	processor EntryProcessorFunc) (string, error) {
+
+	return getDiskFormat(ctx, disk, processor)
 }
 
 // FormatAndMount uses unix utils to format and mount the given disk.
@@ -96,13 +101,20 @@ func Unmount(target string) error {
 //
 // * Darwin hosts parse the output of the "mount" command to obtain
 //   mount information.
-func GetMounts() ([]*Info, error) {
-	return getMounts()
+func GetMounts(
+	ctx context.Context,
+	processor EntryProcessorFunc) ([]Info, error) {
+
+	return getMounts(ctx, processor)
 }
 
 // GetDevMounts returns a slice of all mounts for dev
-func GetDevMounts(dev string) ([]*Info, error) {
-	return getDevMounts(dev)
+func GetDevMounts(
+	ctx context.Context,
+	dev string,
+	processor EntryProcessorFunc) ([]Info, error) {
+
+	return getDevMounts(ctx, dev, processor)
 }
 
 func contains(list []string, item string) bool {

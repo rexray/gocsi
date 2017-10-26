@@ -2,6 +2,7 @@ package mount
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -11,25 +12,67 @@ import (
 	"strings"
 )
 
-// BypassSourceFilesystemTypes is a list of the filesystem type regex
-// patterns for which the Source field check is bypassed when returning
-// mount information from GetMounts.
+// EntryProcessorFunc defines the signature of the function that can
+// be passed to GetMounts to customize how entries in the mount table
+// are handled.
 //
-// Normally when considering mount entries from /proc/self/mountinfo the
-// entry is skipped if its Source field does not have a leading "/"
-// character. Entries are not skipped if they have a filesystem type
-// matches one of the regex patterns in this list.
-var BypassSourceFilesystemTypes = []string{
-	`(?i)^devtmpfs$`,
-	`(?i)^fuse\.`,
-	`(?i)^nfs\d$`,
+// When validateOnly is true it's not necessary to return mount
+// information, only validate that the entry is valid.
+type EntryProcessorFunc func(
+	ctx context.Context,
+	root, mountPoint, fsType, mountSource string, mountOpts []string,
+	mountSourceToRoot map[string]string,
+	validateOnly bool) (Info, bool)
+
+// GetDefaultEntryProcessor returns the default entry processor function.
+func GetDefaultEntryProcessor() EntryProcessorFunc {
+	return defaultEntryProcessor
 }
 
-// procMountsFields is fields per line in procMountsPath as per
+func defaultEntryProcessor(
+	ctx context.Context,
+	root, mountPoint, fsType, mountSource string, mountOpts []string,
+	mountSourceToMountPoint map[string]string,
+	validateOnly bool) (info Info, valid bool) {
+
+	info.Device = mountSource
+	info.Path = mountPoint
+	info.Type = fsType
+	info.Opts = mountOpts
+
+	// Validate the mount table entry.
+	validFSType, _ := regexp.MatchString(
+		`(?i)^devtmpfs|(?:fuse\..*)|(?:nfs\d?)$`, fsType)
+	sourceHasSlashPrefix := strings.HasPrefix(mountSource, "/")
+	if valid = validFSType || sourceHasSlashPrefix; !valid || validateOnly {
+		return
+	}
+
+	// If this is the first time a source is encountered in the
+	// output then cache its mountPoint field as the filesystem path
+	// to which the source is mounted as a non-bind mount.
+	//
+	// Subsequent encounters with the source will resolve it
+	// to the cached root value in order to set the mount info's
+	// Source field to the the cached mountPont field value + the
+	// value of the current line's root field.
+	if cachedMountPoint, ok := mountSourceToMountPoint[mountSource]; ok {
+		info.Source = path.Join(cachedMountPoint, root)
+	} else {
+		mountSourceToMountPoint[mountSource] = mountPoint
+	}
+
+	return
+}
+
+// ProcMountsFields is fields per line in procMountsPath as per
 // https://www.kernel.org/doc/Documentation/filesystems/proc.txt
-const procMountsFields = 9
+const ProcMountsFields = 9
 
 /*
+ReadProcMountsFrom parses the contents of a mount table file, typically
+"/proc/self/mountinfo".
+
 From https://www.kernel.org/doc/Documentation/filesystems/proc.txt:
 
 3.5	/proc/<pid>/mountinfo - Information about mounts
@@ -60,30 +103,31 @@ master:X  mount is slave to peer group X
 propagate_from:X  mount is slave and receives propagation from peer group X (*)
 unbindable  mount is unbindable
 */
-func readProcMountsFrom(
+func ReadProcMountsFrom(
+	ctx context.Context,
 	file io.Reader,
-	info bool,
-	expectedFields int) ([]*Info, uint32, error) {
+	quick bool,
+	expectedFields int,
+	processor EntryProcessorFunc) ([]Info, uint32, error) {
+
+	if processor == nil {
+		processor = defaultEntryProcessor
+	}
 
 	var (
-		mountPoints []*Info
-		mountSrcMap map[string]string
+		mountInfos              []Info
+		mountSourceToMountPoint map[string]string
 	)
 
-	if info {
-		mountPoints = []*Info{}
-		mountSrcMap = map[string]string{}
+	if !quick {
+		mountSourceToMountPoint = map[string]string{}
 	}
 
 	hash := fnv.New32a()
-	scanner := bufio.NewReader(file)
-	for {
-		line, err := scanner.ReadString('\n')
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
 
-		if err == io.EOF {
-			break
-		}
-
+		line := scanner.Text()
 		fields := strings.Fields(line)
 
 		// Remove the optional fields that should be ignored.
@@ -97,72 +141,33 @@ func readProcMountsFrom(
 
 		if len(fields) != expectedFields {
 			return nil, 0, fmt.Errorf(
-				"wrong number of fields (expected %d, got %d): %s",
+				"readProcMountsFrom: invalid field count: exp=%d, act=%d: %s",
 				expectedFields, len(fields), line)
 		}
 
-		// Skip any lines where the source does not start with a leading
-		// slash. This means this is not a mount on a "real" device.
-		// However, there are exceptions for entries with filesystem
-		// types that match a prefix from BypassSourceFilesystemTypes.
-		var (
-			fsType = fields[6]
-			source = fields[7]
-		)
-		bypassSourceCheck := false
-		for _, patt := range BypassSourceFilesystemTypes {
-			matched, err := regexp.MatchString(patt, fsType)
-			if err != nil {
-				return nil, 0, err
-			}
-			if matched {
-				bypassSourceCheck = true
-				break
-			}
-		}
-		if !bypassSourceCheck && !strings.HasPrefix(source, "/") {
+		info, valid := processor(
+			ctx,
+			fields[3],                     // root
+			fields[4],                     // mountPoint
+			fields[6],                     // fsType
+			fields[7],                     // mountSource
+			strings.Split(fields[5], ","), // mountOpts
+			mountSourceToMountPoint,
+			quick)
+
+		if !valid {
 			continue
 		}
 
-		fmt.Fprintf(hash, "%s", line)
+		fmt.Fprint(hash, line)
 
-		if !info {
+		if quick {
 			continue
 		}
 
-		var (
-			bindMountSource string
-
-			root       = fields[3]
-			mountPoint = fields[4]
-			mountOpts  = strings.Split(fields[5], ",")
-		)
-
-		// If this is the first time a source is encountered in the
-		// output then cache its mountPoint field as the filesystem path
-		// to which the source is mounted as a non-bind mount.
-		//
-		// Subsequent encounters with the source will resolve it
-		// to the cached root value in order to set the mount info's
-		// Source field to the the cached mountPont field value + the
-		// value of the current line's root field.
-		if cachedMountPoint, ok := mountSrcMap[source]; ok {
-			bindMountSource = path.Join(cachedMountPoint, root)
-		} else {
-			mountSrcMap[source] = mountPoint
-		}
-
-		mp := &Info{
-			Device: source,
-			Path:   mountPoint,
-			Source: bindMountSource,
-			Type:   fsType,
-			Opts:   mountOpts,
-		}
-
-		mountPoints = append(mountPoints, mp)
+		mountInfos = append(mountInfos, info)
 	}
-	return mountPoints, hash.Sum32(), nil
+	return mountInfos, hash.Sum32(), nil
 }
 
 // EvalSymlinks evaluates the provided path and updates it to remove

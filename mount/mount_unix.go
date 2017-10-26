@@ -3,6 +3,7 @@
 package mount
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -31,7 +32,7 @@ func mount(source, target, fsType string, options []string) error {
 // doMount runs the mount command.
 func doMount(mntCmd, source, target, fsType string, options []string) error {
 
-	mountArgs := makeMountArgs(source, target, fsType, options)
+	mountArgs := MakeMountArgs(source, target, fsType, options)
 	args := strings.Join(mountArgs, " ")
 
 	f := log.Fields{
@@ -98,24 +99,28 @@ func isBind(options []string) ([]string, bool) {
 }
 
 // getDevMounts returns a slice of all mounts for dev
-func getDevMounts(dev string) ([]*Info, error) {
-	allMnts, err := getMounts()
+func getDevMounts(
+	ctx context.Context,
+	dev string,
+	processor EntryProcessorFunc) ([]Info, error) {
+
+	allMnts, err := getMounts(ctx, processor)
 	if err != nil {
 		return nil, err
 	}
 
-	mnts := make([]*Info, 0)
+	var mountInfos []Info
 	for _, m := range allMnts {
 		if m.Device == dev {
-			mnts = append(mnts, m)
+			mountInfos = append(mountInfos, m)
 		}
 	}
 
-	return mnts, nil
+	return mountInfos, nil
 }
 
-// makeMountArgs makes the arguments to the mount(8) command.
-func makeMountArgs(source, target, fsType string, options []string) []string {
+// MakeMountArgs makes the arguments to the mount(8) command.
+func MakeMountArgs(source, target, fsType string, options []string) []string {
 
 	// Build mount command as follows:
 	//   mount [-t $fsType] [-o $options] [$source] $target
