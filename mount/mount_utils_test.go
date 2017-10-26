@@ -1,22 +1,93 @@
-package mount
+package mount_test
 
 import (
+	"context"
+	"path"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/thecodeteam/gocsi/mount"
 )
 
+func newTestEntryProcessor(t *testing.T) mount.EntryProcessorFunc {
+	//return mount.GetDefaultEntryProcessor()
+	return (&testEntryProcessor{t}).process
+}
+
+type testEntryProcessor struct {
+	t *testing.T
+}
+
+func (p *testEntryProcessor) process(
+	ctx context.Context,
+	root, mountPoint, fsType, mountSource string, mountOpts []string,
+	mountSourceToMountPoint map[string]string,
+	validateOnly bool) (info mount.Info, valid bool) {
+
+	// p.t.Logf("root=%s\tmountPoint=%s\t"+
+	// 	"fsType=%s\tmountSource=%s\tmountOpts=%v",
+	// 	root, mountPoint, fsType, mountSource, mountOpts)
+
+	baseName := root
+	if isNFS, _ := regexp.MatchString(`(?i)^nfs\d?$`, fsType); isNFS {
+		baseName = path.Base(mountSource)
+		mountSource = path.Dir(mountSource)
+	}
+
+	info.Device = mountSource
+	info.Path = mountPoint
+	info.Type = fsType
+	info.Opts = mountOpts
+
+	// Validate the mount table entry.
+	validFSType, _ := regexp.MatchString(
+		`(?i)^(devtmpfs|(?:fuse\..*)|(?:nfs\d?))$`, fsType)
+	sourceHasSlashPrefix := strings.HasPrefix(mountSource, "/")
+	valid = validFSType || sourceHasSlashPrefix
+
+	if !valid || validateOnly {
+		// p.t.Logf("SKIP: root=%s\tmountPoint=%s\t"+
+		// 	"fsType=%s\tmountSource=%s\tmountOpts=%v",
+		// 	root, mountPoint, fsType, mountSource, mountOpts)
+		return
+	}
+
+	// If this is the first time a source is encountered in the
+	// output then cache its mountPoint field as the filesystem path
+	// to which the source is mounted as a non-bind mount.
+	//
+	// Subsequent encounters with the source will resolve it
+	// to the cached root value in order to set the mount info's
+	// Source field to the the cached mountPont field value + the
+	// value of the current line's root field.
+	if cachedMountPoint, ok := mountSourceToMountPoint[mountSource]; ok {
+		info.Source = path.Join(cachedMountPoint, baseName)
+	} else {
+		mountSourceToMountPoint[mountSource] = mountPoint
+	}
+
+	return
+}
+
 func TestReadProcMountsFrom(t *testing.T) {
-	r := strings.NewReader(procMountInfoData)
-	mis, _, err := readProcMountsFrom(r, true, procMountsFields)
+
+	mountInfos, _, err := mount.ReadProcMountsFrom(
+		context.TODO(),
+		strings.NewReader(procMountInfoData),
+		false,
+		mount.ProcMountsFields,
+		newTestEntryProcessor(t))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("len(mounts)=%d", len(mis))
+
+	t.Logf("len(mounts)=%d", len(mountInfos))
 	success1 := "/home/akutz/2"
 	success2 := "/home/akutz/travis-is-right"
 	success3 := "/home/akutz/red"
 	success4 := "/var/lib/rexray/volumes/s3fsvol01"
-	for _, mi := range mis {
+	for _, mi := range mountInfos {
 		t.Logf("%+v", mi)
 		if mi.Path == "/home/akutz/2" && mi.Source == "/home/akutz/1" {
 			success1 = ""
@@ -24,7 +95,7 @@ func TestReadProcMountsFrom(t *testing.T) {
 		if mi.Path == "/home/akutz/travis-is-right" && mi.Source == "/dev/sda1" {
 			success2 = ""
 		}
-		if mi.Path == "/home/akutz/red" && mi.Device == "localhost:/home/akutz" {
+		if mi.Path == "/home/akutz/red" && mi.Device == "localhost:/home" {
 			success3 = ""
 		}
 		if mi.Path == "/var/lib/rexray/volumes/s3fsvol01" && mi.Device == "s3fs" {
@@ -34,7 +105,7 @@ func TestReadProcMountsFrom(t *testing.T) {
 
 	chk := func(s string) {
 		if s != "" {
-			t.Error(s)
+			t.Errorf("error: %s", s)
 			t.Fail()
 		}
 	}
@@ -83,4 +154,6 @@ const procMountInfoData = `17 60 0:16 / /sys rw,nosuid,nodev,noexec,relatime sha
 125 18 0:39 / /proc/fs/nfsd rw,relatime shared:72 - nfsd nfsd rw
 128 74 0:41 / /home/akutz/red rw,relatime shared:74 - nfs4 localhost:/home/akutz rw,vers=4.1,rsize=524288,wsize=524288,namlen=255,hard,proto=tcp6,port=0,timeo=600,retrans=2,sec=sys,clientaddr=::1,local_lock=none,addr=::1
 81 62 0:39 / /var/lib/rexray/volumes/s3fsvol01 rw,nosuid,nodev,relatime shared:31 - fuse.s3fs s3fs rw,user_id=0,group_id=0
+121 61 0:39 / /var/lib/rexray/volumes/vol01 rw,relatime shared:69 - nfs 192.168.1.80:/ifs/vols/vol01 rw,vers=3,rsize=131072,wsize=524288,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=192.168.1.80,mountvers=3,mountport=300,mountproto=udp,local_lock=none,addr=192.168.1.80
+124 61 0:39 / /var/lib/rexray/csi/volumes/vol01 rw,relatime shared:69 - nfs 192.168.1.80:/ifs/vols/vol01/data rw,vers=3,rsize=131072,wsize=524288,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=192.168.1.80,mountvers=3,mountport=300,mountproto=udp,local_lock=none,addr=192.168.1.80
 `

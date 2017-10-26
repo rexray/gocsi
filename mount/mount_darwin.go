@@ -3,6 +3,7 @@ package mount
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -15,8 +16,12 @@ var (
 )
 
 // getDiskFormat uses 'lsblk' to see if the given disk is unformated
-func getDiskFormat(disk string) (string, error) {
-	mps, err := getMounts()
+func getDiskFormat(
+	ctx context.Context,
+	disk string,
+	processor EntryProcessorFunc) (string, error) {
+
+	mps, err := getMounts(ctx, processor)
 	if err != nil {
 		return "", err
 	}
@@ -25,7 +30,7 @@ func getDiskFormat(disk string) (string, error) {
 			return i.Type, nil
 		}
 	}
-	return "", fmt.Errorf("failed to get disk format: %s", disk)
+	return "", fmt.Errorf("getDiskFormat: failed: %s", disk)
 }
 
 // formatAndMount uses unix utils to format and mount the given disk
@@ -34,13 +39,18 @@ func formatAndMount(source, target, fsType string, options []string) error {
 }
 
 // getMounts returns a slice of all the mounted filesystems
-func getMounts() ([]*Info, error) {
+func getMounts(
+	ctx context.Context,
+	processor EntryProcessorFunc) ([]Info, error) {
+
 	out, err := exec.Command("mount").CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
+
+	var mountInfos []Info
 	scan := bufio.NewScanner(bytes.NewReader(out))
-	mps := []*Info{}
+
 	for scan.Scan() {
 		m := mountRX.FindStringSubmatch(scan.Text())
 		if len(m) != 4 {
@@ -56,7 +66,8 @@ func getMounts() ([]*Info, error) {
 			options = strings.Split(m[3], ",")
 		)
 		if len(options) == 0 {
-			return nil, fmt.Errorf("invalid mount options: %s", device)
+			return nil, fmt.Errorf(
+				"getMounts: invalid mount options: %s", device)
 		}
 		for i, v := range options {
 			options[i] = strings.TrimSpace(v)
@@ -67,7 +78,7 @@ func getMounts() ([]*Info, error) {
 		} else {
 			options = nil
 		}
-		mps = append(mps, &Info{
+		mountInfos = append(mountInfos, Info{
 			Device: device,
 			Path:   path,
 			Source: source,
@@ -75,7 +86,7 @@ func getMounts() ([]*Info, error) {
 			Opts:   options,
 		})
 	}
-	return mps, nil
+	return mountInfos, nil
 }
 
 // bindMount performs a bind mount

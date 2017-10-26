@@ -1,6 +1,7 @@
 package mount
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,7 +22,11 @@ var (
 )
 
 // getDiskFormat uses 'lsblk' to see if the given disk is unformatted
-func getDiskFormat(disk string) (string, error) {
+func getDiskFormat(
+	ctx context.Context,
+	disk string,
+	processor EntryProcessorFunc) (string, error) {
+
 	args := []string{"-n", "-o", "FSTYPE", disk}
 
 	f := log.Fields{
@@ -131,14 +136,17 @@ func bindMount(source, target string, options []string) error {
 }
 
 // getMounts returns a slice of all the mounted filesystems
-func getMounts() ([]*Info, error) {
-	_, hash1, err := readProcMounts(procMountsPath, false)
+func getMounts(
+	ctx context.Context,
+	processor EntryProcessorFunc) ([]Info, error) {
+
+	_, hash1, err := readProcMounts(ctx, procMountsPath, false, processor)
 	if err != nil {
 		return nil, err
 	}
 
 	for i := 0; i < procMountsRetries; i++ {
-		mps, hash2, err := readProcMounts(procMountsPath, true)
+		mps, hash2, err := readProcMounts(ctx, procMountsPath, true, processor)
 		if err != nil {
 			return nil, err
 		}
@@ -155,12 +163,17 @@ func getMounts() ([]*Info, error) {
 
 // readProcMounts reads procMountsInfo and produce a hash
 // of the contents and a list of the mounts as Info objects.
-func readProcMounts(path string, info bool) ([]*Info, uint32, error) {
+func readProcMounts(
+	ctx context.Context,
+	path string,
+	info bool,
+	processor EntryProcessorFunc) ([]Info, uint32, error) {
 
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer file.Close()
-	return readProcMountsFrom(file, info, procMountsFields)
+
+	return ReadProcMountsFrom(ctx, file, !info, ProcMountsFields, processor)
 }
