@@ -7,7 +7,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/codedellemc/gocsi/csi"
+	"github.com/thecodeteam/gocsi/csi"
 )
 
 // Version is a type that responds with Major, Minor, and Patch

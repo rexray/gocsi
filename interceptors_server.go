@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"sync/atomic"
 
-	"github.com/codedellemc/gocsi/csi"
+	"github.com/thecodeteam/gocsi/csi"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

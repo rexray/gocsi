@@ -19,12 +19,12 @@ import (
 	gomegaTypes "github.com/onsi/gomega/types"
 	"google.golang.org/grpc"
 
-	"github.com/codedellemc/gocsi"
-	"github.com/codedellemc/gocsi/csi"
+	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/csi"
 )
 
 const (
-	mockPkg    = "github.com/codedellemc/gocsi/mock"
+	mockPkg    = "github.com/thecodeteam/gocsi/mock"
 	pluginName = "mock"
 )
 

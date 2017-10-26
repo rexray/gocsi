@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/codedellemc/gocsi/csi"
+	"github.com/thecodeteam/gocsi/csi"
 )
 
 // ErrorNoCode is the value that indicates the error code is not set.

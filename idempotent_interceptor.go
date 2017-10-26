@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/codedellemc/gocsi/csi"
+	"github.com/thecodeteam/gocsi/csi"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 

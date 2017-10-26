@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/codedellemc/gocsi"
-	"github.com/codedellemc/gocsi/csi"
+	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/csi"
 	"google.golang.org/grpc"
 )
 

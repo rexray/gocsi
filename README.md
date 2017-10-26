@@ -61,7 +61,7 @@ GoCSI is _go gettable_ - that means it is possible to build GoCSI with
 the following command:
 
 ```bash
-$ go get github.com/codedellemc/gocsi
+$ go get github.com/thecodeteam/gocsi
 ```
 
 If GoCSI has already been cloned locally via Git or the aforementioned
@@ -167,7 +167,7 @@ test suite will automatically build the GoCSI Mock plug-in binary
 before executing any test cases:
 
 ```bash
-$ go build -o mock github.com/codedellemc/gocsi/mock
+$ go build -o mock github.com/thecodeteam/gocsi/mock
 ```
 
 The above command builds the Mock plug-in binary in the working,

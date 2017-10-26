@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/codedellemc/gocsi"
+	"github.com/thecodeteam/gocsi"
 )
 
 var _ = Describe("ParseVersion", func() {
