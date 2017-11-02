@@ -49,11 +49,6 @@ jobs:
         script:  make $PROG
 
       - stage:   build
-        env:     PROG=mount.a
-        install: skip
-        script:  make $PROG
-
-      - stage:   build
         env:     PROG=csc
         install: skip
         script:  make -C $PROG
@@ -70,13 +65,3 @@ jobs:
           - make -C mock
         script:
           - GOCSI_MOCK=$(pwd)/mock/mock make test
-
-      # Test the mount package. This job requires a VM (sudo: required)
-      # because of the tests performing mount operations.
-      - stage:   test
-        sudo:    required
-        install: skip
-        script:
-          - go test -c -o mount.test ./mount
-          - mkdir -p /tmp/gocsi && cp mount.test /tmp/gocsi
-          - sudo /tmp/gocsi/mount.test -test.v
