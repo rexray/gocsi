@@ -84,9 +84,14 @@ var ErrMissingCSIEndpoint = errors.New("missing CSI_ENDPOINT")
 // ErrNilVolumeInfo occurs when a gRPC call returns a nil VolumeInfo.
 var ErrNilVolumeInfo = errors.New("volumeInfo is nil")
 
-// ErrNilVolumeID occurs when a gRPC call returns a VolumeInfo with
-// a nil Id field.
-var ErrNilVolumeID = errors.New("volumeInfo.Id is nil")
+// ErrEmptyVolumeID occurs when a gRPC call returns a VolumeInfo with
+// an zero-length Id field.
+var ErrEmptyVolumeID = errors.New("volumeInfo.Id is empty")
+
+// ErrNonNilEmptyAttribs occurs when a gRPC call returns a VolumeInfo
+// with a non-nil Attributes field that has no elements.
+var ErrNonNilEmptyAttribs = errors.New(
+	"volumeInfo.Attributes is not nil & empty")
 
 // ErrNilPublishVolumeInfo occurs when a gRPC call returns
 // a nil PublishVolumeInfo.
@@ -96,9 +101,9 @@ var ErrNilPublishVolumeInfo = errors.New("publishVolumeInfo is nil")
 // a PublishVolumeInfo with an empty Values field.
 var ErrEmptyPublishVolumeInfo = errors.New("publishVolumeInfo is empty")
 
-// ErrNilNodeID occurs when a gRPC call returns
-// a nil NodeID.
-var ErrNilNodeID = errors.New("nodeID is nil")
+// ErrEmptyNodeID occurs when a gRPC call returns
+// an empty NodeID.
+var ErrEmptyNodeID = errors.New("nodeID is empty")
 
 // ErrNilSupportedVersions occurs when a gRPC call returns nil SupportedVersions
 var ErrNilSupportedVersions = errors.New("supportedVersions is nil")
@@ -107,7 +112,7 @@ var ErrNilSupportedVersions = errors.New("supportedVersions is nil")
 // version argument.
 var ErrVersionRequired = errors.New("version is required")
 
-// ErrVolumeIDRequired occurs when an RPC call is made with a nil
+// ErrVolumeIDRequired occurs when an RPC call is made with an empty
 // volumeID argument.
 var ErrVolumeIDRequired = errors.New("volumeID is required")
 
@@ -573,18 +578,18 @@ func ErrGetNodeIDGeneral(
 	}
 }
 
-// ErrProbeNode returns a
-// ProbeNodeResponse with a
-// ProbeNodeError.
-func ErrProbeNode(
-	code csi.Error_ProbeNodeError_ProbeNodeErrorCode,
-	msg string) *csi.ProbeNodeResponse {
+// ErrNodeProbe returns a
+// NodeProbeResponse with a
+// NodeProbeError.
+func ErrNodeProbe(
+	code csi.Error_NodeProbeError_NodeProbeErrorCode,
+	msg string) *csi.NodeProbeResponse {
 
-	return &csi.ProbeNodeResponse{
-		Reply: &csi.ProbeNodeResponse_Error{
+	return &csi.NodeProbeResponse{
+		Reply: &csi.NodeProbeResponse_Error{
 			Error: &csi.Error{
-				Value: &csi.Error_ProbeNodeError_{
-					ProbeNodeError: &csi.Error_ProbeNodeError{
+				Value: &csi.Error_NodeProbeError_{
+					NodeProbeError: &csi.Error_NodeProbeError{
 						ErrorCode:        code,
 						ErrorDescription: msg,
 					},
@@ -594,15 +599,15 @@ func ErrProbeNode(
 	}
 }
 
-// ErrProbeNodeGeneral returns a
-// ProbeNodeResponse with a
+// ErrNodeProbeGeneral returns a
+// NodeProbeResponse with a
 // GeneralError.
-func ErrProbeNodeGeneral(
+func ErrNodeProbeGeneral(
 	code csi.Error_GeneralError_GeneralErrorCode,
-	msg string) *csi.ProbeNodeResponse {
+	msg string) *csi.NodeProbeResponse {
 
-	return &csi.ProbeNodeResponse{
-		Reply: &csi.ProbeNodeResponse_Error{
+	return &csi.NodeProbeResponse{
+		Reply: &csi.NodeProbeResponse_Error{
 			Error: &csi.Error{
 				Value: &csi.Error_GeneralError_{
 					GeneralError: &csi.Error_GeneralError{
@@ -1120,13 +1125,13 @@ func CheckResponseErrGetNodeID(
 	}
 }
 
-// CheckResponseErrProbeNode returns a Go error for the
+// CheckResponseErrNodeProbe returns a Go error for the
 // error message inside of a CSI response if present; otherwise nil
 // is returned.
-func CheckResponseErrProbeNode(
+func CheckResponseErrNodeProbe(
 	ctx context.Context,
 	method string,
-	response *csi.ProbeNodeResponse) error {
+	response *csi.NodeProbeResponse) error {
 
 	rErr := response.GetError()
 	if rErr == nil {
@@ -1134,10 +1139,10 @@ func CheckResponseErrProbeNode(
 	}
 
 	if method == "" {
-		method = FMProbeNode
+		method = FMNodeProbe
 	}
 
-	if err := rErr.GetProbeNodeError(); err != nil {
+	if err := rErr.GetNodeProbeError(); err != nil {
 		return &Error{
 			FullMethod:  method,
 			Code:        int32(err.ErrorCode),

@@ -8,6 +8,7 @@ import (
 
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
+	"github.com/thecodeteam/gocsi/mock/service"
 )
 
 var _ = Describe("Identity", func() {
@@ -52,8 +53,8 @@ var _ = Describe("Identity", func() {
 		shouldBeValid := func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Name).Should(Equal(pluginName))
-			Ω(res.VendorVersion).Should(Equal(CTest().ComponentTexts[3]))
+			Ω(res.Name).Should(Equal(service.Name))
+			Ω(res.VendorVersion).Should(Equal(service.VendorVersion))
 		}
 		shouldNotBeValid := func() {
 			Ω(res).Should(BeNil())

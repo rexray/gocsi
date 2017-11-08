@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"os"
-	"strings"
 
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
@@ -33,10 +32,10 @@ var nodeCmds = []*cmd{
 		Flags:   flagsGetNodeID,
 	},
 	&cmd{
-		Name:    "probenode",
-		Aliases: []string{"p", "probe"},
-		Action:  probeNode,
-		Flags:   flagsProbeNode,
+		Name:    "nodeprobe",
+		Aliases: []string{"np", "nprobe"},
+		Action:  nodeProbe,
+		Flags:   flagsNodeProbe,
 	},
 	&cmd{
 		Name:    "nodegetcapabilities",
@@ -50,7 +49,7 @@ var nodeCmds = []*cmd{
 //                            NodePublishVolume                              //
 ///////////////////////////////////////////////////////////////////////////////
 var argsNodePublishVolume struct {
-	volumeMD          mapOfStringArg
+	volumeAT          mapOfStringArg
 	publishVolumeInfo mapOfStringArg
 	targetPath        string
 	fsType            string
@@ -67,9 +66,9 @@ func flagsNodePublishVolume(
 	flagsGlobal(fs, "", "")
 
 	fs.Var(
-		&argsNodePublishVolume.volumeMD,
-		"metadata",
-		"The metadata of the volume to be used on a node.")
+		&argsNodePublishVolume.volumeAT,
+		"attribs",
+		"The volume attributes.")
 
 	fs.Var(
 		&argsNodePublishVolume.publishVolumeInfo,
@@ -115,7 +114,7 @@ func flagsNodePublishVolume(
 	fs.Usage = func() {
 		fmt.Fprintf(
 			os.Stderr,
-			"usage: %s %s [ARGS...] ID_KEY[=ID_VAL] [ID_KEY[=ID_VAL]...]\n",
+			"usage: %s %s [ARGS...] ID\n",
 			appName, rpc)
 		fs.PrintDefaults()
 	}
@@ -129,22 +128,20 @@ func nodePublishVolume(
 	cc *grpc.ClientConn) error {
 
 	var (
-		client csi.NodeClient
+		client  csi.NodeClient
+		version = args.version
 
-		volumeMD   *csi.VolumeMetadata
-		pubVolInfo *csi.PublishVolumeInfo
+		volumeID   string
 		mode       csi.VolumeCapability_AccessMode_Mode
 		capability *csi.VolumeCapability
 
-		block    = argsNodePublishVolume.block
-		fsType   = argsNodePublishVolume.fsType
-		mntFlags = argsNodePublishVolume.mntFlags.vals
-
-		volumeID   = &csi.VolumeID{Values: map[string]string{}}
+		block      = argsNodePublishVolume.block
+		fsType     = argsNodePublishVolume.fsType
+		mntFlags   = argsNodePublishVolume.mntFlags.vals
+		volumeAT   = argsNodePublishVolume.volumeAT.vals
+		pubVolInfo = argsNodePublishVolume.publishVolumeInfo.vals
 		targetPath = argsNodePublishVolume.targetPath
 		readOnly   = argsNodePublishVolume.readOnly
-
-		version = args.version
 	)
 
 	// make sure maxEntries doesn't exceed int32
@@ -159,26 +156,10 @@ func nodePublishVolume(
 		capability = gocsi.NewMountCapability(mode, fsType, mntFlags)
 	}
 
-	// parse the volume ID into a map
-	for x := 0; x < fs.NArg(); x++ {
-		a := fs.Arg(x)
-		kv := strings.SplitN(a, "=", 2)
-		switch len(kv) {
-		case 1:
-			volumeID.Values[kv[0]] = ""
-		case 2:
-			volumeID.Values[kv[0]] = kv[1]
-		}
-	}
-
-	// check for volume metadata
-	if v := argsNodePublishVolume.volumeMD.vals; len(v) > 0 {
-		volumeMD = &csi.VolumeMetadata{Values: v}
-	}
-
-	// check for publish volume info
-	if v := argsNodePublishVolume.publishVolumeInfo.vals; len(v) > 0 {
-		pubVolInfo = &csi.PublishVolumeInfo{Values: v}
+	// If there are unprocessed tokens then set the first one
+	// as the volume ID.
+	if fs.NArg() > 0 {
+		volumeID = fs.Arg(0)
 	}
 
 	// initialize the csi client
@@ -187,7 +168,7 @@ func nodePublishVolume(
 	// execute the rpc
 	err := gocsi.NodePublishVolume(
 		ctx, client, version, volumeID,
-		volumeMD, pubVolInfo, targetPath,
+		volumeAT, pubVolInfo, targetPath,
 		capability, readOnly)
 	if err != nil {
 		return err
@@ -200,7 +181,7 @@ func nodePublishVolume(
 //                           NodeUnpublishVolume                             //
 ///////////////////////////////////////////////////////////////////////////////
 var argsNodeUnpublishVolume struct {
-	volumeMD   mapOfStringArg
+	volumeAT   mapOfStringArg
 	targetPath string
 }
 
@@ -209,11 +190,6 @@ func flagsNodeUnpublishVolume(
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
 	flagsGlobal(fs, "", "")
-
-	fs.Var(
-		&argsNodeUnpublishVolume.volumeMD,
-		"metadata",
-		"The metadata of the volume to be used on a node.")
 
 	fs.StringVar(
 		&argsNodeUnpublishVolume.targetPath,
@@ -224,7 +200,7 @@ func flagsNodeUnpublishVolume(
 	fs.Usage = func() {
 		fmt.Fprintf(
 			os.Stderr,
-			"usage: %s %s [ARGS...] ID_KEY[=ID_VAL] [ID_KEY[=ID_VAL]...]\n",
+			"usage: %s %s [ARGS...] ID\n",
 			appName, rpc)
 		fs.PrintDefaults()
 	}
@@ -237,31 +213,16 @@ func nodeUnpublishVolume(
 	cc *grpc.ClientConn) error {
 
 	var (
-		client csi.NodeClient
-
-		volumeMD *csi.VolumeMetadata
-
-		volumeID   = &csi.VolumeID{Values: map[string]string{}}
+		client     csi.NodeClient
+		version    = args.version
+		volumeID   string
 		targetPath = argsNodeUnpublishVolume.targetPath
-
-		version = args.version
 	)
 
-	// parse the volume ID into a map
-	for x := 0; x < fs.NArg(); x++ {
-		a := fs.Arg(x)
-		kv := strings.SplitN(a, "=", 2)
-		switch len(kv) {
-		case 1:
-			volumeID.Values[kv[0]] = ""
-		case 2:
-			volumeID.Values[kv[0]] = kv[1]
-		}
-	}
-
-	// check for volume metadata
-	if v := argsNodeUnpublishVolume.volumeMD.vals; len(v) > 0 {
-		volumeMD = &csi.VolumeMetadata{Values: v}
+	// If there are unprocessed tokens then set the first one
+	// as the volume ID.
+	if fs.NArg() > 0 {
+		volumeID = fs.Arg(0)
 	}
 
 	// initialize the csi client
@@ -269,8 +230,7 @@ func nodeUnpublishVolume(
 
 	// execute the rpc
 	err := gocsi.NodeUnpublishVolume(
-		ctx, client, version, volumeID,
-		volumeMD, targetPath)
+		ctx, client, version, volumeID, targetPath)
 	if err != nil {
 		return err
 	}
@@ -285,7 +245,7 @@ func flagsGetNodeID(
 	ctx context.Context, rpc string) *flag.FlagSet {
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
-	flagsGlobal(fs, mapSzOfSzFormat, "map[string]string")
+	flagsGlobal(fs, "", "")
 
 	fs.Usage = func() {
 		fmt.Fprintf(
@@ -303,19 +263,11 @@ func getNodeID(
 	cc *grpc.ClientConn) error {
 
 	var (
-		err     error
 		client  csi.NodeClient
-		tpl     *template.Template
-		nodeID  *csi.NodeID
 		version = args.version
-		format  = args.format
+		err     error
+		nodeID  string
 	)
-
-	// create a template for emitting the output
-	tpl = template.New("template")
-	if tpl, err = tpl.Parse(format); err != nil {
-		return err
-	}
 
 	// initialize the csi client
 	client = csi.NewNodeClient(cc)
@@ -326,18 +278,14 @@ func getNodeID(
 	}
 
 	// emit the result
-	if err = tpl.Execute(
-		os.Stdout, nodeID.GetValues()); err != nil {
-		return err
-	}
-
+	fmt.Println(nodeID)
 	return nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                ProbeNode                                  //
 ///////////////////////////////////////////////////////////////////////////////
-func flagsProbeNode(
+func flagsNodeProbe(
 	ctx context.Context, rpc string) *flag.FlagSet {
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
@@ -353,7 +301,7 @@ func flagsProbeNode(
 	return fs
 }
 
-func probeNode(
+func nodeProbe(
 	ctx context.Context,
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
@@ -362,12 +310,10 @@ func probeNode(
 	client := csi.NewNodeClient(cc)
 
 	// execute the rpc
-	err := gocsi.ProbeNode(ctx, client, args.version)
+	err := gocsi.NodeProbe(ctx, client, args.version)
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("Success")
 
 	return nil
 }

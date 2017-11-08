@@ -26,11 +26,11 @@ const (
 		".Node/" +
 		"NodeUnpublishVolume"
 
-	// FMProbeNode is the full method name for the
+	// FMNodeProbe is the full method name for the
 	// eponymous RPC message.
-	FMProbeNode = "/" + Namespace +
+	FMNodeProbe = "/" + Namespace +
 		".Node/" +
-		"ProbeNode"
+		"NodeProbe"
 
 	// FMNodeGetCapabilities is the full method name for the
 	// eponymous RPC message.
@@ -46,7 +46,7 @@ func GetNodeID(
 	ctx context.Context,
 	c csi.NodeClient,
 	version *csi.Version,
-	callOpts ...grpc.CallOption) (*csi.NodeID, error) {
+	callOpts ...grpc.CallOption) (string, error) {
 
 	req := &csi.GetNodeIDRequest{
 		Version: version,
@@ -54,7 +54,7 @@ func GetNodeID(
 
 	res, err := c.GetNodeID(ctx, req, callOpts...)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return res.GetResult().NodeId, nil
@@ -67,9 +67,9 @@ func NodePublishVolume(
 	ctx context.Context,
 	c csi.NodeClient,
 	version *csi.Version,
-	volumeID *csi.VolumeID,
-	volumeMetadata *csi.VolumeMetadata,
-	publishVolumeInfo *csi.PublishVolumeInfo,
+	volumeID string,
+	volumeAttribs map[string]string,
+	publishVolumeInfo map[string]string,
 	targetPath string,
 	volumeCapability *csi.VolumeCapability,
 	readonly bool,
@@ -78,7 +78,7 @@ func NodePublishVolume(
 	req := &csi.NodePublishVolumeRequest{
 		Version:           version,
 		VolumeId:          volumeID,
-		VolumeMetadata:    volumeMetadata,
+		VolumeAttributes:  volumeAttribs,
 		PublishVolumeInfo: publishVolumeInfo,
 		TargetPath:        targetPath,
 		VolumeCapability:  volumeCapability,
@@ -100,16 +100,14 @@ func NodeUnpublishVolume(
 	ctx context.Context,
 	c csi.NodeClient,
 	version *csi.Version,
-	volumeID *csi.VolumeID,
-	volumeMetadata *csi.VolumeMetadata,
+	volumeID string,
 	targetPath string,
 	callOpts ...grpc.CallOption) error {
 
 	req := &csi.NodeUnpublishVolumeRequest{
-		Version:        version,
-		VolumeId:       volumeID,
-		VolumeMetadata: volumeMetadata,
-		TargetPath:     targetPath,
+		Version:    version,
+		VolumeId:   volumeID,
+		TargetPath: targetPath,
 	}
 
 	_, err := c.NodeUnpublishVolume(ctx, req, callOpts...)
@@ -120,20 +118,20 @@ func NodeUnpublishVolume(
 	return nil
 }
 
-// ProbeNode issues a
-// ProbeNode request
+// NodeProbe issues a
+// NodeProbe request
 // to a CSI controller.
-func ProbeNode(
+func NodeProbe(
 	ctx context.Context,
 	c csi.NodeClient,
 	version *csi.Version,
 	callOpts ...grpc.CallOption) error {
 
-	req := &csi.ProbeNodeRequest{
+	req := &csi.NodeProbeRequest{
 		Version: version,
 	}
 
-	_, err := c.ProbeNode(ctx, req, callOpts...)
+	_, err := c.NodeProbe(ctx, req, callOpts...)
 	if err != nil {
 		return err
 	}

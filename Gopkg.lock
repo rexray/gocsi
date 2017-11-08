@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/container-storage-interface/spec"
   packages = ["lib/go"]
-  revision = "8dbb73222cdb63ce583e5c0abeafdf96748bf4f5"
+  revision = "2561947ce5899bcb80e5dbaecb99afdce66e91d4"
 
 [[projects]]
   branch = "master"
@@ -30,6 +30,12 @@
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "89742aefa4b206dcf400792f3bd35b542998eb3b"
+
+[[projects]]
+  name = "github.com/thecodeteam/goioc"
+  packages = ["."]
+  revision = "bcc5c533363c5bb3eb0651a1413889ec71822200"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -75,6 +81,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bb476372681b4b68ed6929e968b68e853dc3048c70ce856a2547a380cb91b235"
+  inputs-digest = "ec3250c165b0e8f53c030a35937a331ff1b5aa9241ecc480b72da315b89c4311"
   solver-name = "gps-cdcl"
   solver-version = 1
