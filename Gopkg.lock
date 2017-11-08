@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/container-storage-interface/spec"
   packages = ["lib/go"]
-  revision = "2561947ce5899bcb80e5dbaecb99afdce66e91d4"
+  revision = "7266f5a30d776ee9e404cff9beff18c49fa0278c"
 
 [[projects]]
   branch = "master"

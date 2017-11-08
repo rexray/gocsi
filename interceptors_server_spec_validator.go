@@ -315,12 +315,12 @@ func (s *serverSpecValidator) createVolume(
 		}
 	}
 
-	if s.opts[CreateVolumeCredentialsRequired] {
-		if req.UserCredentials == nil || len(req.UserCredentials.Data) == 0 {
-			return ErrCreateVolumeGeneral(
-				csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
-				"user credentials required"), nil
-		}
+	if s.opts[CreateVolumeCredentialsRequired] &&
+		len(req.UserCredentials) == 0 {
+
+		return ErrCreateVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"user credentials required"), nil
 	}
 
 	return nil, nil
@@ -337,12 +337,12 @@ func (s *serverSpecValidator) deleteVolume(
 			"volume id required"), nil
 	}
 
-	if s.opts[DeleteVolumeCredentialsRequired] {
-		if req.UserCredentials == nil || len(req.UserCredentials.Data) == 0 {
-			return ErrDeleteVolumeGeneral(
-				csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
-				"user credentials required"), nil
-		}
+	if s.opts[DeleteVolumeCredentialsRequired] &&
+		len(req.UserCredentials) == 0 {
+
+		return ErrDeleteVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"user credentials required"), nil
 	}
 
 	return nil, nil
@@ -407,12 +407,12 @@ func (s *serverSpecValidator) controllerPublishVolume(
 			fmt.Sprintf("invalid access type: %T", atype)), nil
 	}
 
-	if s.opts[ControllerPublishVolumeCredentialsRequired] {
-		if req.UserCredentials == nil || len(req.UserCredentials.Data) == 0 {
-			return ErrControllerPublishVolumeGeneral(
-				csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
-				"user credentials required"), nil
-		}
+	if s.opts[ControllerPublishVolumeCredentialsRequired] &&
+		len(req.UserCredentials) == 0 {
+
+		return ErrControllerPublishVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"user credentials required"), nil
 	}
 
 	return nil, nil
@@ -429,12 +429,12 @@ func (s *serverSpecValidator) controllerUnpublishVolume(
 			"volume id required"), nil
 	}
 
-	if s.opts[ControllerUnpublishVolumeCredentialsRequired] {
-		if req.UserCredentials == nil || len(req.UserCredentials.Data) == 0 {
-			return ErrControllerUnpublishVolumeGeneral(
-				csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
-				"user credentials required"), nil
-		}
+	if s.opts[ControllerUnpublishVolumeCredentialsRequired] &&
+		len(req.UserCredentials) == 0 {
+
+		return ErrControllerUnpublishVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"user credentials required"), nil
 	}
 
 	return nil, nil
@@ -447,7 +447,7 @@ func (s *serverSpecValidator) validateVolumeCapabilities(
 
 	if req.VolumeId == "" {
 		return ErrValidateVolumeCapabilities(
-			csi.Error_ValidateVolumeCapabilitiesError_INVALID_VOLUME_INFO,
+			csi.Error_ValidateVolumeCapabilitiesError_INVALID_VOLUME_ID,
 			"volume id required"), nil
 	}
 
@@ -651,12 +651,12 @@ func (s *serverSpecValidator) nodePublishVolume(
 			"target path required"), nil
 	}
 
-	if s.opts[NodePublishVolumeCredentialsRequired] {
-		if req.UserCredentials == nil || len(req.UserCredentials.Data) == 0 {
-			return ErrNodePublishVolumeGeneral(
-				csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
-				"user credentials required"), nil
-		}
+	if s.opts[NodePublishVolumeCredentialsRequired] &&
+		len(req.UserCredentials) == 0 {
+
+		return ErrNodePublishVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"user credentials required"), nil
 	}
 
 	return nil, nil
@@ -679,12 +679,12 @@ func (s *serverSpecValidator) nodeUnpublishVolume(
 			"target path required"), nil
 	}
 
-	if s.opts[NodeUnpublishVolumeCredentialsRequired] {
-		if req.UserCredentials == nil || len(req.UserCredentials.Data) == 0 {
-			return ErrNodeUnpublishVolumeGeneral(
-				csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
-				"user credentials required"), nil
-		}
+	if s.opts[NodeUnpublishVolumeCredentialsRequired] &&
+		len(req.UserCredentials) == 0 {
+
+		return ErrNodeUnpublishVolumeGeneral(
+			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
+			"user credentials required"), nil
 	}
 
 	return nil, nil
