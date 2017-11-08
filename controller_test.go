@@ -2,11 +2,13 @@ package gocsi_test
 
 import (
 	"context"
+	"path"
 
 	"google.golang.org/grpc"
 
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
+	"github.com/thecodeteam/gocsi/mock/service"
 )
 
 var _ = Describe("Controller", func() {
@@ -26,10 +28,12 @@ var _ = Describe("Controller", func() {
 		fsType   string
 		mntFlags []string
 		params   map[string]string
+
+		pubVolInfo map[string]string
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
-		gclient, stopMock, err = startMockServerWithOptions(ctx, true)
+		gclient, stopMock, err = startMockServer(ctx)
 		Ω(err).ShouldNot(HaveOccurred())
 		client = csi.NewControllerClient(gclient)
 
@@ -58,6 +62,7 @@ var _ = Describe("Controller", func() {
 		fsType = ""
 		mntFlags = nil
 		params = nil
+		pubVolInfo = nil
 	})
 
 	createNewVolume := func() {
@@ -78,10 +83,7 @@ var _ = Describe("Controller", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(vol).ShouldNot(BeNil())
 		Ω(vol.CapacityBytes).Should(Equal(limBytes))
-		Ω(vol.Id).ShouldNot(BeNil())
-		Ω(vol.Id.Values).ShouldNot(BeNil())
-		Ω(vol.Id.Values).ShouldNot(HaveLen(0))
-		Ω(vol.Id.Values["name"]).Should(Equal(volName))
+		Ω(vol.Attributes["name"]).Should(Equal(volName))
 	}
 
 	Describe("CreateVolume", func() {
@@ -99,10 +101,7 @@ var _ = Describe("Controller", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vol).ShouldNot(BeNil())
 				Ω(vol.CapacityBytes).Should(Equal(reqBytes))
-				Ω(vol.Id).ShouldNot(BeNil())
-				Ω(vol.Id.Values).ShouldNot(BeNil())
-				Ω(vol.Id.Values).ShouldNot(HaveLen(0))
-				Ω(vol.Id.Values["name"]).Should(Equal(volName))
+				Ω(vol.Attributes["name"]).Should(Equal(volName))
 			})
 		})
 		Context("Missing Name", func() {
@@ -114,7 +113,7 @@ var _ = Describe("Controller", func() {
 				Ω(err).Should(Σ(&gocsi.Error{
 					FullMethod:  "/csi.Controller/CreateVolume",
 					Code:        3,
-					Description: "missing name",
+					Description: "name required",
 				}))
 				Ω(vol).Should(BeNil())
 			})
@@ -157,29 +156,19 @@ var _ = Describe("Controller", func() {
 	})
 
 	Describe("DeleteVolume", func() {
-		var volID *csi.VolumeID
+		var volID string
 		BeforeEach(func() {
-			volID = &csi.VolumeID{
-				Values: map[string]string{
-					"id": CTest().ComponentTexts[2],
-				},
-			}
+			volID = CTest().ComponentTexts[2]
 		})
 		AfterEach(func() {
-			volID = nil
+			volID = ""
 		})
 		JustBeforeEach(func() {
 			err = gocsi.DeleteVolume(
 				ctx,
 				client,
 				version,
-				volID,
-				&csi.VolumeMetadata{Values: map[string]string{}})
-		})
-		Context("0", func() {
-			It("Should Be Valid", func() {
-				Ω(err).ShouldNot(HaveOccurred())
-			})
+				volID)
 		})
 		Context("1", func() {
 			It("Should Be Valid", func() {
@@ -191,16 +180,21 @@ var _ = Describe("Controller", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
+		Context("3", func() {
+			It("Should Be Valid", func() {
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+		})
 		Context("Missing Volume ID", func() {
 			BeforeEach(func() {
-				volID = nil
+				volID = ""
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
 				Ω(err).Should(Σ(&gocsi.Error{
 					FullMethod:  "/csi.Controller/DeleteVolume",
 					Code:        3,
-					Description: "missing id obj",
+					Description: "volume id required",
 				}))
 			})
 		})
@@ -257,6 +251,65 @@ var _ = Describe("Controller", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).ShouldNot(BeNil())
 				Ω(vols).Should(HaveLen(4))
+			})
+		})
+	})
+
+	Describe("Publication", func() {
+
+		devPathKey := path.Join(service.Name, "dev")
+
+		publishVolume := func() {
+			pubVolInfo, err = gocsi.ControllerPublishVolume(
+				ctx,
+				client,
+				version,
+				"1",
+				nil,
+				service.Name,
+				gocsi.NewMountCapability(
+					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					"mock",
+					nil),
+				true)
+		}
+
+		shouldBePublished := func() {
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(pubVolInfo).ShouldNot(BeNil())
+			Ω(pubVolInfo["device"]).Should(Equal("/dev/mock"))
+		}
+
+		BeforeEach(func() {
+			publishVolume()
+		})
+		Context("PublishVolume", func() {
+			It("Should Be Valid", func() {
+				shouldBePublished()
+				vols, _, err := gocsi.ListVolumes(ctx, client, version, 0, "")
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(vols).Should(HaveLen(3))
+				Ω(vols[0].Attributes[devPathKey]).Should(Equal("/dev/mock"))
+			})
+		})
+
+		Context("UnpublishVolume", func() {
+			BeforeEach(func() {
+				shouldBePublished()
+				err := gocsi.ControllerUnpublishVolume(
+					ctx,
+					client,
+					version,
+					"1",
+					service.Name)
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+			It("Should Be Unpublished", func() {
+				vols, _, err := gocsi.ListVolumes(ctx, client, version, 0, "")
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(vols).Should(HaveLen(3))
+				_, ok := vols[0].Attributes[devPathKey]
+				Ω(ok).Should(BeFalse())
 			})
 		})
 	})

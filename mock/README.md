@@ -25,3 +25,16 @@ INFO  2017/08/22 16:23:53 main.go:188: mock.GracefulStop
 INFO  2017/08/22 16:23:53 main.go:53: removed sock file: /tmp/csi.sock
 INFO  2017/08/22 16:23:53 main.go:64: server stopped gracefully
 ```
+
+## Configuration
+The Mock CSI plug-in can be configured with the following environment variables:
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `X_CSI_MOCK_REQ_LOGGING_ENABLED` | Enable request logging | `true` |
+| `X_CSI_MOCK_RES_LOGGING_ENABLED` | Enable response logging | `true` |
+| `X_CSI_MOCK_REQ_ID_INJECTION_ENABLED` | Enable request ID injection | `true` |
+| `X_CSI_MOCK_VERSION_VALIDATION_ENABLED` | Enable request version validation | `true` |
+| `X_CSI_MOCK_SPEC_VALIDATION_ENABLED` | Enable validation of request data against the CSI specification | `true` |
+| `X_CSI_MOCK_IDEMPOTENCY_ENABLED` | Enable idempotency | `true` |
+| `X_CSI_MOCK_IDEMPOTENCY_TIMEOUT` | A Go duration string that determines how long a request waits when serial access to volumes is enforced by the idempotency interceptor. This value has no effect if `X_CSI_MOCK_IDEMPOTENCY_ENABLED=false`. | `0` |

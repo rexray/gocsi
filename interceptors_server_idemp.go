@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/thecodeteam/gocsi/csi"
 	log "github.com/sirupsen/logrus"
+	"github.com/thecodeteam/gocsi/csi"
 	"google.golang.org/grpc"
 
 	"golang.org/x/net/context"
@@ -18,29 +18,25 @@ type IdempotencyProvider interface {
 	// GetVolumeName should return the name of the volume specified
 	// by the provided volume ID. If the volume does not exist then
 	// an empty string should be returned.
-	GetVolumeName(
-		ctx context.Context,
-		id *csi.VolumeID) (string, error)
+	GetVolumeName(ctx context.Context, id string) (string, error)
 
 	// GetVolumeInfo should return information about the volume
 	// specified by the provided volume name. If the volume does not
 	// exist then a nil value should be returned.
-	GetVolumeInfo(
-		ctx context.Context,
-		name string) (*csi.VolumeInfo, error)
+	GetVolumeInfo(ctx context.Context, name string) (*csi.VolumeInfo, error)
 
 	// IsControllerPublished should return publication info about
-	// the volume specified by the provided volume name or ID.
+	// the volume specified by the provided volume ID.
 	IsControllerPublished(
 		ctx context.Context,
-		id *csi.VolumeID) (*csi.PublishVolumeInfo, error)
+		id, nodeID string) (map[string]string, error)
 
 	// IsNodePublished should return a flag indicating whether or
 	// not the volume exists and is published on the current host.
 	IsNodePublished(
 		ctx context.Context,
-		id *csi.VolumeID,
-		pubVolInfo *csi.PublishVolumeInfo,
+		id string,
+		pubVolInfo map[string]string,
 		targetPath string) (bool, error)
 }
 
@@ -164,7 +160,7 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 		return handler(ctx, req)
 	}
 
-	pubInfo, err := i.p.IsControllerPublished(ctx, req.VolumeId)
+	pubInfo, err := i.p.IsControllerPublished(ctx, req.VolumeId, req.NodeId)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +225,7 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 		return handler(ctx, req)
 	}
 
-	pubInfo, err := i.p.IsControllerPublished(ctx, req.VolumeId)
+	pubInfo, err := i.p.IsControllerPublished(ctx, req.VolumeId, req.NodeId)
 	if err != nil {
 		return nil, err
 	}

@@ -130,14 +130,12 @@ func DeleteVolume(
 	ctx context.Context,
 	c csi.ControllerClient,
 	version *csi.Version,
-	volumeID *csi.VolumeID,
-	volumeMetadata *csi.VolumeMetadata,
+	volumeID string,
 	callOpts ...grpc.CallOption) error {
 
 	req := &csi.DeleteVolumeRequest{
-		Version:        version,
-		VolumeId:       volumeID,
-		VolumeMetadata: volumeMetadata,
+		Version:  version,
+		VolumeId: volumeID,
 	}
 
 	_, err := c.DeleteVolume(ctx, req, callOpts...)
@@ -155,18 +153,18 @@ func ControllerPublishVolume(
 	ctx context.Context,
 	c csi.ControllerClient,
 	version *csi.Version,
-	volumeID *csi.VolumeID,
-	volumeMetadata *csi.VolumeMetadata,
-	nodeID *csi.NodeID,
+	volumeID string,
+	volumeAttribs map[string]string,
+	nodeID string,
 	volumeCapability *csi.VolumeCapability,
 	readonly bool,
 	callOpts ...grpc.CallOption) (
-	*csi.PublishVolumeInfo, error) {
+	map[string]string, error) {
 
 	req := &csi.ControllerPublishVolumeRequest{
 		Version:          version,
 		VolumeId:         volumeID,
-		VolumeMetadata:   volumeMetadata,
+		VolumeAttributes: volumeAttribs,
 		NodeId:           nodeID,
 		Readonly:         readonly,
 		VolumeCapability: volumeCapability,
@@ -187,16 +185,13 @@ func ControllerUnpublishVolume(
 	ctx context.Context,
 	c csi.ControllerClient,
 	version *csi.Version,
-	volumeID *csi.VolumeID,
-	volumeMetadata *csi.VolumeMetadata,
-	nodeID *csi.NodeID,
+	volumeID, nodeID string,
 	callOpts ...grpc.CallOption) error {
 
 	req := &csi.ControllerUnpublishVolumeRequest{
-		Version:        version,
-		VolumeId:       volumeID,
-		VolumeMetadata: volumeMetadata,
-		NodeId:         nodeID,
+		Version:  version,
+		VolumeId: volumeID,
+		NodeId:   nodeID,
 	}
 
 	_, err := c.ControllerUnpublishVolume(ctx, req, callOpts...)
@@ -213,13 +208,15 @@ func ValidateVolumeCapabilities(
 	ctx context.Context,
 	c csi.ControllerClient,
 	version *csi.Version,
-	volumeInfo *csi.VolumeInfo,
+	volumeID string,
+	volumeAttribs map[string]string,
 	volumeCapabilities []*csi.VolumeCapability,
 	callOpts ...grpc.CallOption) (*csi.ValidateVolumeCapabilitiesResponse_Result, error) {
 
 	req := &csi.ValidateVolumeCapabilitiesRequest{
 		Version:            version,
-		VolumeInfo:         volumeInfo,
+		VolumeId:           volumeID,
+		VolumeAttributes:   volumeAttribs,
 		VolumeCapabilities: volumeCapabilities,
 	}
 

@@ -167,7 +167,7 @@ func newGrpcClient(
 	dialOpts := []grpc.DialOption{
 		grpc.WithUnaryInterceptor(gocsi.ChainUnaryClient(
 			gocsi.ClientCheckReponseError,
-			gocsi.ClientResponseValidator)),
+			gocsi.NewClientResponseValidator())),
 		grpc.WithDialer(
 			func(target string, timeout time.Duration) (net.Conn, error) {
 				proto, addr, err := gocsi.ParseProtoAddr(target)
@@ -196,10 +196,8 @@ const mapSzOfSzFormat = `{{range $k, $v := .}}` +
 
 // volumeInfoFormat is the default Go template format for
 // emitting a *csi.VolumeInfo
-const volumeInfoFormat = `{{with .Id}}{{range $k, $v := .Values}}` +
-	`{{printf "%s=%s\t" $k $v}}{{end}}{{end}}` +
-	`{{if .Metadata}}{{with .Metadata}}{{range $k, $v := .Values}}` +
-	`{{printf "%s=%s\t" $k $v}}{{end}}{{end}}{{end}}` +
+const volumeInfoFormat = `{{printf "%s\t" .Id}}` +
+	`{{range $k, $v := .Attributes}}{{printf "%s=%s\t" $k $v}}{{end}}` +
 	`{{"\n"}}`
 
 // versionFormat is the default Go template format for emitting a *csi.Version

@@ -204,12 +204,20 @@ $(GINKGO):
 # uses if it detects programmatic involvement. Please see
 # https://goo.gl/CKz4La for more information.
 ifneq (true,$(TRAVIS))
-test: build
+test:  build
 endif
 test: | $(GINKGO)
 	$(GINKGO) -v . || test "$$?" -eq "197"
 
-.PHONY: test
+
+########################################################################
+##                               BENCH                                ##
+########################################################################
+ifneq (true,$(TRAVIS))
+bench: build
+endif
+bench:
+	go test -run Bench -bench . -benchmem . || test "$$?" -eq "197"
 
 
 ########################################################################
@@ -231,4 +239,4 @@ clobber: clean
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@
 
-.PHONY: build test clean clobber
+.PHONY: build test bench clean clobber
