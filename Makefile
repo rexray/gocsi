@@ -32,7 +32,7 @@ dep-ensure: | $(DEP)
 
 # Only set PROTOC_VER if it has an empty value.
 ifeq (,$(strip $(PROTOC_VER)))
-PROTOC_VER := 3.3.0
+PROTOC_VER := 3.4.0
 endif
 
 PROTOC_OS := $(shell uname -s)
