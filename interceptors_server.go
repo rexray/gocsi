@@ -68,6 +68,10 @@ func rprintReqOrRep(w io.Writer, obj interface{}) {
 	printedColon := false
 	printComma := false
 	for i := 0; i < nf; i++ {
+		name := tv.Field(i).Name
+		if name == "UserCredentials" {
+			continue
+		}
 		sv := fmt.Sprintf("%v", rv.Field(i).Interface())
 		if emptyValRX.MatchString(sv) {
 			continue
@@ -80,6 +84,6 @@ func rprintReqOrRep(w io.Writer, obj interface{}) {
 			printedColon = true
 		}
 		printComma = true
-		fmt.Fprintf(w, "%s=%s", tv.Field(i).Name, sv)
+		fmt.Fprintf(w, "%s=%s", name, sv)
 	}
 }

@@ -182,7 +182,7 @@ func createVolume(
 	result, err := gocsi.CreateVolume(
 		ctx, client, version, name,
 		reqBytes, limBytes,
-		caps, params)
+		caps, userCreds, params)
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func deleteVolume(
 	client = csi.NewControllerClient(cc)
 
 	// execute the rpc
-	err = gocsi.DeleteVolume(ctx, client, version, volumeID)
+	err = gocsi.DeleteVolume(ctx, client, version, volumeID, userCreds)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func controllerPublishVolume(
 	// execute the rpc
 	result, err := gocsi.ControllerPublishVolume(
 		ctx, client, version, volumeID,
-		volumeAT, nodeID, capability, readOnly)
+		volumeAT, nodeID, capability, readOnly, userCreds)
 	if err != nil {
 		return err
 	}
@@ -431,7 +431,7 @@ func controllerUnpublishVolume(
 
 	// execute the rpc
 	err := gocsi.ControllerUnpublishVolume(
-		ctx, client, version, volumeID, nodeID)
+		ctx, client, version, volumeID, nodeID, userCreds)
 	if err != nil {
 		return err
 	}

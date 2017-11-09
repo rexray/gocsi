@@ -1,6 +1,7 @@
 package gocsi
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -169,4 +170,89 @@ func ParseProtoAddr(protoAddr string) (proto string, addr string, err error) {
 		return "", "", fmt.Errorf("invalid network address: %s", protoAddr)
 	}
 	return m[1], m[2], nil
+}
+
+// ParseMap parses a string into a map. The string's expected pattern is:
+//
+//         KEY1=VAL1 KEY2="VAL2 " "KEY 3"=' VAL3'
+//
+// The key/value pairs are separated by one or more whitespace characters.
+// Keys and/or values with whitespace should be quoted with either single
+// or double quotes.
+func ParseMap(line string) map[string]string {
+	if line == "" {
+		return nil
+	}
+
+	var (
+		escp bool
+		quot rune
+		ckey string
+		keyb = &bytes.Buffer{}
+		valb = &bytes.Buffer{}
+		word = keyb
+		data = map[string]string{}
+	)
+
+	for i, c := range line {
+		// Check to see if the character is a quote character.
+		switch c {
+		case '\\':
+			// If not already escaped then activate escape.
+			if !escp {
+				escp = true
+				continue
+			}
+		case '\'', '"':
+			// If the quote or double quote is the first char or
+			// an unescaped char then determine if this is the
+			// beginning of a quote or end of one.
+			if i == 0 || !escp {
+				if quot == c {
+					quot = 0
+				} else {
+					quot = c
+				}
+				continue
+			}
+		case '=':
+			// If the word buffer is currently the key buffer,
+			// quoting is not enabled, and the preceeding character
+			// is not the escape character then the equal sign indicates
+			// a transition from key to value.
+			if word == keyb && quot == 0 && !escp {
+				ckey = keyb.String()
+				keyb.Reset()
+				word = valb
+				continue
+			}
+		case ' ', '\t':
+			// If quoting is not enabled and the preceeding character is
+			// not the escape character then record the value into the
+			// map and fast-forward the cursor to the next, non-whitespace
+			// character.
+			if quot == 0 && !escp {
+				// Record the value into the map for the current key.
+				if ckey != "" {
+					data[ckey] = valb.String()
+					valb.Reset()
+					word = keyb
+					ckey = ""
+				}
+				continue
+			}
+		}
+		if escp {
+			escp = false
+		}
+		word.WriteRune(c)
+	}
+
+	// If the current key string is not empty then record it with the value
+	// buffer's string value as a new pair.
+	if ckey != "" {
+		data[ckey] = valb.String()
+	}
+
+	return data
 }
