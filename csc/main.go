@@ -146,7 +146,7 @@ func main() {
 
 	// If there is metadata then send it.
 	if v := args.grpcMetadata.vals; len(v) > 0 {
-		ctx = metadata.NewContext(ctx, metadata.New(v))
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(v))
 	}
 
 	// execute the command

@@ -3,24 +3,21 @@ all: build
 ################################################################################
 ##                                   DEP                                      ##
 ################################################################################
-DEP := ./dep
-DEP_VER ?= 0.3.0
-DEP_ZIP := dep-$$GOHOSTOS-$$GOHOSTARCH.zip
-DEP_URL := https://github.com/golang/dep/releases/download/v$(DEP_VER)/$$DEP_ZIP
+DEP ?= ./dep
+DEP_VER ?= 0.3.2
+DEP_BIN := dep-$$GOHOSTOS-$$GOHOSTARCH
+DEP_URL := https://github.com/golang/dep/releases/download/v$(DEP_VER)/$$DEP_BIN
 
 $(DEP):
 	GOVERSION=$$(go version | awk '{print $$4}') && \
 	GOHOSTOS=$$(echo $$GOVERSION | awk -F/ '{print $$1}') && \
 	GOHOSTARCH=$$(echo $$GOVERSION | awk -F/ '{print $$2}') && \
-	DEP_ZIP="$(DEP_ZIP)" && \
+	DEP_BIN="$(DEP_BIN)" && \
 	DEP_URL="$(DEP_URL)" && \
-	mkdir -p .dep && \
-	cd .dep && \
 	curl -sSLO $$DEP_URL && \
-	unzip "$$DEP_ZIP" && \
-	mv $(@F) ../ && \
-	cd ../ && \
-	rm -fr .dep
+	chmod 0755 "$$DEP_BIN" && \
+	mv -f "$$DEP_BIN" "$@"
+
 ifneq (./dep,$(DEP))
 dep: $(DEP)
 endif
@@ -35,7 +32,7 @@ dep-ensure: | $(DEP)
 
 # Only set PROTOC_VER if it has an empty value.
 ifeq (,$(strip $(PROTOC_VER)))
-PROTOC_VER := 3.3.0
+PROTOC_VER := 3.4.0
 endif
 
 PROTOC_OS := $(shell uname -s)
