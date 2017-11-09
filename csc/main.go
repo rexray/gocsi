@@ -38,9 +38,14 @@ const (
 	// in order to avoid importing the math package for just
 	// a constant value
 	maxInt32 = 2147483647
+
+	userCredsKey = "X_CSI_USER_CREDENTIALS"
 )
 
-var appName = path.Base(os.Args[0])
+var (
+	appName   = path.Base(os.Args[0])
+	userCreds = gocsi.ParseMap(os.Getenv(userCredsKey))
+)
 
 func main() {
 

@@ -100,7 +100,7 @@ func CreateVolume(
 	name string,
 	requiredBytes, limitBytes uint64,
 	capabilities []*csi.VolumeCapability,
-	params map[string]string,
+	userCreds, params map[string]string,
 	callOpts ...grpc.CallOption) (volume *csi.VolumeInfo, err error) {
 
 	req := &csi.CreateVolumeRequest{
@@ -108,6 +108,7 @@ func CreateVolume(
 		Version:            version,
 		Parameters:         params,
 		VolumeCapabilities: capabilities,
+		UserCredentials:    userCreds,
 	}
 
 	if requiredBytes > 0 || limitBytes > 0 {
@@ -131,11 +132,13 @@ func DeleteVolume(
 	c csi.ControllerClient,
 	version *csi.Version,
 	volumeID string,
+	userCreds map[string]string,
 	callOpts ...grpc.CallOption) error {
 
 	req := &csi.DeleteVolumeRequest{
-		Version:  version,
-		VolumeId: volumeID,
+		Version:         version,
+		VolumeId:        volumeID,
+		UserCredentials: userCreds,
 	}
 
 	_, err := c.DeleteVolume(ctx, req, callOpts...)
@@ -158,6 +161,7 @@ func ControllerPublishVolume(
 	nodeID string,
 	volumeCapability *csi.VolumeCapability,
 	readonly bool,
+	userCreds map[string]string,
 	callOpts ...grpc.CallOption) (
 	map[string]string, error) {
 
@@ -168,6 +172,7 @@ func ControllerPublishVolume(
 		NodeId:           nodeID,
 		Readonly:         readonly,
 		VolumeCapability: volumeCapability,
+		UserCredentials:  userCreds,
 	}
 
 	res, err := c.ControllerPublishVolume(ctx, req, callOpts...)
@@ -186,12 +191,14 @@ func ControllerUnpublishVolume(
 	c csi.ControllerClient,
 	version *csi.Version,
 	volumeID, nodeID string,
+	userCreds map[string]string,
 	callOpts ...grpc.CallOption) error {
 
 	req := &csi.ControllerUnpublishVolumeRequest{
-		Version:  version,
-		VolumeId: volumeID,
-		NodeId:   nodeID,
+		Version:         version,
+		VolumeId:        volumeID,
+		NodeId:          nodeID,
+		UserCredentials: userCreds,
 	}
 
 	_, err := c.ControllerUnpublishVolume(ctx, req, callOpts...)

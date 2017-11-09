@@ -76,6 +76,7 @@ var _ = Describe("Controller", func() {
 			[]*csi.VolumeCapability{
 				gocsi.NewMountCapability(0, fsType, mntFlags),
 			},
+			nil,
 			params)
 	}
 
@@ -168,7 +169,8 @@ var _ = Describe("Controller", func() {
 				ctx,
 				client,
 				version,
-				volID)
+				volID,
+				nil)
 		})
 		Context("1", func() {
 			It("Should Be Valid", func() {
@@ -271,7 +273,8 @@ var _ = Describe("Controller", func() {
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					"mock",
 					nil),
-				true)
+				true,
+				nil)
 		}
 
 		shouldBePublished := func() {
@@ -301,7 +304,8 @@ var _ = Describe("Controller", func() {
 					client,
 					version,
 					"1",
-					service.Name)
+					service.Name,
+					nil)
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 			It("Should Be Unpublished", func() {

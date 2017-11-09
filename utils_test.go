@@ -183,3 +183,122 @@ var _ = Describe("ParseProtoAddr", func() {
 		})
 	})
 })
+
+var _ = Describe("ParseMap", func() {
+	Context("One Pair", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("k1=v1")
+			Ω(data).Should(HaveLen(1))
+			Ω(data["k1"]).Should(Equal("v1"))
+		})
+	})
+	Context("Empty Line", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("")
+			Ω(data).Should(HaveLen(0))
+		})
+	})
+	Context("Key Sans Value", func() {
+		It("Should Be Invalid", func() {
+			data := gocsi.ParseMap("k1")
+			Ω(data).Should(HaveLen(0))
+		})
+	})
+	Context("Two Pair", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("k1=v1 k2=v2")
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal("v1"))
+			Ω(data["k2"]).Should(Equal("v2"))
+		})
+	})
+	Context("Two Pair with Quoting & Escaping", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap(`"k1"=v1 'k2'='v2\'s'`)
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal("v1"))
+			Ω(data["k2"]).Should(Equal(`v2's`))
+		})
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap(`"k1"=v1 'k2'='v2\\\'s'`)
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal("v1"))
+			Ω(data["k2"]).Should(Equal(`v2\'s`))
+		})
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("\"k1\"=v1 'k2'='v2\\'s'")
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal("v1"))
+			Ω(data["k2"]).Should(Equal(`v2's`))
+		})
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("\"k1\"=v1 'k2'='v2\\\\\\'s'")
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal("v1"))
+			Ω(data["k2"]).Should(Equal(`v2\'s`))
+		})
+	})
+	Context("Two Pair with Three Spaces Between Them", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("k1=v1   k2=v2")
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal("v1"))
+			Ω(data["k2"]).Should(Equal("v2"))
+		})
+	})
+	Context("Two Pair with One Sans Value", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("k1= k2=v2")
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal(""))
+			Ω(data["k2"]).Should(Equal("v2"))
+		})
+	})
+	Context("Two Pair with One Sans Value & Three Spaces Between Them", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("k1=    k2=v2")
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal(""))
+			Ω(data["k2"]).Should(Equal("v2"))
+		})
+	})
+	Context("One Pair with Single Quoted Value", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("k1='v 1'")
+			Ω(data).Should(HaveLen(1))
+			Ω(data["k1"]).Should(Equal("v 1"))
+		})
+	})
+	Context("One Pair with Double Quoted Value", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap(`k1="v 1"`)
+			Ω(data).Should(HaveLen(1))
+			Ω(data["k1"]).Should(Equal("v 1"))
+		})
+	})
+	Context("Two Pair with Single Quoted Value", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap("k1='v 1' k2=v2")
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal("v 1"))
+			Ω(data["k2"]).Should(Equal("v2"))
+		})
+	})
+	Context("Two Pair with Double Quoted Value", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap(`k1="v 1" k2=v2`)
+			Ω(data).Should(HaveLen(2))
+			Ω(data["k1"]).Should(Equal("v 1"))
+			Ω(data["k2"]).Should(Equal("v2"))
+		})
+	})
+	Context("Three Pair with Mixed Values", func() {
+		It("Should Be Valid", func() {
+			data := gocsi.ParseMap(`k1="v 1" k2='v 2 ' "k3 "=v3 `)
+			Ω(data).Should(HaveLen(3))
+			Ω(data["k1"]).Should(Equal("v 1"))
+			Ω(data["k2"]).Should(Equal("v 2 "))
+			Ω(data["k3 "]).Should(Equal("v3"))
+		})
+	})
+})

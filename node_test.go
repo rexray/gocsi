@@ -70,7 +70,8 @@ var _ = Describe("Node", func() {
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					"mock",
 					nil),
-				false)
+				false,
+				nil)
 		}
 
 		shouldBePublished := func() {
@@ -99,7 +100,8 @@ var _ = Describe("Node", func() {
 					client,
 					version,
 					"1",
-					targetPath)
+					targetPath,
+					nil)
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 			It("Should Be Unpublished", func() {

@@ -169,7 +169,7 @@ func nodePublishVolume(
 	err := gocsi.NodePublishVolume(
 		ctx, client, version, volumeID,
 		volumeAT, pubVolInfo, targetPath,
-		capability, readOnly)
+		capability, readOnly, userCreds)
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func nodeUnpublishVolume(
 
 	// execute the rpc
 	err := gocsi.NodeUnpublishVolume(
-		ctx, client, version, volumeID, targetPath)
+		ctx, client, version, volumeID, targetPath, userCreds)
 	if err != nil {
 		return err
 	}
