@@ -55,6 +55,11 @@ const (
 	// used to obtain the time.Duration that is the timeout
 	// for this plug-in's idempotency provider.
 	IdempTimeout = "X_CSI_MOCK_IDEMPOTENCY_TIMEOUT"
+
+	// IdempRequireVolume is the name of the environment variable
+	// used to determine if the idempotency provider checks to
+	// see if a volume exists prior to acting upon it.
+	IdempRequireVolume = "X_CSI_MOCK_IDEMPOTENCY_REQUIRE_VOLUME"
 )
 
 var (
@@ -213,26 +218,27 @@ func newGrpcInterceptors(
 	getEnv getEnvFunc) []grpc.UnaryServerInterceptor {
 
 	// pb parses an environment variable into a boolean value.
-	pb := func(n string, d bool) bool {
+	pb := func(n string) bool {
 		b, err := strconv.ParseBool(getEnv(n))
 		if err != nil {
-			return d
+			return true
 		}
 		return b
 	}
 
 	var (
 		usi           []grpc.UnaryServerInterceptor
-		reqLogEnabled = pb(ReqLoggingEnabled, true)
-		resLogEnabled = pb(ResLoggingEnabled, true)
-		reqIDEnabled  = pb(ReqIDInjectionEnabled, true)
-		verEnabled    = pb(VersionValidationEnabled, true)
-		specEnabled   = pb(SpecValidationEnabled, true)
-		idempEnabled  = pb(IdempEnabled, true)
+		reqLogEnabled = pb(ReqLoggingEnabled)
+		resLogEnabled = pb(ResLoggingEnabled)
+		reqIDEnabled  = pb(ReqIDInjectionEnabled)
+		verEnabled    = pb(VersionValidationEnabled)
+		specEnabled   = pb(SpecValidationEnabled)
+		idempEnabled  = pb(IdempEnabled)
+		idempReqVol   = pb(IdempRequireVolume)
 	)
 
 	if reqIDEnabled {
-		usi = append(usi, gocsi.ServerRequestIDInjector)
+		usi = append(usi, gocsi.NewServerRequestIDInjector())
 	}
 
 	// If request or response logging are enabled then create the loggers.
@@ -265,9 +271,17 @@ func newGrpcInterceptors(
 	if idempEnabled {
 		// Get idempotency provider's timeout.
 		timeout, _ := time.ParseDuration(getEnv(IdempTimeout))
-		usi = append(
-			usi,
-			gocsi.NewIdempotentInterceptor(idemp, timeout))
+
+		iopts := []gocsi.IdempotentInterceptorOption{
+			gocsi.WithIdempTimeout(timeout),
+		}
+
+		// Check to see if the idempotency provider requires volumes to exist.
+		if idempReqVol {
+			iopts = append(iopts, gocsi.WithIdempRequireVolumeExists())
+		}
+
+		usi = append(usi, gocsi.NewIdempotentInterceptor(idemp, iopts...))
 	}
 
 	return usi

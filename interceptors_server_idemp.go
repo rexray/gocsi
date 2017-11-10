@@ -15,21 +15,21 @@ import (
 // gRPC interceptor to provide serial access and idempotency for CSI's
 // volume resources.
 type IdempotencyProvider interface {
-	// GetVolumeName should return the name of the volume specified
-	// by the provided volume ID. If the volume does not exist then
+	// GetVolumeID should return the ID of the volume specified
+	// by the provided volume name. If the volume does not exist then
 	// an empty string should be returned.
-	GetVolumeName(ctx context.Context, id string) (string, error)
+	GetVolumeID(ctx context.Context, name string) (string, error)
 
 	// GetVolumeInfo should return information about the volume
-	// specified by the provided volume name. If the volume does not
+	// specified by the provided volume ID or name. If the volume does not
 	// exist then a nil value should be returned.
-	GetVolumeInfo(ctx context.Context, name string) (*csi.VolumeInfo, error)
+	GetVolumeInfo(ctx context.Context, id, name string) (*csi.VolumeInfo, error)
 
-	// IsControllerPublished should return publication info about
-	// the volume specified by the provided volume ID.
+	// IsControllerPublished should return publication for a volume's
+	// publication status on a specified node.
 	IsControllerPublished(
 		ctx context.Context,
-		id, nodeID string) (map[string]string, error)
+		volumeID, nodeID string) (map[string]string, error)
 
 	// IsNodePublished should return a flag indicating whether or
 	// not the volume exists and is published on the current host.
@@ -38,6 +38,31 @@ type IdempotencyProvider interface {
 		id string,
 		pubVolInfo map[string]string,
 		targetPath string) (bool, error)
+}
+
+// IdempotentInterceptorOption configures the idempotent interceptor.
+type IdempotentInterceptorOption func(*idempIntercOpts)
+
+type idempIntercOpts struct {
+	timeout       time.Duration
+	requireVolume bool
+}
+
+// WithIdempTimeout is an IdempotentInterceptorOption that sets the
+// timeout used by the idempotent interceptor.
+func WithIdempTimeout(t time.Duration) IdempotentInterceptorOption {
+	return func(o *idempIntercOpts) {
+		o.timeout = t
+	}
+}
+
+// WithIdempRequireVolumeExists is an IdempotentInterceptorOption that
+// enforces the requirement that volumes must exist before proceeding
+// with an operation.
+func WithIdempRequireVolumeExists() IdempotentInterceptorOption {
+	return func(o *idempIntercOpts) {
+		o.requireVolume = true
+	}
 }
 
 // NewIdempotentInterceptor returns a new server-side, gRPC interceptor
@@ -52,12 +77,17 @@ type IdempotencyProvider interface {
 //  * NodeUnpublishVolume
 func NewIdempotentInterceptor(
 	p IdempotencyProvider,
-	timeout time.Duration) grpc.UnaryServerInterceptor {
+	opts ...IdempotentInterceptorOption) grpc.UnaryServerInterceptor {
 
 	i := &idempotencyInterceptor{
-		p:        p,
-		timeout:  timeout,
-		volLocks: map[string]*volLockInfo{},
+		p:            p,
+		volIDLocks:   map[string]*volLockInfo{},
+		volNameLocks: map[string]*volLockInfo{},
+	}
+
+	// Configure the idempotent interceptor's options.
+	for _, setOpt := range opts {
+		setOpt(&i.opts)
 	}
 
 	return i.handle
@@ -65,26 +95,42 @@ func NewIdempotentInterceptor(
 
 type volLockInfo struct {
 	MutexWithTryLock
-	methodInErr map[string]bool
+	methodInErr map[string]struct{}
 }
 
 type idempotencyInterceptor struct {
-	sync.Mutex
-	p        IdempotencyProvider
-	timeout  time.Duration
-	volLocks map[string]*volLockInfo
+	p             IdempotencyProvider
+	volIDLocksL   sync.Mutex
+	volNameLocksL sync.Mutex
+	volIDLocks    map[string]*volLockInfo
+	volNameLocks  map[string]*volLockInfo
+	opts          idempIntercOpts
 }
 
-func (i *idempotencyInterceptor) lockWithName(name string) *volLockInfo {
-	i.Lock()
-	defer i.Unlock()
-	lock := i.volLocks[name]
+func (i *idempotencyInterceptor) lockWithID(id string) *volLockInfo {
+	i.volIDLocksL.Lock()
+	defer i.volIDLocksL.Unlock()
+	lock := i.volIDLocks[id]
 	if lock == nil {
 		lock = &volLockInfo{
 			MutexWithTryLock: NewMutexWithTryLock(),
-			methodInErr:      map[string]bool{},
+			methodInErr:      map[string]struct{}{},
 		}
-		i.volLocks[name] = lock
+		i.volIDLocks[id] = lock
+	}
+	return lock
+}
+
+func (i *idempotencyInterceptor) lockWithName(name string) *volLockInfo {
+	i.volNameLocksL.Lock()
+	defer i.volNameLocksL.Unlock()
+	lock := i.volNameLocks[name]
+	if lock == nil {
+		lock = &volLockInfo{
+			MutexWithTryLock: NewMutexWithTryLock(),
+			methodInErr:      map[string]struct{}{},
+		}
+		i.volNameLocks[name] = lock
 	}
 	return lock
 }
@@ -119,18 +165,8 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	name, err := i.p.GetVolumeName(ctx, req.VolumeId)
-	if err != nil {
-		return nil, err
-	}
-	if name == "" {
-		return ErrControllerPublishVolume(
-			csi.Error_ControllerPublishVolumeError_VOLUME_DOES_NOT_EXIST,
-			""), nil
-	}
-
-	lock := i.lockWithName(name)
-	if !lock.TryLock(i.timeout) {
+	lock := i.lockWithID(req.VolumeId)
+	if !lock.TryLock(i.opts.timeout) {
 		return ErrControllerPublishVolume(
 			csi.Error_ControllerPublishVolumeError_OPERATION_PENDING_FOR_VOLUME,
 			""), nil
@@ -146,7 +182,7 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 	defer func() {
 		if resErr != nil ||
 			res.(*csi.ControllerPublishVolumeResponse).GetError() != nil {
-			lock.methodInErr[info.FullMethod] = true
+			lock.methodInErr[info.FullMethod] = struct{}{}
 		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
 			delete(lock.methodInErr, info.FullMethod)
 		}
@@ -156,8 +192,22 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
 	// subsequent call should bypass idempotency.
-	if inErr, ok := lock.methodInErr[info.FullMethod]; ok && inErr {
+	if _, ok := lock.methodInErr[info.FullMethod]; ok {
 		return handler(ctx, req)
+	}
+
+	// If configured to do so, check to see if the volume exists and
+	// return an error if it does not.
+	if i.opts.requireVolume {
+		volInfo, err := i.p.GetVolumeInfo(ctx, req.VolumeId, "")
+		if err != nil {
+			return nil, err
+		}
+		if volInfo == nil {
+			return ErrControllerPublishVolume(
+				csi.Error_ControllerPublishVolumeError_VOLUME_DOES_NOT_EXIST,
+				""), nil
+		}
 	}
 
 	pubInfo, err := i.p.IsControllerPublished(ctx, req.VolumeId, req.NodeId)
@@ -165,7 +215,8 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 		return nil, err
 	}
 	if pubInfo != nil {
-		log.WithField("name", name).Info("idempotent controller publish")
+		log.WithField("volumeID", req.VolumeId).Info(
+			"idempotent controller publish")
 		return &csi.ControllerPublishVolumeResponse{
 			Reply: &csi.ControllerPublishVolumeResponse_Result_{
 				Result: &csi.ControllerPublishVolumeResponse_Result{
@@ -184,18 +235,8 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	name, err := i.p.GetVolumeName(ctx, req.VolumeId)
-	if err != nil {
-		return nil, err
-	}
-	if name == "" {
-		return ErrControllerUnpublishVolume(
-			csi.Error_ControllerUnpublishVolumeError_VOLUME_DOES_NOT_EXIST,
-			""), nil
-	}
-
-	lock := i.lockWithName(name)
-	if !lock.TryLock(i.timeout) {
+	lock := i.lockWithID(req.VolumeId)
+	if !lock.TryLock(i.opts.timeout) {
 		return ErrControllerUnpublishVolume(
 			csi.Error_ControllerUnpublishVolumeError_OPERATION_PENDING_FOR_VOLUME,
 			""), nil
@@ -211,7 +252,7 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 	defer func() {
 		if resErr != nil ||
 			res.(*csi.ControllerUnpublishVolumeResponse).GetError() != nil {
-			lock.methodInErr[info.FullMethod] = true
+			lock.methodInErr[info.FullMethod] = struct{}{}
 		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
 			delete(lock.methodInErr, info.FullMethod)
 		}
@@ -221,8 +262,22 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
 	// subsequent call should bypass idempotency.
-	if inErr, ok := lock.methodInErr[info.FullMethod]; ok && inErr {
+	if _, ok := lock.methodInErr[info.FullMethod]; ok {
 		return handler(ctx, req)
+	}
+
+	// If configured to do so, check to see if the volume exists and
+	// return an error if it does not.
+	if i.opts.requireVolume {
+		volInfo, err := i.p.GetVolumeInfo(ctx, req.VolumeId, "")
+		if err != nil {
+			return nil, err
+		}
+		if volInfo == nil {
+			return ErrControllerUnpublishVolume(
+				csi.Error_ControllerUnpublishVolumeError_VOLUME_DOES_NOT_EXIST,
+				""), nil
+		}
 	}
 
 	pubInfo, err := i.p.IsControllerPublished(ctx, req.VolumeId, req.NodeId)
@@ -230,7 +285,8 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 		return nil, err
 	}
 	if pubInfo == nil {
-		log.WithField("name", name).Info("idempotent controller publish")
+		log.WithField("volumeID", req.VolumeId).Info(
+			"idempotent controller unpublish")
 		return &csi.ControllerUnpublishVolumeResponse{
 			Reply: &csi.ControllerUnpublishVolumeResponse_Result_{
 				Result: &csi.ControllerUnpublishVolumeResponse_Result{},
@@ -247,8 +303,10 @@ func (i *idempotencyInterceptor) createVolume(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	lock := i.lockWithName(req.Name)
-	if !lock.TryLock(i.timeout) {
+	// First attempt to lock the volume by the provided name. If no lock
+	// can be obtained then exit with the appropriate error.
+	nameLock := i.lockWithName(req.Name)
+	if !nameLock.TryLock(i.opts.timeout) {
 		return ErrCreateVolume(
 			csi.Error_CreateVolumeError_OPERATION_PENDING_FOR_VOLUME,
 			""), nil
@@ -264,37 +322,109 @@ func (i *idempotencyInterceptor) createVolume(
 	defer func() {
 		if resErr != nil ||
 			res.(*csi.CreateVolumeResponse).GetError() != nil {
-			lock.methodInErr[info.FullMethod] = true
-		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			delete(lock.methodInErr, info.FullMethod)
+
+			// Check to see if the error code is OPERATION_PENDING_FOR_VOLUME.
+			// If it is then do not mark this method in error.
+			terr := res.(*csi.CreateVolumeResponse).GetError()
+			if terr, ok := terr.Value.(*csi.Error_CreateVolumeError_); ok &&
+				terr.CreateVolumeError != nil &&
+				terr.CreateVolumeError.ErrorCode ==
+					csi.Error_CreateVolumeError_OPERATION_PENDING_FOR_VOLUME {
+				return
+			}
+			nameLock.methodInErr[info.FullMethod] = struct{}{}
+		} else if _, ok := nameLock.methodInErr[info.FullMethod]; ok {
+			delete(nameLock.methodInErr, info.FullMethod)
 		}
 	}()
-	defer lock.Unlock()
+	defer nameLock.Unlock()
 
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
 	// subsequent call should bypass idempotency.
-	if inErr, ok := lock.methodInErr[info.FullMethod]; ok && inErr {
+	if _, ok := nameLock.methodInErr[info.FullMethod]; ok {
+		log.WithField("volumeName", req.Name).Warn("creating volume: nameInErr")
 		return handler(ctx, req)
 	}
 
-	volInfo, err := i.p.GetVolumeInfo(ctx, req.Name)
+	// Next, attempt to get the volume info based on the name.
+	volInfo, err := i.p.GetVolumeInfo(ctx, "", req.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	if volInfo != nil {
-		log.WithField("name", req.Name).Info("idempotent create")
-		return &csi.CreateVolumeResponse{
-			Reply: &csi.CreateVolumeResponse_Result_{
-				Result: &csi.CreateVolumeResponse_Result{
-					VolumeInfo: volInfo,
-				},
-			},
-		}, nil
+	// If the volInfo is nil then it means the volume does not exist.
+	// Return early, passing control to the next handler in the chain.
+	if volInfo == nil {
+		log.WithField("volumeName", req.Name).Warn("creating volume")
+		return handler(ctx, req)
 	}
 
-	return handler(ctx, req)
+	// If the volInfo is not nil it means the volume already exists.
+	// The volume info contains the volume's ID. Use that to obtain a
+	// volume ID-based lock for the volume.
+	idLock := i.lockWithID(volInfo.Id)
+	if !idLock.TryLock(i.opts.timeout) {
+		return ErrCreateVolume(
+			csi.Error_CreateVolumeError_OPERATION_PENDING_FOR_VOLUME,
+			""), nil
+	}
+
+	// At the end of this function check for a response error or if
+	// the response itself contains an error. If either is true then
+	// mark the current method as in error.
+	//
+	// If neither is true then check to see if the method has been
+	// marked in error in the past and remove that mark to reclaim
+	// memory.
+	defer func() {
+		if resErr != nil ||
+			res.(*csi.CreateVolumeResponse).GetError() != nil {
+			idLock.methodInErr[info.FullMethod] = struct{}{}
+		} else if _, ok := idLock.methodInErr[info.FullMethod]; ok {
+			delete(idLock.methodInErr, info.FullMethod)
+		}
+	}()
+	defer idLock.Unlock()
+
+	// If the method has been marked in error then it means a previous
+	// call to this function returned an error. In these cases a
+	// subsequent call should bypass idempotency.
+	if _, ok := idLock.methodInErr[info.FullMethod]; ok {
+		log.WithField("volumeName", req.Name).Warn("creating volume: idInErr")
+		return handler(ctx, req)
+	}
+
+	// The ID lock has been obtained. Once again call GetVolumeInfo,
+	// this time with the volume ID, now that the ID lock is held.
+	// This ensures the volume still exists since it could have been
+	// removed in the time it took to obtain the ID lock.
+	volInfo, err = i.p.GetVolumeInfo(ctx, volInfo.Id, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// If the volume info is nil it means the volume was removed in
+	// the time it took to obtain the lock ID. Return early, passing
+	// control to the next handler in the chain.
+	if volInfo == nil {
+		log.WithField("volumeName", req.Name).Warn("creating volume: 2")
+		return handler(ctx, req)
+	}
+
+	// If the volume info still exists then it means the volume
+	// exists! Go ahead and return the volume info and note this
+	// as an idempotent create call.
+	log.WithFields(map[string]interface{}{
+		"volumeID":   volInfo.Id,
+		"volumeName": req.Name}).Info("idempotent create")
+	return &csi.CreateVolumeResponse{
+		Reply: &csi.CreateVolumeResponse_Result_{
+			Result: &csi.CreateVolumeResponse_Result{
+				VolumeInfo: volInfo,
+			},
+		},
+	}, nil
 }
 
 func (i *idempotencyInterceptor) deleteVolume(
@@ -303,18 +433,8 @@ func (i *idempotencyInterceptor) deleteVolume(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	name, err := i.p.GetVolumeName(ctx, req.VolumeId)
-	if err != nil {
-		return nil, err
-	}
-	if name == "" {
-		return ErrDeleteVolume(
-			csi.Error_DeleteVolumeError_VOLUME_DOES_NOT_EXIST,
-			""), nil
-	}
-
-	lock := i.lockWithName(name)
-	if !lock.TryLock(i.timeout) {
+	lock := i.lockWithID(req.VolumeId)
+	if !lock.TryLock(i.opts.timeout) {
 		return ErrDeleteVolume(
 			csi.Error_DeleteVolumeError_OPERATION_PENDING_FOR_VOLUME,
 			""), nil
@@ -330,7 +450,7 @@ func (i *idempotencyInterceptor) deleteVolume(
 	defer func() {
 		if resErr != nil ||
 			res.(*csi.DeleteVolumeResponse).GetError() != nil {
-			lock.methodInErr[info.FullMethod] = true
+			lock.methodInErr[info.FullMethod] = struct{}{}
 		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
 			delete(lock.methodInErr, info.FullMethod)
 		}
@@ -340,17 +460,39 @@ func (i *idempotencyInterceptor) deleteVolume(
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
 	// subsequent call should bypass idempotency.
-	if inErr, ok := lock.methodInErr[info.FullMethod]; ok && inErr {
+	if _, ok := lock.methodInErr[info.FullMethod]; ok {
 		return handler(ctx, req)
 	}
 
-	volInfo, err := i.p.GetVolumeInfo(ctx, name)
-	if err != nil {
-		return nil, err
+	// If configured to do so, check to see if the volume exists and
+	// return an error if it does not.
+	var volExists bool
+	if i.opts.requireVolume {
+		volInfo, err := i.p.GetVolumeInfo(ctx, req.VolumeId, "")
+		if err != nil {
+			return nil, err
+		}
+		if volInfo == nil {
+			return ErrDeleteVolume(
+				csi.Error_DeleteVolumeError_VOLUME_DOES_NOT_EXIST,
+				""), nil
+		}
+		volExists = true
 	}
 
-	if volInfo == nil {
-		log.WithField("name", name).Info("idempotent delete")
+	// Check to see if the volume exists if that has not yet been
+	// verified above.
+	if !volExists {
+		volInfo, err := i.p.GetVolumeInfo(ctx, req.VolumeId, "")
+		if err != nil {
+			return nil, err
+		}
+		volExists = volInfo != nil
+	}
+
+	// Indicate an idempotent delete operation if the volume does not exist.
+	if !volExists {
+		log.WithField("volumeID", req.VolumeId).Info("idempotent delete")
 		return &csi.DeleteVolumeResponse{
 			Reply: &csi.DeleteVolumeResponse_Result_{
 				Result: &csi.DeleteVolumeResponse_Result{},
@@ -367,18 +509,8 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	name, err := i.p.GetVolumeName(ctx, req.VolumeId)
-	if err != nil {
-		return nil, err
-	}
-	if name == "" {
-		return ErrNodePublishVolume(
-			csi.Error_NodePublishVolumeError_VOLUME_DOES_NOT_EXIST,
-			""), nil
-	}
-
-	lock := i.lockWithName(name)
-	if !lock.TryLock(i.timeout) {
+	lock := i.lockWithID(req.VolumeId)
+	if !lock.TryLock(i.opts.timeout) {
 		return ErrNodePublishVolume(
 			csi.Error_NodePublishVolumeError_OPERATION_PENDING_FOR_VOLUME,
 			""), nil
@@ -394,7 +526,7 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 	defer func() {
 		if resErr != nil ||
 			res.(*csi.NodePublishVolumeResponse).GetError() != nil {
-			lock.methodInErr[info.FullMethod] = true
+			lock.methodInErr[info.FullMethod] = struct{}{}
 		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
 			delete(lock.methodInErr, info.FullMethod)
 		}
@@ -404,8 +536,22 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
 	// subsequent call should bypass idempotency.
-	if inErr, ok := lock.methodInErr[info.FullMethod]; ok && inErr {
+	if _, ok := lock.methodInErr[info.FullMethod]; ok {
 		return handler(ctx, req)
+	}
+
+	// If configured to do so, check to see if the volume exists and
+	// return an error if it does not.
+	if i.opts.requireVolume {
+		volInfo, err := i.p.GetVolumeInfo(ctx, req.VolumeId, "")
+		if err != nil {
+			return nil, err
+		}
+		if volInfo == nil {
+			return ErrNodePublishVolume(
+				csi.Error_NodePublishVolumeError_VOLUME_DOES_NOT_EXIST,
+				""), nil
+		}
 	}
 
 	ok, err := i.p.IsNodePublished(
@@ -414,7 +560,7 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 		return nil, err
 	}
 	if ok {
-		log.WithField("name", name).Info("idempotent node publish")
+		log.WithField("volumeId", req.VolumeId).Info("idempotent node publish")
 		return &csi.NodePublishVolumeResponse{
 			Reply: &csi.NodePublishVolumeResponse_Result_{
 				Result: &csi.NodePublishVolumeResponse_Result{},
@@ -431,18 +577,8 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	name, err := i.p.GetVolumeName(ctx, req.VolumeId)
-	if err != nil {
-		return nil, err
-	}
-	if name == "" {
-		return ErrNodeUnpublishVolume(
-			csi.Error_NodeUnpublishVolumeError_VOLUME_DOES_NOT_EXIST,
-			""), nil
-	}
-
-	lock := i.lockWithName(name)
-	if !lock.TryLock(i.timeout) {
+	lock := i.lockWithID(req.VolumeId)
+	if !lock.TryLock(i.opts.timeout) {
 		return ErrNodeUnpublishVolume(
 			csi.Error_NodeUnpublishVolumeError_OPERATION_PENDING_FOR_VOLUME,
 			""), nil
@@ -458,7 +594,7 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 	defer func() {
 		if resErr != nil ||
 			res.(*csi.NodeUnpublishVolumeResponse).GetError() != nil {
-			lock.methodInErr[info.FullMethod] = true
+			lock.methodInErr[info.FullMethod] = struct{}{}
 		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
 			delete(lock.methodInErr, info.FullMethod)
 		}
@@ -468,8 +604,22 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
 	// subsequent call should bypass idempotency.
-	if inErr, ok := lock.methodInErr[info.FullMethod]; ok && inErr {
+	if _, ok := lock.methodInErr[info.FullMethod]; ok {
 		return handler(ctx, req)
+	}
+
+	// If configured to do so, check to see if the volume exists and
+	// return an error if it does not.
+	if i.opts.requireVolume {
+		volInfo, err := i.p.GetVolumeInfo(ctx, req.VolumeId, "")
+		if err != nil {
+			return nil, err
+		}
+		if volInfo == nil {
+			return ErrNodeUnpublishVolume(
+				csi.Error_NodeUnpublishVolumeError_VOLUME_DOES_NOT_EXIST,
+				""), nil
+		}
 	}
 
 	ok, err := i.p.IsNodePublished(ctx, req.VolumeId, nil, req.TargetPath)
@@ -477,7 +627,8 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 		return nil, err
 	}
 	if !ok {
-		log.WithField("name", name).Info("idempotent node unpublish")
+		log.WithField("volumeId", req.VolumeId).Info(
+			"idempotent node unpublish")
 		return &csi.NodeUnpublishVolumeResponse{
 			Reply: &csi.NodeUnpublishVolumeResponse_Result_{
 				Result: &csi.NodeUnpublishVolumeResponse_Result{},

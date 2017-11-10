@@ -191,6 +191,11 @@ $(GOCSI_A): $(CSI_GOSRC) *.go
 ########################################################################
 GINKGO := ./ginkgo
 GINKGO_PKG := ./vendor/github.com/onsi/ginkgo/ginkgo
+GINKGO_SECS := 20
+ifeq (true,$(TRAVIS))
+GINKGO_SECS := 30
+endif
+GINKGO_RUN_OPTS := --slowSpecThreshold=$(GINKGO_SECS) -randomizeAllSpecs -p
 $(GINKGO):
 	go build -o "$@" $(GINKGO_PKG)
 
@@ -204,7 +209,7 @@ ifneq (true,$(TRAVIS))
 test:  build
 endif
 test: | $(GINKGO)
-	$(GINKGO) -v . || test "$$?" -eq "197"
+	$(GINKGO) $(GINKGO_RUN_OPTS) . || test "$$?" -eq "197"
 
 
 ########################################################################

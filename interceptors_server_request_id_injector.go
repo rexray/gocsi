@@ -7,11 +7,17 @@ import (
 	"google.golang.org/grpc"
 )
 
-var requestIDVal uint64
+type serverRequestIDInjector struct {
+	requestIDVal uint64
+}
 
-// ServerRequestIDInjector is a unary server interceptor that injects
+// NewServerRequestIDInjector returns a new server interceptor that injects
 // request contexts with a unique request ID.
-func ServerRequestIDInjector(
+func NewServerRequestIDInjector() grpc.UnaryServerInterceptor {
+	return (&serverRequestIDInjector{}).handle
+}
+
+func (i *serverRequestIDInjector) handle(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
@@ -21,6 +27,6 @@ func ServerRequestIDInjector(
 		context.WithValue(
 			ctx,
 			requestIDKey,
-			atomic.AddUint64(&requestIDVal, 1)),
+			atomic.AddUint64(&i.requestIDVal, 1)),
 		req)
 }

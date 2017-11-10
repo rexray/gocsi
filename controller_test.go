@@ -2,7 +2,10 @@ package gocsi_test
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"path"
+	"sync"
 
 	"google.golang.org/grpc"
 
@@ -14,6 +17,7 @@ import (
 var _ = Describe("Controller", func() {
 	var (
 		err      error
+		gocsiErr error
 		stopMock func()
 		ctx      context.Context
 		gclient  *grpc.ClientConn
@@ -21,13 +25,15 @@ var _ = Describe("Controller", func() {
 
 		version *csi.Version
 
-		vol      *csi.VolumeInfo
-		volName  string
-		reqBytes uint64
-		limBytes uint64
-		fsType   string
-		mntFlags []string
-		params   map[string]string
+		vol       *csi.VolumeInfo
+		volID     string
+		volName   string
+		reqBytes  uint64
+		limBytes  uint64
+		fsType    string
+		mntFlags  []string
+		params    map[string]string
+		userCreds map[string]string
 
 		pubVolInfo map[string]string
 	)
@@ -37,14 +43,17 @@ var _ = Describe("Controller", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		client = csi.NewControllerClient(gclient)
 
+		gocsiErr = &gocsi.Error{}
 		version = mockSupportedVersions[0]
 
+		volID = "4"
 		volName = "Test Volume"
 		reqBytes = 1.074e+10 //  10GiB
 		limBytes = 1.074e+11 // 100GiB
 		fsType = "ext4"
 		mntFlags = []string{"-o noexec"}
 		params = map[string]string{"tag": "gold"}
+		userCreds = map[string]string{"beour": "guest"}
 	})
 	AfterEach(func() {
 		ctx = nil
@@ -53,9 +62,11 @@ var _ = Describe("Controller", func() {
 		client = nil
 		stopMock()
 
+		gocsiErr = nil
 		version = nil
 
 		vol = nil
+		volID = ""
 		volName = ""
 		reqBytes = 0
 		limBytes = 0
@@ -65,8 +76,8 @@ var _ = Describe("Controller", func() {
 		pubVolInfo = nil
 	})
 
-	createNewVolume := func() {
-		vol, err = gocsi.CreateVolume(
+	createNewVolumeWithResult := func() (*csi.VolumeInfo, error) {
+		return gocsi.CreateVolume(
 			ctx,
 			client,
 			version,
@@ -76,15 +87,37 @@ var _ = Describe("Controller", func() {
 			[]*csi.VolumeCapability{
 				gocsi.NewMountCapability(0, fsType, mntFlags),
 			},
-			nil,
+			userCreds,
 			params)
 	}
 
-	validateNewVolume := func() {
+	createNewVolume := func() {
+		vol, err = createNewVolumeWithResult()
+	}
+
+	validateNewVolumeResult := func(
+		vol *csi.VolumeInfo,
+		err error) bool {
+
+		if err != nil {
+			Ω(vol).Should(BeNil())
+			Ω(err).Should(BeAssignableToTypeOf(gocsiErr))
+			terr := err.(*gocsi.Error)
+			Ω(terr.Code).Should(BeEquivalentTo(
+				csi.Error_CreateVolumeError_OPERATION_PENDING_FOR_VOLUME))
+			return true
+		}
+
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(vol).ShouldNot(BeNil())
 		Ω(vol.CapacityBytes).Should(Equal(limBytes))
+		Ω(vol.Id).Should(Equal(volID))
 		Ω(vol.Attributes["name"]).Should(Equal(volName))
+		return false
+	}
+
+	validateNewVolume := func() {
+		validateNewVolumeResult(vol, err)
 	}
 
 	Describe("CreateVolume", func() {
@@ -112,7 +145,7 @@ var _ = Describe("Controller", func() {
 			It("Should Be Invalid", func() {
 				Ω(err).Should(HaveOccurred())
 				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  "/csi.Controller/CreateVolume",
+					FullMethod:  gocsi.FMCreateVolume,
 					Code:        3,
 					Description: "name required",
 				}))
@@ -120,38 +153,106 @@ var _ = Describe("Controller", func() {
 			})
 		})
 		Context("Idempotent Create", func() {
-			It("Should Be Valid", func() {
-				// Validate the new volume with this specific function.
-				// It's the same function that will be used to validate
-				// the volume that's created as the result of the
-				// idempotent create.
-				validateNewVolume()
 
+			const bucketSize = 250
+
+			var (
+				wg                   sync.WaitGroup
+				count                int
+				opPendingErrorOccurs bool
+			)
+
+			// Verify that the newly created volume increases
+			// the volume count to 4.
+			listVolsAndValidate4 := func() {
+				vols, _, err := gocsi.ListVolumes(
+					ctx,
+					client,
+					version,
+					0,
+					"")
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(vols).ShouldNot(BeNil())
+				Ω(vols).Should(HaveLen(4))
+			}
+
+			idempCreateVols := func() {
 				var (
-					vols      []*csi.VolumeInfo
-					nextToken string
+					once    sync.Once
+					buckets = count / bucketSize
+					worker  = func() {
+						defer GinkgoRecover()
+						if !validateNewVolumeResult(
+							createNewVolumeWithResult()) {
+							once.Do(func() {
+								opPendingErrorOccurs = true
+							})
+						}
+						wg.Done()
+					}
 				)
+				if r := math.Remainder(
+					float64(count), float64(bucketSize)); r > 0 {
+					buckets++
+				}
+				fmt.Fprintf(
+					GinkgoWriter, "count=%d, buckets=%d\n", count, buckets)
+				for i := 0; i < buckets; i++ {
+					go func(i int) {
+						defer GinkgoRecover()
+						start := i * bucketSize
+						for j := start; j < start+bucketSize && j < count; j++ {
+							fmt.Fprintf(
+								GinkgoWriter, "bucket=%d, index=%d\n", i, j)
+							go worker()
+						}
+					}(i)
+				}
+			}
 
-				// Verify that the newly created volume increases
-				// the volume count to 4.
-				listVolsAndValidate4 := func() {
-					vols, nextToken, err = gocsi.ListVolumes(
-						ctx,
-						client,
-						version,
-						0,
-						"")
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(vols).ShouldNot(BeNil())
-					Ω(vols).Should(HaveLen(4))
+			validateIdempResult := func() {
+				wg.Wait()
+				if count >= 1000 {
+					Ω(opPendingErrorOccurs).Should(BeTrue())
 				}
 				listVolsAndValidate4()
+			}
 
-				// Create the same volume again and then assert the
-				// volume count has not increased.
-				createNewVolume()
+			JustBeforeEach(func() {
 				validateNewVolume()
 				listVolsAndValidate4()
+				idempCreateVols()
+				wg.Add(count)
+			})
+
+			AfterEach(func() {
+				count = 0
+				opPendingErrorOccurs = false
+			})
+
+			Context("x1", func() {
+				BeforeEach(func() {
+					count = 1
+				})
+				It("Should Be Valid", validateIdempResult)
+			})
+			Context("x1000", func() {
+				BeforeEach(func() {
+					count = 1000
+				})
+				It("Should Be Valid", validateIdempResult)
+			})
+			Context("x10000", func() {
+				BeforeEach(func() {
+					count = 10000
+				})
+				It("Should Be Valid", validateIdempResult)
+			})
+			Context("x100000", func() {
+				BeforeEach(func() {
+					count = 100000
+				})
+				It("Should Be Valid", validateIdempResult)
 			})
 		})
 	})
@@ -194,7 +295,7 @@ var _ = Describe("Controller", func() {
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
 				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  "/csi.Controller/DeleteVolume",
+					FullMethod:  gocsi.FMDeleteVolume,
 					Code:        3,
 					Description: "volume id required",
 				}))
@@ -207,7 +308,7 @@ var _ = Describe("Controller", func() {
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
 				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  "/csi.Controller/DeleteVolume",
+					FullMethod:  gocsi.FMDeleteVolume,
 					Code:        2,
 					Description: "unsupported request version: 0.0.0",
 				}))
@@ -318,3 +419,8 @@ var _ = Describe("Controller", func() {
 		})
 	})
 })
+
+type createVolumeResult struct {
+	vol *csi.VolumeInfo
+	err error
+}

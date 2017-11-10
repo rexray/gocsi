@@ -16,16 +16,16 @@ type MutexWithTryLock interface {
 }
 
 type mutex struct {
-	c chan int
+	c chan struct{}
 }
 
 // NewMutexWithTryLock returns a new mutex that implements TryLock.
 func NewMutexWithTryLock() MutexWithTryLock {
-	return &mutex{c: make(chan int, 1)}
+	return &mutex{c: make(chan struct{}, 1)}
 }
 
 func (m *mutex) Lock() {
-	m.c <- 1
+	m.c <- struct{}{}
 }
 
 func (m *mutex) Unlock() {
@@ -35,7 +35,7 @@ func (m *mutex) Unlock() {
 func (m *mutex) TryLock(timeout time.Duration) bool {
 	timer := time.NewTimer(timeout)
 	select {
-	case m.c <- 1:
+	case m.c <- struct{}{}:
 		timer.Stop()
 		return true
 	case <-time.After(timeout):
