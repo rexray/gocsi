@@ -8,25 +8,36 @@ import (
 	"github.com/thecodeteam/gocsi/csi"
 )
 
-func (s *service) GetVolumeName(
+func (s *service) GetVolumeID(
 	ctx xctx.Context,
-	id string) (string, error) {
+	name string) (string, error) {
 
-	i, v := s.findVol("id", id)
+	i, v := s.findVol("name", name)
 	if i < 0 {
 		return "", nil
 	}
-	return v.Attributes["name"], nil
+	return v.Id, nil
 }
 
 func (s *service) GetVolumeInfo(
 	ctx xctx.Context,
-	name string) (*csi.VolumeInfo, error) {
+	id, name string) (*csi.VolumeInfo, error) {
 
-	i, v := s.findVol("name", name)
+	var (
+		i = -1
+		v csi.VolumeInfo
+	)
+	if id != "" {
+		i, v = s.findVol("id", id)
+	}
+	if i < 0 && name != "" {
+		i, v = s.findVol("name", name)
+	}
+
 	if i < 0 {
 		return nil, nil
 	}
+
 	return &v, nil
 }
 
