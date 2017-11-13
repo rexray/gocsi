@@ -64,14 +64,8 @@ func (p *pipeConn) Accept() (net.Conn, error) {
 	return nil, http.ErrServerClosed
 }
 
-func (p *pipeConn) Close() (err error) {
-	p.Once.Do(func() {
-		if p.chcn == nil {
-			return
-		}
-		close(p.chcn)
-		p.chcn = nil
-	})
+func (p *pipeConn) Close() error {
+	p.Do(func() { close(p.chcn) })
 	return http.ErrServerClosed
 }
 

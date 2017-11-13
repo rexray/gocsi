@@ -53,11 +53,10 @@ func GetNodeID(
 	}
 
 	res, err := c.GetNodeID(ctx, req, callOpts...)
-	if err != nil {
-		return "", err
+	if res != nil {
+		return res.NodeId, err
 	}
-
-	return res.GetResult().NodeId, nil
+	return "", err
 }
 
 // NodePublishVolume issues a
@@ -87,11 +86,7 @@ func NodePublishVolume(
 	}
 
 	_, err := c.NodePublishVolume(ctx, req, callOpts...)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // NodeUnpublishVolume issues a
@@ -114,11 +109,7 @@ func NodeUnpublishVolume(
 	}
 
 	_, err := c.NodeUnpublishVolume(ctx, req, callOpts...)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // NodeProbe issues a
@@ -135,11 +126,7 @@ func NodeProbe(
 	}
 
 	_, err := c.NodeProbe(ctx, req, callOpts...)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // NodeGetCapabilities issues a NodeGetCapabilities request to a
@@ -156,9 +143,5 @@ func NodeGetCapabilities(
 	}
 
 	res, err := c.NodeGetCapabilities(ctx, req, callOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	return res.GetResult().Capabilities, nil
+	return res.Capabilities, err
 }

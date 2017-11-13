@@ -32,11 +32,10 @@ func GetSupportedVersions(
 	req := &csi.GetSupportedVersionsRequest{}
 
 	res, err := c.GetSupportedVersions(ctx, req, callOpts...)
-	if err != nil {
-		return nil, err
+	if res != nil {
+		return res.SupportedVersions, err
 	}
-
-	return res.GetResult().SupportedVersions, nil
+	return nil, err
 }
 
 // GetPluginInfo issues a
@@ -46,16 +45,15 @@ func GetPluginInfo(
 	ctx context.Context,
 	c csi.IdentityClient,
 	version *csi.Version,
-	callOpts ...grpc.CallOption) (*csi.GetPluginInfoResponse_Result, error) {
+	callOpts ...grpc.CallOption) (string, string, map[string]string, error) {
 
 	req := &csi.GetPluginInfoRequest{
 		Version: version,
 	}
 
 	res, err := c.GetPluginInfo(ctx, req, callOpts...)
-	if err != nil {
-		return nil, err
+	if res != nil {
+		return res.Name, res.VendorVersion, res.Manifest, err
 	}
-
-	return res.GetResult(), nil
+	return "", "", nil, err
 }

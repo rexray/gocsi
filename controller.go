@@ -119,11 +119,10 @@ func CreateVolume(
 	}
 
 	res, err := c.CreateVolume(ctx, req, callOpts...)
-	if err != nil {
-		return nil, err
+	if res != nil {
+		return res.VolumeInfo, err
 	}
-
-	return res.GetResult().VolumeInfo, nil
+	return nil, err
 }
 
 // DeleteVolume issues a DeleteVolume request to a CSI controller.
@@ -142,11 +141,7 @@ func DeleteVolume(
 	}
 
 	_, err := c.DeleteVolume(ctx, req, callOpts...)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // ControllerPublishVolume issues a
@@ -176,11 +171,10 @@ func ControllerPublishVolume(
 	}
 
 	res, err := c.ControllerPublishVolume(ctx, req, callOpts...)
-	if err != nil {
-		return nil, err
+	if res != nil {
+		return res.PublishVolumeInfo, err
 	}
-
-	return res.GetResult().PublishVolumeInfo, nil
+	return nil, err
 }
 
 // ControllerUnpublishVolume issues a
@@ -202,11 +196,7 @@ func ControllerUnpublishVolume(
 	}
 
 	_, err := c.ControllerUnpublishVolume(ctx, req, callOpts...)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // ValidateVolumeCapabilities issues a ValidateVolumeCapabilities
@@ -218,7 +208,7 @@ func ValidateVolumeCapabilities(
 	volumeID string,
 	volumeAttribs map[string]string,
 	volumeCapabilities []*csi.VolumeCapability,
-	callOpts ...grpc.CallOption) (*csi.ValidateVolumeCapabilitiesResponse_Result, error) {
+	callOpts ...grpc.CallOption) (bool, string, error) {
 
 	req := &csi.ValidateVolumeCapabilitiesRequest{
 		Version:            version,
@@ -228,11 +218,10 @@ func ValidateVolumeCapabilities(
 	}
 
 	res, err := c.ValidateVolumeCapabilities(ctx, req, callOpts...)
-	if err != nil {
-		return nil, err
+	if res != nil {
+		return res.Supported, res.Message, err
 	}
-
-	return res.GetResult(), nil
+	return false, "", err
 }
 
 // ListVolumes issues a ListVolumes request to a CSI controller.
@@ -256,12 +245,11 @@ func ListVolumes(
 		return nil, "", err
 	}
 
-	result := res.GetResult()
-	nextToken = result.NextToken
-	entries := result.Entries
+	entries := res.Entries
+	nextToken = res.NextToken
 
 	// check to see if there are zero entries
-	if len(result.Entries) == 0 {
+	if len(res.Entries) == 0 {
 		return nil, nextToken, nil
 	}
 
@@ -291,11 +279,10 @@ func GetCapacity(
 	}
 
 	res, err := c.GetCapacity(ctx, req, callOpts...)
-	if err != nil {
-		return 0, err
+	if res != nil {
+		return res.AvailableCapacity, err
 	}
-
-	return res.GetResult().AvailableCapacity, nil
+	return 0, err
 }
 
 // ControllerGetCapabilities issues a ControllerGetCapabilities request to a
@@ -312,9 +299,8 @@ func ControllerGetCapabilities(
 	}
 
 	res, err := c.ControllerGetCapabilities(ctx, req, callOpts...)
-	if err != nil {
-		return nil, err
+	if res != nil {
+		return res.Capabilities, err
 	}
-
-	return res.GetResult().Capabilities, nil
+	return nil, err
 }

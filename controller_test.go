@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
@@ -17,7 +18,6 @@ import (
 var _ = Describe("Controller", func() {
 	var (
 		err      error
-		gocsiErr error
 		stopMock func()
 		ctx      context.Context
 		gclient  *grpc.ClientConn
@@ -43,7 +43,6 @@ var _ = Describe("Controller", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		client = csi.NewControllerClient(gclient)
 
-		gocsiErr = &gocsi.Error{}
 		version = mockSupportedVersions[0]
 
 		volID = "4"
@@ -62,7 +61,6 @@ var _ = Describe("Controller", func() {
 		client = nil
 		stopMock()
 
-		gocsiErr = nil
 		version = nil
 
 		vol = nil
@@ -100,15 +98,10 @@ var _ = Describe("Controller", func() {
 		err error) bool {
 
 		if err != nil {
-			Ω(vol).Should(BeNil())
-			Ω(err).Should(BeAssignableToTypeOf(gocsiErr))
-			terr := err.(*gocsi.Error)
-			Ω(terr.Code).Should(BeEquivalentTo(
-				csi.Error_CreateVolumeError_OPERATION_PENDING_FOR_VOLUME))
+			Ω(err).Should(Σ(gocsi.ErrOpPending))
 			return true
 		}
 
-		Ω(err).ShouldNot(HaveOccurred())
 		Ω(vol).ShouldNot(BeNil())
 		Ω(vol.CapacityBytes).Should(Equal(limBytes))
 		Ω(vol.Id).Should(Equal(volID))
@@ -144,11 +137,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Be Invalid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  gocsi.FMCreateVolume,
-					Code:        3,
-					Description: "name required",
-				}))
+				Ω(err).Should(Σ(gocsi.ErrVolumeNameRequired))
 				Ω(vol).Should(BeNil())
 			})
 		})
@@ -181,6 +170,7 @@ var _ = Describe("Controller", func() {
 					once    sync.Once
 					buckets = count / bucketSize
 					worker  = func() {
+						defer wg.Done()
 						defer GinkgoRecover()
 						if !validateNewVolumeResult(
 							createNewVolumeWithResult()) {
@@ -188,7 +178,6 @@ var _ = Describe("Controller", func() {
 								opPendingErrorOccurs = true
 							})
 						}
-						wg.Done()
 					}
 				)
 				if r := math.Remainder(
@@ -233,6 +222,12 @@ var _ = Describe("Controller", func() {
 			Context("x1", func() {
 				BeforeEach(func() {
 					count = 1
+				})
+				It("Should Be Valid", validateIdempResult)
+			})
+			Context("x10", func() {
+				BeforeEach(func() {
+					count = 10
 				})
 				It("Should Be Valid", validateIdempResult)
 			})
@@ -294,11 +289,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  gocsi.FMDeleteVolume,
-					Code:        3,
-					Description: "volume id required",
-				}))
+				Ω(err).Should(Σ(gocsi.ErrVolumeIDRequired))
 			})
 		})
 		Context("Missing Version", func() {
@@ -307,11 +298,9 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  gocsi.FMDeleteVolume,
-					Code:        2,
-					Description: "unsupported request version: 0.0.0",
-				}))
+				Ω(err).Should(ΣCM(
+					codes.InvalidArgument,
+					"invalid request version: 0.0.0"))
 			})
 		})
 	})

@@ -6,9 +6,11 @@ import (
 	"path"
 	"strconv"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"golang.org/x/net/context"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
 )
 
@@ -34,13 +36,7 @@ func (s *service) CreateVolume(
 	defer s.volsRWL.Unlock()
 	s.vols = append(s.vols, v)
 
-	return &csi.CreateVolumeResponse{
-		Reply: &csi.CreateVolumeResponse_Result_{
-			Result: &csi.CreateVolumeResponse_Result{
-				VolumeInfo: &v,
-			},
-		},
-	}, nil
+	return &csi.CreateVolumeResponse{VolumeInfo: &v}, nil
 }
 
 func (s *service) DeleteVolume(
@@ -61,11 +57,7 @@ func (s *service) DeleteVolume(
 		s.vols = s.vols[:len(s.vols)-1]
 	}()
 
-	return &csi.DeleteVolumeResponse{
-		Reply: &csi.DeleteVolumeResponse_Result_{
-			Result: &csi.DeleteVolumeResponse_Result{},
-		},
-	}, nil
+	return &csi.DeleteVolumeResponse{}, nil
 }
 
 func (s *service) ControllerPublishVolume(
@@ -87,12 +79,8 @@ func (s *service) ControllerPublishVolume(
 	s.vols[i] = v
 
 	return &csi.ControllerPublishVolumeResponse{
-		Reply: &csi.ControllerPublishVolumeResponse_Result_{
-			Result: &csi.ControllerPublishVolumeResponse_Result{
-				PublishVolumeInfo: map[string]string{
-					"device": v.Attributes[devPathKey],
-				},
-			},
+		PublishVolumeInfo: map[string]string{
+			"device": v.Attributes[devPathKey],
 		},
 	}, nil
 }
@@ -115,11 +103,7 @@ func (s *service) ControllerUnpublishVolume(
 	delete(v.Attributes, devPathKey)
 	s.vols[i] = v
 
-	return &csi.ControllerUnpublishVolumeResponse{
-		Reply: &csi.ControllerUnpublishVolumeResponse_Result_{
-			Result: &csi.ControllerUnpublishVolumeResponse_Result{},
-		},
-	}, nil
+	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 
 func (s *service) ValidateVolumeCapabilities(
@@ -128,11 +112,7 @@ func (s *service) ValidateVolumeCapabilities(
 	*csi.ValidateVolumeCapabilitiesResponse, error) {
 
 	return &csi.ValidateVolumeCapabilitiesResponse{
-		Reply: &csi.ValidateVolumeCapabilitiesResponse_Result_{
-			Result: &csi.ValidateVolumeCapabilitiesResponse_Result{
-				Supported: true,
-			},
-		},
+		Supported: true,
 	}, nil
 }
 
@@ -161,17 +141,19 @@ func (s *service) ListVolumes(
 	if v := req.StartingToken; v != "" {
 		i, err := strconv.ParseUint(v, 10, 32)
 		if err != nil {
-			return gocsi.ErrListVolumes(0, fmt.Sprintf(
+			return nil, status.Errorf(
+				codes.InvalidArgument,
 				"startingToken=%d !< uint32=%d",
-				startingToken, math.MaxUint32)), nil
+				startingToken, math.MaxUint32)
 		}
 		startingToken = uint32(i)
 	}
 
 	if startingToken > ulenVols {
-		return gocsi.ErrListVolumes(0, fmt.Sprintf(
+		return nil, status.Errorf(
+			codes.InvalidArgument,
 			"startingToken=%d > len(vols)=%d",
-			startingToken, ulenVols)), nil
+			startingToken, ulenVols)
 	}
 
 	// Discern the number of remaining entries.
@@ -187,12 +169,12 @@ func (s *service) ListVolumes(
 		i       int
 		j       = startingToken
 		entries = make(
-			[]*csi.ListVolumesResponse_Result_Entry,
+			[]*csi.ListVolumesResponse_Entry,
 			maxEntries)
 	)
 
 	for i = 0; i < len(entries); i++ {
-		entries[i] = &csi.ListVolumesResponse_Result_Entry{
+		entries[i] = &csi.ListVolumesResponse_Entry{
 			VolumeInfo: &vols[j],
 		}
 		j++
@@ -204,12 +186,8 @@ func (s *service) ListVolumes(
 	}
 
 	return &csi.ListVolumesResponse{
-		Reply: &csi.ListVolumesResponse_Result_{
-			Result: &csi.ListVolumesResponse_Result{
-				Entries:   entries,
-				NextToken: nextToken,
-			},
-		},
+		Entries:   entries,
+		NextToken: nextToken,
 	}, nil
 }
 
@@ -219,11 +197,7 @@ func (s *service) GetCapacity(
 	*csi.GetCapacityResponse, error) {
 
 	return &csi.GetCapacityResponse{
-		Reply: &csi.GetCapacityResponse_Result_{
-			Result: &csi.GetCapacityResponse_Result{
-				AvailableCapacity: tib100,
-			},
-		},
+		AvailableCapacity: tib100,
 	}, nil
 }
 
@@ -233,36 +207,32 @@ func (s *service) ControllerGetCapabilities(
 	*csi.ControllerGetCapabilitiesResponse, error) {
 
 	return &csi.ControllerGetCapabilitiesResponse{
-		Reply: &csi.ControllerGetCapabilitiesResponse_Result_{
-			Result: &csi.ControllerGetCapabilitiesResponse_Result{
-				Capabilities: []*csi.ControllerServiceCapability{
-					&csi.ControllerServiceCapability{
-						Type: &csi.ControllerServiceCapability_Rpc{
-							Rpc: &csi.ControllerServiceCapability_RPC{
-								Type: csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-							},
-						},
+		Capabilities: []*csi.ControllerServiceCapability{
+			&csi.ControllerServiceCapability{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 					},
-					&csi.ControllerServiceCapability{
-						Type: &csi.ControllerServiceCapability_Rpc{
-							Rpc: &csi.ControllerServiceCapability_RPC{
-								Type: csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
-							},
-						},
+				},
+			},
+			&csi.ControllerServiceCapability{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 					},
-					&csi.ControllerServiceCapability{
-						Type: &csi.ControllerServiceCapability_Rpc{
-							Rpc: &csi.ControllerServiceCapability_RPC{
-								Type: csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
-							},
-						},
+				},
+			},
+			&csi.ControllerServiceCapability{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
 					},
-					&csi.ControllerServiceCapability{
-						Type: &csi.ControllerServiceCapability_Rpc{
-							Rpc: &csi.ControllerServiceCapability_RPC{
-								Type: csi.ControllerServiceCapability_RPC_GET_CAPACITY,
-							},
-						},
+				},
+			},
+			&csi.ControllerServiceCapability{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_GET_CAPACITY,
 					},
 				},
 			},
@@ -275,9 +245,5 @@ func (s *service) ControllerProbe(
 	req *csi.ControllerProbeRequest) (
 	*csi.ControllerProbeResponse, error) {
 
-	return &csi.ControllerProbeResponse{
-		Reply: &csi.ControllerProbeResponse_Result_{
-			Result: &csi.ControllerProbeResponse_Result{},
-		},
-	}, nil
+	return &csi.ControllerProbeResponse{}, nil
 }

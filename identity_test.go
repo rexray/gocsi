@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
@@ -35,13 +36,15 @@ var _ = Describe("Identity", func() {
 
 	Describe("GetPluginInfo", func() {
 		var (
-			res     *csi.GetPluginInfoResponse_Result
-			version gocsi.Version
+			name          string
+			vendorVersion string
+			manifest      map[string]string
+			version       gocsi.Version
 		)
 		BeforeEach(func() {
 			version, err = gocsi.ParseVersion(CTest().ComponentTexts[3])
 			Ω(err).ShouldNot(HaveOccurred())
-			res, err = gocsi.GetPluginInfo(
+			name, vendorVersion, manifest, err = gocsi.GetPluginInfo(
 				ctx,
 				client,
 				&csi.Version{
@@ -50,21 +53,23 @@ var _ = Describe("Identity", func() {
 					Patch: version.GetPatch(),
 				})
 		})
+		AfterEach(func() {
+			name = ""
+			vendorVersion = ""
+			manifest = nil
+		})
 		shouldBeValid := func() {
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(res).ShouldNot(BeNil())
-			Ω(res.Name).Should(Equal(service.Name))
-			Ω(res.VendorVersion).Should(Equal(service.VendorVersion))
+			Ω(name).Should(Equal(service.Name))
+			Ω(vendorVersion).Should(Equal(service.VendorVersion))
+			Ω(manifest).Should(BeNil())
 		}
 		shouldNotBeValid := func() {
-			Ω(res).Should(BeNil())
-			Ω(err).Should(HaveOccurred())
-			Ω(err).Should(Σ(&gocsi.Error{
-				FullMethod: "/csi.Identity/GetPluginInfo",
-				Code:       2,
-				Description: fmt.Sprintf("unsupported request version: %s",
-					CTest().ComponentTexts[3]),
-			}))
+			Ω(err).Should(ΣCM(
+				codes.InvalidArgument,
+				fmt.Sprintf("invalid request version: %s",
+					CTest().ComponentTexts[3])))
+
 		}
 		Context("With Request Version", func() {
 			Context("0.0.0", func() {

@@ -3,9 +3,11 @@ package service
 import (
 	"path"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"golang.org/x/net/context"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
 )
 
@@ -16,9 +18,9 @@ func (s *service) NodePublishVolume(
 
 	device, ok := req.PublishVolumeInfo["device"]
 	if !ok {
-		return gocsi.ErrNodePublishVolumeGeneral(
-			csi.Error_GeneralError_MISSING_REQUIRED_FIELD,
-			"publish volume info 'device' key required"), nil
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"publish volume info 'device' key required")
 	}
 
 	// nodeMntPathKey is the key in the volume's attributes that is set to a
@@ -33,11 +35,7 @@ func (s *service) NodePublishVolume(
 	v.Attributes[nodeMntPathKey] = device
 	s.vols[i] = v
 
-	return &csi.NodePublishVolumeResponse{
-		Reply: &csi.NodePublishVolumeResponse_Result_{
-			Result: &csi.NodePublishVolumeResponse_Result{},
-		},
-	}, nil
+	return &csi.NodePublishVolumeResponse{}, nil
 }
 
 func (s *service) NodeUnpublishVolume(
@@ -57,11 +55,7 @@ func (s *service) NodeUnpublishVolume(
 	delete(v.Attributes, nodeMntPathKey)
 	s.vols[i] = v
 
-	return &csi.NodeUnpublishVolumeResponse{
-		Reply: &csi.NodeUnpublishVolumeResponse_Result_{
-			Result: &csi.NodeUnpublishVolumeResponse_Result{},
-		},
-	}, nil
+	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
 func (s *service) GetNodeID(
@@ -70,11 +64,7 @@ func (s *service) GetNodeID(
 	*csi.GetNodeIDResponse, error) {
 
 	return &csi.GetNodeIDResponse{
-		Reply: &csi.GetNodeIDResponse_Result_{
-			Result: &csi.GetNodeIDResponse_Result{
-				NodeId: s.nodeID,
-			},
-		},
+		NodeId: s.nodeID,
 	}, nil
 }
 
@@ -83,11 +73,7 @@ func (s *service) NodeProbe(
 	req *csi.NodeProbeRequest) (
 	*csi.NodeProbeResponse, error) {
 
-	return &csi.NodeProbeResponse{
-		Reply: &csi.NodeProbeResponse_Result_{
-			Result: &csi.NodeProbeResponse_Result{},
-		},
-	}, nil
+	return &csi.NodeProbeResponse{}, nil
 }
 
 func (s *service) NodeGetCapabilities(
@@ -96,15 +82,11 @@ func (s *service) NodeGetCapabilities(
 	*csi.NodeGetCapabilitiesResponse, error) {
 
 	return &csi.NodeGetCapabilitiesResponse{
-		Reply: &csi.NodeGetCapabilitiesResponse_Result_{
-			Result: &csi.NodeGetCapabilitiesResponse_Result{
-				Capabilities: []*csi.NodeServiceCapability{
-					&csi.NodeServiceCapability{
-						Type: &csi.NodeServiceCapability_Rpc{
-							Rpc: &csi.NodeServiceCapability_RPC{
-								Type: csi.NodeServiceCapability_RPC_UNKNOWN,
-							},
-						},
+		Capabilities: []*csi.NodeServiceCapability{
+			&csi.NodeServiceCapability{
+				Type: &csi.NodeServiceCapability_Rpc{
+					Rpc: &csi.NodeServiceCapability_RPC{
+						Type: csi.NodeServiceCapability_RPC_UNKNOWN,
 					},
 				},
 			},
