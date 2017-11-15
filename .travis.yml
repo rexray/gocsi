@@ -48,10 +48,10 @@ jobs:
         install: true
         script:  make $PROG
 
-      #- stage:   build
-        #env:     PROG=csc
-        #install: true
-        #script:  make -C $PROG
+      - stage:   build
+        env:     PROG=csc
+        install: true
+        script:  make -C $PROG
 
       - stage:   build
         env:     PROG=mock
