@@ -50,7 +50,7 @@ jobs:
 
       #- stage:   build
         #env:     PROG=csc
-        #install: skip
+        #install: true
         #script:  make -C $PROG
 
       - stage:   build

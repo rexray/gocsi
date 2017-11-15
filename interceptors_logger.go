@@ -131,6 +131,7 @@ func (s *loggingInterceptor) handle(
 
 	// Print the response error if it is set.
 	if failed != nil {
+		fmt.Fprint(w, ": ")
 		fmt.Fprint(w, failed)
 	}
 

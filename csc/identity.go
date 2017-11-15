@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"os"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
 	"google.golang.org/grpc"
 )
@@ -51,24 +50,23 @@ func getSupportedVersions(
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
 
-	// initialize the csi client
-	client := csi.NewIdentityClient(cc)
-
-	// execute the rpc
-	versions, err := gocsi.GetSupportedVersions(ctx, client)
+	// Create a template to emit the result.
+	tpl, err := template.New("template").Parse(args.format)
 	if err != nil {
 		return err
 	}
 
-	// create a template for emitting the output
-	tpl := template.New("template")
-	if tpl, err = tpl.Parse(args.format); err != nil {
+	// Execute the RPC.
+	client := csi.NewIdentityClient(cc)
+	res, err := client.GetSupportedVersions(
+		ctx, &csi.GetSupportedVersionsRequest{})
+	if err != nil {
 		return err
 	}
-	// emit the result
-	for _, v := range versions {
-		if err = tpl.Execute(
-			os.Stdout, v); err != nil {
+
+	// Emit the result.
+	for _, v := range res.SupportedVersions {
+		if err = tpl.Execute(os.Stdout, v); err != nil {
 			return err
 		}
 	}
@@ -83,7 +81,7 @@ func flagsGetPluginInfo(
 	ctx context.Context, rpc string) *flag.FlagSet {
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
-	flagsGlobal(fs, pluginInfoFormat, "*csi.GetPluginInfoResponse_Result")
+	flagsGlobal(fs, pluginInfoFormat, "*csi.GetPluginInfoResponse")
 
 	fs.Usage = func() {
 		fmt.Fprintf(
@@ -100,23 +98,23 @@ func getPluginInfo(
 	fs *flag.FlagSet,
 	cc *grpc.ClientConn) error {
 
-	// initialize the csi client
-	client := csi.NewIdentityClient(cc)
-
-	// execute the rpc
-	info, err := gocsi.GetPluginInfo(ctx, client, args.version)
+	// Create a template to emit the result.
+	tpl, err := template.New("template").Parse(args.format)
 	if err != nil {
 		return err
 	}
 
-	// create a template for emitting the output
-	tpl := template.New("template")
-	if tpl, err = tpl.Parse(args.format); err != nil {
+	// Execute the RPC.
+	client := csi.NewIdentityClient(cc)
+	res, err := client.GetPluginInfo(ctx, &csi.GetPluginInfoRequest{
+		Version: args.version,
+	})
+	if err != nil {
 		return err
 	}
-	// emit the result
-	if err = tpl.Execute(
-		os.Stdout, info); err != nil {
+
+	// Emit the result.
+	if err = tpl.Execute(os.Stdout, res); err != nil {
 		return err
 	}
 

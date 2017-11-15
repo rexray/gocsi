@@ -5,14 +5,14 @@ import (
 	"os"
 
 	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/csi"
 )
 
 var _ = Describe("ParseVersion", func() {
-	shouldParse := func() gocsi.Version {
+	shouldParse := func() csi.Version {
 		v, err := gocsi.ParseVersion(
 			CurrentGinkgoTestDescription().ComponentTexts[1])
 		Ω(err).ShouldNot(HaveOccurred())
-		Ω(v).ShouldNot(BeNil())
 		return v
 	}
 	Context("0.0.0", func() {

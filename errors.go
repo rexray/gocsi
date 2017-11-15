@@ -174,9 +174,9 @@ func IsSuccess(err error, successCodes ...codes.Code) error {
 // returned; otherwise the original error is returned.
 func IsSuccessfulResponse(method string, err error) error {
 	switch method {
-	case FMCreateVolume:
+	case CreateVolume:
 		return IsSuccess(err, codes.AlreadyExists)
-	case FMDeleteVolume:
+	case DeleteVolume:
 		return IsSuccess(err, codes.NotFound)
 	}
 	return err

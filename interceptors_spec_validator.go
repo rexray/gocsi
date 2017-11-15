@@ -60,7 +60,7 @@ func WithSupportedVersions(versions ...csi.Version) SpecValidatorOption {
 // eponymous request should treat the eponymous error code as successful.
 func WithSuccessCreateVolumeAlreadyExists() SpecValidatorOption {
 	return func(o *specValidatorOpts) {
-		o.setSuccessfulExitCode(FMCreateVolume, codes.AlreadyExists)
+		o.setSuccessfulExitCode(CreateVolume, codes.AlreadyExists)
 	}
 }
 
@@ -68,7 +68,7 @@ func WithSuccessCreateVolumeAlreadyExists() SpecValidatorOption {
 // eponymous request should treat the eponymous error code as successful.
 func WithSuccessDeleteVolumeNotFound() SpecValidatorOption {
 	return func(o *specValidatorOpts) {
-		o.setSuccessfulExitCode(FMDeleteVolume, codes.NotFound)
+		o.setSuccessfulExitCode(DeleteVolume, codes.NotFound)
 	}
 }
 
@@ -104,7 +104,7 @@ func WithRequiresVolumeAttributes() SpecValidatorOption {
 // data.
 func WithRequiresCreateVolumeCredentials() SpecValidatorOption {
 	return func(o *specValidatorOpts) {
-		o.requireCredentials(FMCreateVolume)
+		o.requireCredentials(CreateVolume)
 	}
 }
 
@@ -113,7 +113,7 @@ func WithRequiresCreateVolumeCredentials() SpecValidatorOption {
 // data.
 func WithRequiresDeleteVolumeCredentials() SpecValidatorOption {
 	return func(o *specValidatorOpts) {
-		o.requireCredentials(FMDeleteVolume)
+		o.requireCredentials(DeleteVolume)
 	}
 }
 
@@ -122,7 +122,7 @@ func WithRequiresDeleteVolumeCredentials() SpecValidatorOption {
 // data.
 func WithRequiresControllerPublishVolumeCredentials() SpecValidatorOption {
 	return func(o *specValidatorOpts) {
-		o.requireCredentials(FMControllerPublishVolume)
+		o.requireCredentials(ControllerPublishVolume)
 	}
 }
 
@@ -131,7 +131,7 @@ func WithRequiresControllerPublishVolumeCredentials() SpecValidatorOption {
 // data.
 func WithRequiresControllerUnpublishVolumeCredentials() SpecValidatorOption {
 	return func(o *specValidatorOpts) {
-		o.requireCredentials(FMControllerUnpublishVolume)
+		o.requireCredentials(ControllerUnpublishVolume)
 	}
 }
 
@@ -140,7 +140,7 @@ func WithRequiresControllerUnpublishVolumeCredentials() SpecValidatorOption {
 // data.
 func WithRequiresNodePublishVolumeCredentials() SpecValidatorOption {
 	return func(o *specValidatorOpts) {
-		o.requireCredentials(FMNodePublishVolume)
+		o.requireCredentials(NodePublishVolume)
 	}
 }
 
@@ -149,7 +149,7 @@ func WithRequiresNodePublishVolumeCredentials() SpecValidatorOption {
 // data.
 func WithRequiresNodeUnpublishVolumeCredentials() SpecValidatorOption {
 	return func(o *specValidatorOpts) {
-		o.requireCredentials(FMNodeUnpublishVolume)
+		o.requireCredentials(NodeUnpublishVolume)
 	}
 }
 
@@ -417,6 +417,11 @@ func (s *specValidator) validateRequestVersion(
 		requestVersion = treq.GetVersion()
 	)
 
+	if requestVersion == nil {
+		return status.Error(
+			codes.InvalidArgument, "invalid request version: nil")
+	}
+
 	for _, supportedVersion := range s.opts.supportedVersions {
 		if CompareVersions(requestVersion, &supportedVersion) == 0 {
 			supported = true
@@ -428,7 +433,7 @@ func (s *specValidator) validateRequestVersion(
 		return status.Errorf(
 			codes.InvalidArgument,
 			"invalid request version: %s",
-			SprintfVersion(requestVersion))
+			SprintfVersion(*requestVersion))
 	}
 
 	return nil

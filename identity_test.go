@@ -39,19 +39,24 @@ var _ = Describe("Identity", func() {
 			name          string
 			vendorVersion string
 			manifest      map[string]string
-			version       gocsi.Version
+			version       csi.Version
 		)
 		BeforeEach(func() {
 			version, err = gocsi.ParseVersion(CTest().ComponentTexts[3])
 			Ω(err).ShouldNot(HaveOccurred())
-			name, vendorVersion, manifest, err = gocsi.GetPluginInfo(
-				ctx,
-				client,
-				&csi.Version{
+			var res *csi.GetPluginInfoResponse
+			res, err = client.GetPluginInfo(ctx, &csi.GetPluginInfoRequest{
+				Version: &csi.Version{
 					Major: version.GetMajor(),
 					Minor: version.GetMinor(),
 					Patch: version.GetPatch(),
-				})
+				},
+			})
+			if err == nil {
+				name = res.Name
+				vendorVersion = res.VendorVersion
+				manifest = res.Manifest
+			}
 		})
 		AfterEach(func() {
 			name = ""
@@ -95,13 +100,15 @@ var _ = Describe("Identity", func() {
 
 	Describe("GetSupportedVersions", func() {
 		It("Should Be Valid", func() {
-			res, err := gocsi.GetSupportedVersions(
-				ctx,
-				client)
+			res, err := client.GetSupportedVersions(
+				ctx, &csi.GetSupportedVersionsRequest{})
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(res).ShouldNot(BeNil())
-			Ω(res).Should(HaveLen(len(mockSupportedVersions)))
-			Ω(res).Should(Equal(mockSupportedVersions))
+			resVersions := res.SupportedVersions
+			Ω(resVersions).Should(HaveLen(len(mockSupportedVersions)))
+			for i, v := range resVersions {
+				Ω(*v).Should(Equal(mockSupportedVersions[i]))
+			}
 		})
 	})
 })
