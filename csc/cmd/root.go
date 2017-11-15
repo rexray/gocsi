@@ -55,6 +55,10 @@ var RootCmd = &cobra.Command{
 				}
 			case createVolumeCmd.Name():
 				root.format = volumeInfoFormat
+			case supportedVersCmd.Name():
+				root.format = supportedVersionsFormat
+			case pluginInfoCmd.Name():
+				root.format = pluginInfoFormat
 			}
 		}
 		if root.format != "" {
