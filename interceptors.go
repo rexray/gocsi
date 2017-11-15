@@ -62,3 +62,45 @@ func ChainUnaryClient(
 		return c(ctx, method, req, rep, cc, opts...)
 	}
 }
+
+// ChainUnaryServer chains one or more unary, server interceptors
+// together into a left-to-right series that can be provided to a
+// new gRPC server.
+func ChainUnaryServer(
+	i ...grpc.UnaryServerInterceptor) grpc.UnaryServerInterceptor {
+
+	switch len(i) {
+	case 0:
+		return func(
+			ctx context.Context,
+			req interface{},
+			_ *grpc.UnaryServerInfo,
+			handler grpc.UnaryHandler) (interface{}, error) {
+			return handler(ctx, req)
+		}
+	case 1:
+		return i[0]
+	}
+
+	return func(
+		ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler) (interface{}, error) {
+
+		bc := func(
+			cur grpc.UnaryServerInterceptor,
+			nxt grpc.UnaryHandler) grpc.UnaryHandler {
+			return func(
+				curCtx context.Context,
+				curReq interface{}) (interface{}, error) {
+				return cur(curCtx, curReq, info, nxt)
+			}
+		}
+		c := handler
+		for j := len(i) - 1; j >= 0; j-- {
+			c = bc(i[j], c)
+		}
+		return c(ctx, req)
+	}
+}

@@ -109,14 +109,14 @@ func benchmarkNetConnParallel(
 
 	var (
 		ctx    = context.Background()
-		closed = make(chan int)
+		closed = make(chan struct{})
 		server = newHTTPServer(b)
 	)
 
 	// start the http serve
 	go func() {
 		server.Serve(listen)
-		closed <- 1
+		closed <- struct{}{}
 	}()
 
 	// make sure the server is shutdown

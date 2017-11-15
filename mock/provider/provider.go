@@ -27,20 +27,15 @@ const (
 	// logging.
 	ReqLoggingEnabled = "X_CSI_MOCK_REQ_LOGGING_ENABLED"
 
-	// ResLoggingEnabled is the name of the environment variable
+	// RepLoggingEnabled is the name of the environment variable
 	// used to determine if the Mock server should enable response
 	// logging.
-	ResLoggingEnabled = "X_CSI_MOCK_RES_LOGGING_ENABLED"
+	RepLoggingEnabled = "X_CSI_MOCK_REP_LOGGING_ENABLED"
 
 	// ReqIDInjectionEnabled is the name of the environment variable
 	// used to determine if the Mock server should enable request ID
 	// injection.
 	ReqIDInjectionEnabled = "X_CSI_MOCK_REQ_ID_INJECTION_ENABLED"
-
-	// VersionValidationEnabled is the name of the environment variable
-	// used to determine if the Mock server should enable request version
-	// validation.
-	VersionValidationEnabled = "X_CSI_MOCK_VERSION_VALIDATION_ENABLED"
 
 	// SpecValidationEnabled is the name of the environment variable
 	// used to determine if the Mock server should enable request
@@ -229,9 +224,8 @@ func newGrpcInterceptors(
 	var (
 		usi           []grpc.UnaryServerInterceptor
 		reqLogEnabled = pb(ReqLoggingEnabled)
-		resLogEnabled = pb(ResLoggingEnabled)
+		repLogEnabled = pb(RepLoggingEnabled)
 		reqIDEnabled  = pb(ReqIDInjectionEnabled)
-		verEnabled    = pb(VersionValidationEnabled)
 		specEnabled   = pb(SpecValidationEnabled)
 		idempEnabled  = pb(IdempEnabled)
 		idempReqVol   = pb(IdempRequireVolume)
@@ -242,30 +236,35 @@ func newGrpcInterceptors(
 	}
 
 	// If request or response logging are enabled then create the loggers.
-	if reqLogEnabled || resLogEnabled {
-		lout := newLogger(log.Infof)
-		lerr := newLogger(log.Errorf)
-
+	if reqLogEnabled || repLogEnabled {
+		var (
+			opts []gocsi.LoggingOption
+			lout = newLogger(log.Infof)
+		)
 		if reqLogEnabled {
-			usi = append(usi, gocsi.NewServerRequestLogger(lout, lerr))
+			opts = append(opts, gocsi.WithRequestLogging(lout))
 		}
-		if resLogEnabled {
-			usi = append(usi, gocsi.NewServerResponseLogger(lout, lerr))
+		if repLogEnabled {
+			opts = append(opts, gocsi.WithResponseLogging(lout))
 		}
-	}
-
-	if verEnabled {
-		usi = append(
-			usi,
-			gocsi.NewServerRequestVersionValidator(service.SupportedVersions))
+		usi = append(usi, gocsi.NewServerLogger(opts...))
 	}
 
 	if specEnabled {
+		sv := make([]csi.Version, len(service.SupportedVersions))
+		for i, v := range service.SupportedVersions {
+			sv[i] = *v
+		}
 		usi = append(
 			usi,
 			gocsi.NewServerSpecValidator(
-				gocsi.NodeIDRequired,
-				gocsi.PublishVolumeInfoRequired))
+				gocsi.WithSupportedVersions(sv...),
+				gocsi.WithSuccessDeleteVolumeNotFound(),
+				gocsi.WithSuccessCreateVolumeAlreadyExists(),
+				gocsi.WithRequiresNodeID(),
+				gocsi.WithRequiresPublishVolumeInfo(),
+			),
+		)
 	}
 
 	if idempEnabled {

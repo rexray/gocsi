@@ -23,30 +23,26 @@ const maxuint32 = 4294967295
 
 // ParseVersion parses any string that matches \d+\.\d+\.\d+ and
 // returns a Version.
-func ParseVersion(s string) (Version, error) {
-	var major uint32
-	var minor uint32
-	var patch uint32
-	n, err := fmt.Sscanf(s, "%d.%d.%d", &major, &minor, &patch)
+func ParseVersion(s string) (version csi.Version, failed error) {
+	n, err := fmt.Sscanf(
+		s, "%d.%d.%d",
+		&version.Major,
+		&version.Minor,
+		&version.Patch)
 	if err != nil {
-		return nil, err
+		failed = err
+		return
 	}
 	if n != 3 {
-		return nil, fmt.Errorf("error: parsed %d vals", n)
+		failed = fmt.Errorf("error: parsed %d vals", n)
+		return
 	}
-	return &csi.Version{
-		Major: major,
-		Minor: minor,
-		Patch: patch,
-	}, nil
+	return
 }
 
 // SprintfVersion formats a Version as a string.
-func SprintfVersion(v Version) string {
-	if v == nil {
-		return ""
-	}
-	return fmt.Sprintf("%d.%d.%d", v.GetMajor(), v.GetMinor(), v.GetPatch())
+func SprintfVersion(v csi.Version) string {
+	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
 
 // CompareVersions compares two versions and returns:

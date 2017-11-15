@@ -9,6 +9,7 @@ import (
 )
 
 func TestGocsi(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "GoCSI Suite")

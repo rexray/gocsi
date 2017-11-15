@@ -25,7 +25,7 @@ var _ = Describe("Node", func() {
 		gclient, stopMock, err = startMockServer(ctx)
 		Ω(err).ShouldNot(HaveOccurred())
 		client = csi.NewNodeClient(gclient)
-		version = mockSupportedVersions[0]
+		version = &mockSupportedVersions[0]
 	})
 	AfterEach(func() {
 		ctx = nil
@@ -36,16 +36,39 @@ var _ = Describe("Node", func() {
 		stopMock()
 	})
 
+	listVolumes := func() (vols []csi.VolumeInfo, err error) {
+		cvol, cerr := gocsi.PageAllVolumes(
+			ctx,
+			csi.NewControllerClient(gclient),
+			csi.ListVolumesRequest{Version: version})
+		for {
+			select {
+			case v, ok := <-cvol:
+				if !ok {
+					return
+				}
+				vols = append(vols, v)
+			case e, ok := <-cerr:
+				if !ok {
+					return
+				}
+				err = e
+			}
+		}
+	}
+
 	Describe("GetNodeID", func() {
 		var nodeID string
 		BeforeEach(func() {
-			nodeID, err = gocsi.GetNodeID(
+			res, err := client.GetNodeID(
 				ctx,
-				client,
-				mockSupportedVersions[0])
+				&csi.GetNodeIDRequest{
+					Version: &mockSupportedVersions[0],
+				})
+			Ω(err).ShouldNot(HaveOccurred())
+			nodeID = res.NodeId
 		})
 		It("Should Be Valid", func() {
-			Ω(err).ShouldNot(HaveOccurred())
 			Ω(nodeID).ShouldNot(BeEmpty())
 			Ω(nodeID).Should(Equal(service.Name))
 		})
@@ -58,23 +81,16 @@ var _ = Describe("Node", func() {
 		mntPathKey := path.Join(service.Name, targetPath)
 
 		publishVolume := func() {
-			err = gocsi.NodePublishVolume(
-				ctx,
-				client,
-				version,
-				"1",
-				nil,
-				map[string]string{"device": device},
-				targetPath,
-				gocsi.NewMountCapability(
+			req := &csi.NodePublishVolumeRequest{
+				Version:           version,
+				VolumeId:          "1",
+				PublishVolumeInfo: map[string]string{"device": device},
+				VolumeCapability: gocsi.NewMountCapability(
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-					"mock",
-					nil),
-				false,
-				nil)
-		}
-
-		shouldBePublished := func() {
+					"mock"),
+				TargetPath: targetPath,
+			}
+			_, err = client.NodePublishVolume(ctx, req)
 			Ω(err).ShouldNot(HaveOccurred())
 		}
 
@@ -83,9 +99,7 @@ var _ = Describe("Node", func() {
 		})
 		Context("PublishVolume", func() {
 			It("Should Be Valid", func() {
-				shouldBePublished()
-				vols, _, err := gocsi.ListVolumes(
-					ctx, csi.NewControllerClient(gclient), version, 0, "")
+				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).Should(HaveLen(3))
 				Ω(vols[0].Attributes[mntPathKey]).Should(Equal(device))
@@ -94,19 +108,17 @@ var _ = Describe("Node", func() {
 
 		Context("UnpublishVolume", func() {
 			BeforeEach(func() {
-				shouldBePublished()
-				err := gocsi.NodeUnpublishVolume(
+				_, err = client.NodeUnpublishVolume(
 					ctx,
-					client,
-					version,
-					"1",
-					targetPath,
-					nil)
+					&csi.NodeUnpublishVolumeRequest{
+						Version:    version,
+						VolumeId:   "1",
+						TargetPath: targetPath,
+					})
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 			It("Should Be Unpublished", func() {
-				vols, _, err := gocsi.ListVolumes(
-					ctx, csi.NewControllerClient(gclient), version, 0, "")
+				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).Should(HaveLen(3))
 				_, ok := vols[0].Attributes[mntPathKey]

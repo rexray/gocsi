@@ -455,7 +455,7 @@ func flagsValidateVolumeCapabilities(
 
 	fs := flag.NewFlagSet(rpc, flag.ExitOnError)
 	flagsGlobal(fs, valCapFormat,
-		"*csi.ValidateVolumeCapabilitiesResponse_Result")
+		"*csi.ValidateVolumeCapabilitiesResponse")
 
 	fs.BoolVar(
 		&argsValidateVolumeCapabilities.block,
@@ -510,11 +510,11 @@ func validateVolumeCapabilities(
 		volumeID string
 		mode     csi.VolumeCapability_AccessMode_Mode
 
-		caps     = []*csi.VolumeCapability{}
-		block    = argsValidateVolumeCapabilities.block
-		fsType   = argsValidateVolumeCapabilities.fsType
-		mntFlags = argsValidateVolumeCapabilities.mntFlags.vals
-		volumeAT = argsValidateVolumeCapabilities.volumeAT.vals
+		block         = argsValidateVolumeCapabilities.block
+		fsType        = argsValidateVolumeCapabilities.fsType
+		mntFlags      = argsValidateVolumeCapabilities.mntFlags.vals
+		volumeCaps    = []*csi.VolumeCapability{}
+		volumeAttribs = argsValidateVolumeCapabilities.volumeAT.vals
 	)
 
 	// make sure maxEntries doesn't exceed int32
@@ -530,17 +530,24 @@ func validateVolumeCapabilities(
 	}
 
 	if block {
-		caps = append(caps, gocsi.NewBlockCapability(mode))
+		volumeCaps = append(
+			volumeCaps, gocsi.NewBlockCapability(mode))
 	} else {
-		caps = append(caps, gocsi.NewMountCapability(mode, fsType, mntFlags))
+		volumeCaps = append(
+			volumeCaps, gocsi.NewMountCapability(mode, fsType, mntFlags))
 	}
 
 	// initialize the csi client
 	client = csi.NewControllerClient(cc)
 
 	// execute the rpc
-	res, err := gocsi.ValidateVolumeCapabilities(
-		ctx, client, version, volumeID, volumeAT, caps)
+	res, err := client.ValidateVolumeCapabilities(
+		ctx, &csi.ValidateVolumeCapabilitiesRequest{
+			Version:            version,
+			VolumeId:           volumeID,
+			VolumeAttributes:   volumeAttribs,
+			VolumeCapabilities: volumeCaps,
+		})
 	if err != nil {
 		return err
 	}

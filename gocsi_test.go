@@ -2,12 +2,13 @@ package gocsi_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/onsi/ginkgo"
 	gomegaTypes "github.com/onsi/gomega/types"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
@@ -20,33 +21,45 @@ func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {
 	sp := provider.New()
 	pipeconn := gocsi.NewPipeConn("csi-test")
 	go func() {
+		defer GinkgoRecover()
 		if err := sp.Serve(ctx, pipeconn); err != nil {
 			Ω(err.Error()).Should(Equal("http: Server closed"))
 		}
 	}()
 
-	// Create a client for the piped connection.
-	client, err := grpc.DialContext(
-		ctx, "",
+	clientOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(pipeconn.DialGrpc),
-		grpc.WithUnaryInterceptor(gocsi.ChainUnaryClient(
-			gocsi.ClientCheckReponseError,
-			gocsi.NewClientResponseValidator())))
+	}
+
+	// Create a client-side CSI spec validator.
+	/*
+		clientSpecValidator := gocsi.NewClientSpecValidator(
+			gocsi.WithSuccessDeleteVolumeNotFound(),
+			gocsi.WithSuccessCreateVolumeAlreadyExists(),
+			gocsi.WithRequiresNodeID(),
+			gocsi.WithRequiresPublishVolumeInfo(),
+		)
+		clientOpts = append(
+			clientOpts, grpc.WithUnaryInterceptor(clientSpecValidator))
+	*/
+
+	// Create a client for the piped connection.
+	client, err := grpc.DialContext(ctx, "", clientOpts...)
 	Ω(err).ShouldNot(HaveOccurred())
 
 	return client, func() { sp.GracefulStop(ctx) }, nil
 }
 
-func newCSIVersion(major, minor, patch uint32) *csi.Version {
-	return &csi.Version{
+func newCSIVersion(major, minor, patch uint32) csi.Version {
+	return csi.Version{
 		Major: major,
 		Minor: minor,
 		Patch: patch,
 	}
 }
 
-var mockSupportedVersions = []*csi.Version{
+var mockSupportedVersions = []csi.Version{
 	newCSIVersion(0, 1, 0),
 	newCSIVersion(0, 2, 0),
 	newCSIVersion(1, 0, 0),
@@ -56,36 +69,54 @@ var mockSupportedVersions = []*csi.Version{
 // CTest is an alias to retrieve the current Ginko test description.
 var CTest = ginkgo.CurrentGinkgoTestDescription
 
-type gocsiErrMatcher struct {
-	exp *gocsi.Error
+type grpcErrorMatcher struct {
+	exp error
 }
 
-func (m *gocsiErrMatcher) Match(actual interface{}) (bool, error) {
-	act, ok := actual.(*gocsi.Error)
+func (m *grpcErrorMatcher) Match(actual interface{}) (bool, error) {
+	statExp, ok := status.FromError(m.exp)
 	if !ok {
-		return false, errors.New("gocsiErrMatcher expects a *gocsi.Error")
+		return false, fmt.Errorf(
+			"expected error not gRPC error: %T", m.exp)
 	}
-	if m.exp.Code != act.Code {
+
+	actErr, ok := actual.(error)
+	if !ok {
+		return false, fmt.Errorf(
+			"invalid actual error: %T", actual)
+	}
+
+	statAct, ok := status.FromError(actErr)
+	if !ok {
+		return false, fmt.Errorf(
+			"actual error not gRPC error: %T", actual)
+	}
+
+	if statExp.Code() != statAct.Code() {
 		return false, nil
 	}
-	if m.exp.Description != act.Description {
+
+	if statExp.Message() != statAct.Message() {
 		return false, nil
 	}
-	if m.exp.FullMethod != act.FullMethod {
-		return false, nil
-	}
+
 	return true, nil
 }
-func (m *gocsiErrMatcher) FailureMessage(actual interface{}) string {
+func (m *grpcErrorMatcher) FailureMessage(actual interface{}) string {
 	return fmt.Sprintf(
 		"Expected\n\t%#v\nto be equal to\n\t%#v", actual, m.exp)
 }
-func (m *gocsiErrMatcher) NegatedFailureMessage(actual interface{}) string {
+func (m *grpcErrorMatcher) NegatedFailureMessage(actual interface{}) string {
 	return fmt.Sprintf(
 		"Expected\n\t%#v\nnot to be equal to\n\t%#v", actual, m.exp)
 }
 
-// Σ is a custom Ginkgo matcher that compares two GoCSI errors.
-func Σ(a *gocsi.Error) gomegaTypes.GomegaMatcher {
-	return &gocsiErrMatcher{exp: a}
+// Σ is a custom Ginkgo matcher that compares two gRPC errors.
+func Σ(a error) gomegaTypes.GomegaMatcher {
+	return &grpcErrorMatcher{exp: a}
+}
+
+// ΣCM is a custom Ginkgo matcher that compares two gRPC errors.
+func ΣCM(c codes.Code, m string) gomegaTypes.GomegaMatcher {
+	return &grpcErrorMatcher{exp: status.Error(c, m)}
 }

@@ -12,11 +12,7 @@ func (s *service) GetSupportedVersions(
 	*csi.GetSupportedVersionsResponse, error) {
 
 	return &csi.GetSupportedVersionsResponse{
-		Reply: &csi.GetSupportedVersionsResponse_Result_{
-			Result: &csi.GetSupportedVersionsResponse_Result{
-				SupportedVersions: SupportedVersions,
-			},
-		},
+		SupportedVersions: SupportedVersions,
 	}, nil
 }
 
@@ -26,11 +22,7 @@ func (s *service) GetPluginInfo(
 	*csi.GetPluginInfoResponse, error) {
 
 	return &csi.GetPluginInfoResponse{
-		Reply: &csi.GetPluginInfoResponse_Result_{
-			Result: &csi.GetPluginInfoResponse_Result{
-				Name:          Name,
-				VendorVersion: VendorVersion,
-			},
-		},
+		Name:          Name,
+		VendorVersion: VendorVersion,
 	}, nil
 }

@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
@@ -17,7 +18,6 @@ import (
 var _ = Describe("Controller", func() {
 	var (
 		err      error
-		gocsiErr error
 		stopMock func()
 		ctx      context.Context
 		gclient  *grpc.ClientConn
@@ -43,8 +43,7 @@ var _ = Describe("Controller", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		client = csi.NewControllerClient(gclient)
 
-		gocsiErr = &gocsi.Error{}
-		version = mockSupportedVersions[0]
+		version = &mockSupportedVersions[0]
 
 		volID = "4"
 		volName = "Test Volume"
@@ -62,7 +61,6 @@ var _ = Describe("Controller", func() {
 		client = nil
 		stopMock()
 
-		gocsiErr = nil
 		version = nil
 
 		vol = nil
@@ -76,19 +74,46 @@ var _ = Describe("Controller", func() {
 		pubVolInfo = nil
 	})
 
-	createNewVolumeWithResult := func() (*csi.VolumeInfo, error) {
-		return gocsi.CreateVolume(
+	listVolumes := func() (vols []csi.VolumeInfo, err error) {
+		cvol, cerr := gocsi.PageAllVolumes(
 			ctx,
 			client,
-			version,
-			volName,
-			reqBytes,
-			limBytes,
-			[]*csi.VolumeCapability{
-				gocsi.NewMountCapability(0, fsType, mntFlags),
+			csi.ListVolumesRequest{Version: version})
+		for {
+			select {
+			case v, ok := <-cvol:
+				if !ok {
+					return
+				}
+				vols = append(vols, v)
+			case e, ok := <-cerr:
+				if !ok {
+					return
+				}
+				err = e
+			}
+		}
+	}
+
+	createNewVolumeWithResult := func() (*csi.VolumeInfo, error) {
+		req := &csi.CreateVolumeRequest{
+			Name:    volName,
+			Version: version,
+			CapacityRange: &csi.CapacityRange{
+				RequiredBytes: reqBytes,
+				LimitBytes:    limBytes,
 			},
-			userCreds,
-			params)
+			VolumeCapabilities: []*csi.VolumeCapability{
+				gocsi.NewMountCapability(0, fsType, mntFlags...),
+			},
+			UserCredentials: userCreds,
+			Parameters:      params,
+		}
+		res, err := client.CreateVolume(ctx, req)
+		if res == nil {
+			return nil, err
+		}
+		return res.VolumeInfo, err
 	}
 
 	createNewVolume := func() {
@@ -100,15 +125,10 @@ var _ = Describe("Controller", func() {
 		err error) bool {
 
 		if err != nil {
-			Ω(vol).Should(BeNil())
-			Ω(err).Should(BeAssignableToTypeOf(gocsiErr))
-			terr := err.(*gocsi.Error)
-			Ω(terr.Code).Should(BeEquivalentTo(
-				csi.Error_CreateVolumeError_OPERATION_PENDING_FOR_VOLUME))
+			Ω(err).Should(Σ(gocsi.ErrOpPending))
 			return true
 		}
 
-		Ω(err).ShouldNot(HaveOccurred())
 		Ω(vol).ShouldNot(BeNil())
 		Ω(vol.CapacityBytes).Should(Equal(limBytes))
 		Ω(vol.Id).Should(Equal(volID))
@@ -144,11 +164,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Be Invalid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  gocsi.FMCreateVolume,
-					Code:        3,
-					Description: "name required",
-				}))
+				Ω(err).Should(Σ(gocsi.ErrVolumeNameRequired))
 				Ω(vol).Should(BeNil())
 			})
 		})
@@ -165,14 +181,8 @@ var _ = Describe("Controller", func() {
 			// Verify that the newly created volume increases
 			// the volume count to 4.
 			listVolsAndValidate4 := func() {
-				vols, _, err := gocsi.ListVolumes(
-					ctx,
-					client,
-					version,
-					0,
-					"")
+				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
-				Ω(vols).ShouldNot(BeNil())
 				Ω(vols).Should(HaveLen(4))
 			}
 
@@ -181,6 +191,7 @@ var _ = Describe("Controller", func() {
 					once    sync.Once
 					buckets = count / bucketSize
 					worker  = func() {
+						defer wg.Done()
 						defer GinkgoRecover()
 						if !validateNewVolumeResult(
 							createNewVolumeWithResult()) {
@@ -188,7 +199,6 @@ var _ = Describe("Controller", func() {
 								opPendingErrorOccurs = true
 							})
 						}
-						wg.Done()
 					}
 				)
 				if r := math.Remainder(
@@ -236,6 +246,12 @@ var _ = Describe("Controller", func() {
 				})
 				It("Should Be Valid", validateIdempResult)
 			})
+			Context("x10", func() {
+				BeforeEach(func() {
+					count = 10
+				})
+				It("Should Be Valid", validateIdempResult)
+			})
 			Context("x1000", func() {
 				BeforeEach(func() {
 					count = 1000
@@ -266,12 +282,12 @@ var _ = Describe("Controller", func() {
 			volID = ""
 		})
 		JustBeforeEach(func() {
-			err = gocsi.DeleteVolume(
+			_, err = client.DeleteVolume(
 				ctx,
-				client,
-				version,
-				volID,
-				nil)
+				&csi.DeleteVolumeRequest{
+					Version:  version,
+					VolumeId: volID,
+				})
 		})
 		Context("1", func() {
 			It("Should Be Valid", func() {
@@ -294,11 +310,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  gocsi.FMDeleteVolume,
-					Code:        3,
-					Description: "volume id required",
-				}))
+				Ω(err).Should(Σ(gocsi.ErrVolumeIDRequired))
 			})
 		})
 		Context("Missing Version", func() {
@@ -307,36 +319,20 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(&gocsi.Error{
-					FullMethod:  gocsi.FMDeleteVolume,
-					Code:        2,
-					Description: "unsupported request version: 0.0.0",
-				}))
+				Ω(err).Should(ΣCM(
+					codes.InvalidArgument,
+					"invalid request version: nil"))
 			})
 		})
 	})
 
 	Describe("ListVolumes", func() {
-		var (
-			vols          []*csi.VolumeInfo
-			maxEntries    uint32
-			startingToken string
-			nextToken     string
-		)
+		var vols []csi.VolumeInfo
 		AfterEach(func() {
 			vols = nil
-			maxEntries = 0
-			startingToken = ""
-			nextToken = ""
-			version = nil
 		})
 		JustBeforeEach(func() {
-			vols, nextToken, err = gocsi.ListVolumes(
-				ctx,
-				client,
-				version,
-				maxEntries,
-				startingToken)
+			vols, err = listVolumes()
 		})
 		Context("Normal List Volumes Call", func() {
 			It("Should Be Valid", func() {
@@ -363,19 +359,18 @@ var _ = Describe("Controller", func() {
 		devPathKey := path.Join(service.Name, "dev")
 
 		publishVolume := func() {
-			pubVolInfo, err = gocsi.ControllerPublishVolume(
-				ctx,
-				client,
-				version,
-				"1",
-				nil,
-				service.Name,
-				gocsi.NewMountCapability(
+			req := &csi.ControllerPublishVolumeRequest{
+				Version:  version,
+				VolumeId: "1",
+				NodeId:   service.Name,
+				Readonly: true,
+				VolumeCapability: gocsi.NewMountCapability(
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-					"mock",
-					nil),
-				true,
-				nil)
+					"mock"),
+			}
+			res, err := client.ControllerPublishVolume(ctx, req)
+			Ω(err).ShouldNot(HaveOccurred())
+			pubVolInfo = res.PublishVolumeInfo
 		}
 
 		shouldBePublished := func() {
@@ -390,7 +385,7 @@ var _ = Describe("Controller", func() {
 		Context("PublishVolume", func() {
 			It("Should Be Valid", func() {
 				shouldBePublished()
-				vols, _, err := gocsi.ListVolumes(ctx, client, version, 0, "")
+				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).Should(HaveLen(3))
 				Ω(vols[0].Attributes[devPathKey]).Should(Equal("/dev/mock"))
@@ -400,17 +395,17 @@ var _ = Describe("Controller", func() {
 		Context("UnpublishVolume", func() {
 			BeforeEach(func() {
 				shouldBePublished()
-				err := gocsi.ControllerUnpublishVolume(
+				_, err := client.ControllerUnpublishVolume(
 					ctx,
-					client,
-					version,
-					"1",
-					service.Name,
-					nil)
+					&csi.ControllerUnpublishVolumeRequest{
+						Version:  version,
+						VolumeId: "1",
+						NodeId:   service.Name,
+					})
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 			It("Should Be Unpublished", func() {
-				vols, _, err := gocsi.ListVolumes(ctx, client, version, 0, "")
+				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).Should(HaveLen(3))
 				_, ok := vols[0].Attributes[devPathKey]
@@ -419,8 +414,3 @@ var _ = Describe("Controller", func() {
 		})
 	})
 })
-
-type createVolumeResult struct {
-	vol *csi.VolumeInfo
-	err error
-}

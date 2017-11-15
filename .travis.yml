@@ -45,17 +45,17 @@ jobs:
       # Verify GoCSI builds without errors
       - stage:   build
         env:     PROG=gocsi.a
-        install: skip
+        install: true
         script:  make $PROG
 
-      - stage:   build
-        env:     PROG=csc
-        install: skip
-        script:  make -C $PROG
+      #- stage:   build
+        #env:     PROG=csc
+        #install: true
+        #script:  make -C $PROG
 
       - stage:   build
         env:     PROG=mock
-        install: skip
+        install: true
         script:  make -C $PROG
 
       # Test GoCSI using the Mock CSI plug-in.

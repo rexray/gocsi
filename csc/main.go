@@ -25,7 +25,7 @@ import (
 const (
 	// defaultVersion is the default CSI_VERSION string if none
 	// is provided via a CLI argument or environment variable
-	defaultVersion = "0.1.0"
+	defaultVersion = "0.0.0"
 
 	// maxUint32 is the maximum value for a uint32. this is
 	// defined as math.MaxUint32, but it's redefined here
@@ -170,9 +170,6 @@ func newGrpcClient(
 	insecure bool) (*grpc.ClientConn, error) {
 
 	dialOpts := []grpc.DialOption{
-		grpc.WithUnaryInterceptor(gocsi.ChainUnaryClient(
-			gocsi.ClientCheckReponseError,
-			gocsi.NewClientResponseValidator())),
 		grpc.WithDialer(
 			func(target string, timeout time.Duration) (net.Conn, error) {
 				proto, addr, err := gocsi.ParseProtoAddr(target)
@@ -209,20 +206,18 @@ const volumeInfoFormat = `{{printf "%s\t" .Id}}` +
 const versionFormat = `{{.GetMajor}}.{{.GetMinor}}.{{.GetPatch}}{{"\n"}}`
 
 // pluginInfoFormat is the default Go template format for
-// emitting a *csi.GetPluginInfoResponse_Result
-const pluginInfoFormat = `{{.Name}}{{print "\t"}}{{.VendorVersion}}{{print "\t"}}` +
-	`{{with .GetManifest}}{{range $k, $v := .}}` +
-	`{{printf "%s=%s\t" $k $v}}{{end}}{{end}}{{"\n"}}`
+// emitting a *csi.GetPluginInfoResponse
+const pluginInfoFormat = `{{printf "%s\t%s\t" .Name .VendorVersion}}` +
+	`{{range $k, $v := .Manifest}}{{printf "%s=%s\t" $k $v}}{{end}}` +
+	`{{"\n"}}`
 
 // capFormat is the default Go template for emitting a
 // *csi.{Controller,Node}ServiceCapability
 const capFormat = `{{with .GetRpc}}{{.Type}}{{end}}{{"\n"}}`
 
 // valCapFormat is the default Go tempate for emitting a
-// *csi.ValidateVolumeCapabilitiesResponse_Result
-const valCapFormat = `{{with .GetSupported}}{{print "supported: "}}{{.}}` +
-	`{{print "\n"}}{{end}}{{with .GetMessage}}{{print "\tmessage: "}}` +
-	`{{.}}{{end}}{{"\n"}}`
+// *csi.ValidateVolumeCapabilitiesResponse
+const valCapFormat = `{{print "%v\t%s\n" .Supported .Message}}`
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                Commands                                   //
