@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"text/template"
@@ -16,9 +18,10 @@ import (
 )
 
 var root struct {
-	ctx    context.Context
-	client *grpc.ClientConn
-	tpl    *template.Template
+	ctx       context.Context
+	client    *grpc.ClientConn
+	tpl       *template.Template
+	userCreds map[string]string
 
 	logLevel string
 	format   string
@@ -27,6 +30,17 @@ var root struct {
 	timeout  time.Duration
 	version  csiVersionArg
 	metadata mapOfStringArg
+
+	withReqLogging bool
+	withRepLogging bool
+
+	withSpecValidator                    bool
+	withRequiresCreds                    bool
+	withSuccessCreateVolumeAlreadyExists bool
+	withSuccessDeleteVolumeNotFound      bool
+	withRequiresNodeID                   bool
+	withRequiresPubVolInfo               bool
+	withRequiresVolumeAttributes         bool
 }
 
 // RootCmd represents the base command when called without any subcommands
@@ -69,6 +83,9 @@ var RootCmd = &cobra.Command{
 			root.tpl = tpl
 		}
 
+		// Parse the credentials if they exist.
+		root.userCreds = gocsi.ParseMap(os.Getenv(userCredsKey))
+
 		// Create the gRPC client connection.
 		opts := []grpc.DialOption{
 			grpc.WithDialer(
@@ -80,8 +97,94 @@ var RootCmd = &cobra.Command{
 					return net.DialTimeout(proto, addr, timeout)
 				}),
 		}
+
+		// Disable TLS if specified.
 		if root.insecure {
 			opts = append(opts, grpc.WithInsecure())
+		}
+
+		var iceptors []grpc.UnaryClientInterceptor
+
+		// Configure logging.
+		if root.withReqLogging || root.withRepLogging {
+
+			// Automatically enable request ID injection if logging
+			// is enabled.
+			iceptors = append(iceptors,
+				gocsi.NewClientRequestIDInjector())
+			log.Debug("enable request ID injector")
+
+			var (
+				loggingOpts []gocsi.LoggingOption
+				lout        = newLogger(log.Infof)
+			)
+			if root.withReqLogging {
+				loggingOpts = append(loggingOpts,
+					gocsi.WithRequestLogging(lout))
+				log.Debug("enable request logging")
+			}
+			if root.withRepLogging {
+				loggingOpts = append(loggingOpts,
+					gocsi.WithResponseLogging(lout))
+				log.Debug("enable response logging")
+			}
+			iceptors = append(iceptors,
+				gocsi.NewClientLogger(loggingOpts...))
+		}
+
+		// Configure the spec validator.
+		root.withSpecValidator = root.withSpecValidator ||
+			root.withRequiresCreds ||
+			root.withSuccessCreateVolumeAlreadyExists ||
+			root.withSuccessDeleteVolumeNotFound ||
+			root.withRequiresNodeID ||
+			root.withRequiresPubVolInfo ||
+			root.withRequiresVolumeAttributes
+		if root.withSpecValidator {
+			var specOpts []gocsi.SpecValidatorOption
+			if root.withRequiresCreds {
+				specOpts = append(specOpts,
+					gocsi.WithRequiresCreateVolumeCredentials(),
+					gocsi.WithRequiresDeleteVolumeCredentials(),
+					gocsi.WithRequiresControllerPublishVolumeCredentials(),
+					gocsi.WithRequiresControllerUnpublishVolumeCredentials(),
+					gocsi.WithRequiresNodePublishVolumeCredentials(),
+					gocsi.WithRequiresNodeUnpublishVolumeCredentials())
+				log.Debug("enable spec validator opt: requires creds")
+			}
+			if root.withRequiresNodeID {
+				specOpts = append(specOpts,
+					gocsi.WithRequiresNodeID())
+				log.Debug("enable spec validator opt: requires node ID")
+			}
+			if root.withRequiresPubVolInfo {
+				specOpts = append(specOpts,
+					gocsi.WithRequiresPublishVolumeInfo())
+				log.Debug("enable spec validator opt: requires pub vol info")
+			}
+			if root.withRequiresVolumeAttributes {
+				specOpts = append(specOpts,
+					gocsi.WithRequiresVolumeAttributes())
+				log.Debug("enable spec validator opt: requires vol attribs")
+			}
+			if root.withSuccessCreateVolumeAlreadyExists {
+				specOpts = append(specOpts,
+					gocsi.WithSuccessCreateVolumeAlreadyExists())
+				log.Debug("enable spec validator opt: create exists success")
+			}
+			if root.withSuccessDeleteVolumeNotFound {
+				specOpts = append(specOpts,
+					gocsi.WithSuccessDeleteVolumeNotFound())
+				log.Debug("enable spec validator opt: delete !exists success")
+			}
+			iceptors = append(iceptors,
+				gocsi.NewClientSpecValidator(specOpts...))
+		}
+
+		// Add interceptors to the client if any are configured.
+		if len(iceptors) > 0 {
+			opts = append(opts,
+				grpc.WithUnaryInterceptor(gocsi.ChainUnaryClient(iceptors...)))
 		}
 
 		ctx, cancel := context.WithTimeout(root.ctx, root.timeout)
@@ -145,4 +248,45 @@ func init() {
 		"version",
 		"v",
 		"the csi version to send with an rpc")
+
+	RootCmd.PersistentFlags().BoolVar(
+		&root.withReqLogging,
+		"with-request-logging",
+		false,
+		"enables request logging")
+
+	RootCmd.PersistentFlags().BoolVar(
+		&root.withRepLogging,
+		"with-response-logging",
+		false,
+		"enables response logging")
+
+	RootCmd.PersistentFlags().BoolVar(
+		&root.withSpecValidator,
+		"with-spec-validation",
+		false,
+		"enables validation of request/response data "+
+			"against the CSI specification")
+}
+
+type logger struct {
+	f func(msg string, args ...interface{})
+	w io.Writer
+}
+
+func newLogger(f func(msg string, args ...interface{})) *logger {
+	l := &logger{f: f}
+	r, w := io.Pipe()
+	l.w = w
+	go func() {
+		scan := bufio.NewScanner(r)
+		for scan.Scan() {
+			f(scan.Text())
+		}
+	}()
+	return l
+}
+
+func (l *logger) Write(data []byte) (int, error) {
+	return l.w.Write(data)
 }

@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
 )
 
@@ -32,7 +30,7 @@ var controllerPublishVolumeCmd = &cobra.Command{
 		req := csi.ControllerPublishVolumeRequest{
 			Version:          &root.version.Version,
 			NodeId:           controllerPublishVolume.nodeID,
-			UserCredentials:  gocsi.ParseMap(os.Getenv(userCredsKey)),
+			UserCredentials:  root.userCreds,
 			VolumeAttributes: controllerPublishVolume.attribs.data,
 		}
 
@@ -82,4 +80,28 @@ func init() {
 		&controllerPublishVolume.attribs,
 		"attrib",
 		"one or more volume attributes key/value pairs")
+
+	controllerPublishVolumeCmd.Flags().BoolVar(
+		&root.withRequiresCreds,
+		"with-requires-credentials",
+		false,
+		"marks the request's credentials as a required field")
+
+	controllerPublishVolumeCmd.Flags().BoolVar(
+		&root.withRequiresNodeID,
+		"with-requires-node-id",
+		false,
+		"marks the request's node ID as a required field")
+
+	controllerPublishVolumeCmd.Flags().BoolVar(
+		&root.withRequiresPubVolInfo,
+		"with-requires-pub-info",
+		false,
+		"marks the response's publish volume info as a required field")
+
+	controllerPublishVolumeCmd.Flags().BoolVar(
+		&root.withRequiresVolumeAttributes,
+		"with-requires-attributes",
+		false,
+		"marks the request's attributes as a required field")
 }

@@ -11,18 +11,24 @@ import (
 	"github.com/thecodeteam/gocsi/csi"
 )
 
-var deleteVolumeCmd = &cobra.Command{
-	Use:     "deletevolume",
-	Aliases: []string{"d", "del", "rm", "delete"},
-	Short:   `invokes the rpc "DeleteVolume"`,
+var nodeUnpublishVolume struct {
+	nodeID     string
+	targetPath string
+}
+
+var nodeUnpublishVolumeCmd = &cobra.Command{
+	Use:     "unpublishvolume",
+	Aliases: []string{"upub", "unpub", "umount", "unmount", "unpublish"},
+	Short:   `invokes the rpc "NodeUnpublishVolume"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		if len(args) == 0 {
 			return errors.New("volume ID required")
 		}
 
-		req := csi.DeleteVolumeRequest{
+		req := csi.NodeUnpublishVolumeRequest{
 			Version:         &root.version.Version,
+			TargetPath:      nodeUnpublishVolume.targetPath,
 			UserCredentials: root.userCreds,
 		}
 
@@ -33,11 +39,12 @@ var deleteVolumeCmd = &cobra.Command{
 			// Set the volume ID for the current request.
 			req.VolumeId = args[i]
 
-			log.WithField("request", req).Debug("deleting volume")
-			_, err := controller.client.DeleteVolume(ctx, &req)
+			log.WithField("request", req).Debug("mounting volume")
+			_, err := node.client.NodeUnpublishVolume(ctx, &req)
 			if err != nil {
 				return err
 			}
+
 			fmt.Println(args[i])
 		}
 
@@ -46,17 +53,17 @@ var deleteVolumeCmd = &cobra.Command{
 }
 
 func init() {
-	controllerCmd.AddCommand(deleteVolumeCmd)
+	nodeCmd.AddCommand(nodeUnpublishVolumeCmd)
 
-	deleteVolumeCmd.Flags().BoolVar(
+	nodeUnpublishVolumeCmd.Flags().StringVar(
+		&nodeUnpublishVolume.targetPath,
+		"target-path",
+		"",
+		"the path from which to unmount the volume")
+
+	nodeUnpublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresCreds,
 		"with-requires-credentials",
 		false,
 		"marks the request's credentials as a required field")
-
-	deleteVolumeCmd.Flags().BoolVar(
-		&root.withSuccessDeleteVolumeNotFound,
-		"with-success-already-exists",
-		false,
-		"treats a not found error as success")
 }

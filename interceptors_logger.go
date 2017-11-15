@@ -123,6 +123,10 @@ func (s *loggingInterceptor) handle(
 	// Get the response.
 	rep, failed = next()
 
+	if s.opts.repw == nil {
+		return
+	}
+
 	// Print the response method name.
 	fmt.Fprintf(w, "%s: ", method)
 	if reqIDOK {

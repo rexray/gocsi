@@ -34,4 +34,10 @@ var nodeGetIDCmd = &cobra.Command{
 
 func init() {
 	nodeCmd.AddCommand(nodeGetIDCmd)
+
+	nodeGetIDCmd.Flags().BoolVar(
+		&root.withRequiresNodeID,
+		"with-requires-node-id",
+		false,
+		"marks the response's node ID as a required field")
 }

@@ -68,4 +68,10 @@ func init() {
 		&valVolCaps.attribs,
 		"attrib",
 		"one or more volume attributes key/value pairs")
+
+	valVolCapsCmd.Flags().BoolVar(
+		&root.withRequiresVolumeAttributes,
+		"with-requires-attributes",
+		false,
+		"marks the request's attributes as a required field")
 }

@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
 )
 
@@ -31,7 +29,7 @@ var controllerUnpublishVolumeCmd = &cobra.Command{
 		req := csi.ControllerUnpublishVolumeRequest{
 			Version:         &root.version.Version,
 			NodeId:          controllerUnpublishVolume.nodeID,
-			UserCredentials: gocsi.ParseMap(os.Getenv(userCredsKey)),
+			UserCredentials: root.userCreds,
 		}
 
 		for i := range args {
@@ -64,4 +62,10 @@ func init() {
 		"node-id",
 		"",
 		"the id of the node to which to publish the volume")
+
+	controllerUnpublishVolumeCmd.Flags().BoolVar(
+		&root.withRequiresCreds,
+		"with-requires-credentials",
+		false,
+		"marks the request's credentials as a required field")
 }

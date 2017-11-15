@@ -16,6 +16,7 @@ var createVolume struct {
 	limBytes uint64
 	caps     volumeCapabilitySliceArg
 	params   mapOfStringArg
+	reqCreds bool
 }
 
 var createVolumeCmd = &cobra.Command{
@@ -32,6 +33,7 @@ var createVolumeCmd = &cobra.Command{
 			Version:            &root.version.Version,
 			VolumeCapabilities: createVolume.caps.data,
 			Parameters:         createVolume.params.data,
+			UserCredentials:    root.userCreds,
 		}
 
 		if createVolume.reqBytes > 0 || createVolume.limBytes > 0 {
@@ -90,4 +92,22 @@ func init() {
 		&createVolume.params,
 		"params",
 		"one or more volume parameter key/value pairs")
+
+	createVolumeCmd.Flags().BoolVar(
+		&root.withRequiresCreds,
+		"with-requires-credentials",
+		false,
+		"marks the request's credentials as a required field")
+
+	createVolumeCmd.Flags().BoolVar(
+		&root.withRequiresVolumeAttributes,
+		"with-requires-attributes",
+		false,
+		"marks the response's attributes as a required field")
+
+	createVolumeCmd.Flags().BoolVar(
+		&root.withSuccessCreateVolumeAlreadyExists,
+		"with-success-already-exists",
+		false,
+		"treats an already exists error as success")
 }
