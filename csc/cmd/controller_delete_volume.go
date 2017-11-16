@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -15,11 +14,13 @@ var deleteVolumeCmd = &cobra.Command{
 	Use:     "deletevolume",
 	Aliases: []string{"d", "del", "rm", "delete"},
 	Short:   `invokes the rpc "DeleteVolume"`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Example: `
+USAGE
 
-		if len(args) == 0 {
-			return errors.New("volume ID required")
-		}
+    csc controller deletevolume [flags] VOLUME_ID [VOLUME_ID...]
+`,
+	Args: cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.DeleteVolumeRequest{
 			Version:         &root.version.Version,
