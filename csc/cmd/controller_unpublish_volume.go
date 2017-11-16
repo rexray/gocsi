@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -20,11 +19,13 @@ var controllerUnpublishVolumeCmd = &cobra.Command{
 	Aliases: []string{
 		"u", "det", "dett", "upub", "unpub", "detach", "unpublish"},
 	Short: `invokes the rpc "ControllerUnpublishVolume"`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Example: `
+USAGE
 
-		if len(args) == 0 {
-			return errors.New("volume ID required")
-		}
+    csc controller unpublishvolume [flags] VOLUME_ID [VOLUME_ID...]
+`,
+	Args: cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ControllerUnpublishVolumeRequest{
 			Version:         &root.version.Version,

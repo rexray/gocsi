@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -20,11 +19,13 @@ var valVolCapsCmd = &cobra.Command{
 	Use:     "validatevolumecapabilities",
 	Aliases: []string{"v", "vv", "vvc", "validate"},
 	Short:   `invokes the rpc "ValidateVolumeCapabilities"`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Example: `
+USAGE
 
-		if len(args) == 0 {
-			return errors.New("volume ID required")
-		}
+    csc controller validate [flags] VOLUME_ID [VOLUME_ID...]
+`,
+	Args: cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ValidateVolumeCapabilitiesRequest{
 			Version:            &root.version.Version,
@@ -61,8 +62,7 @@ func init() {
 	valVolCapsCmd.Flags().Var(
 		&valVolCaps.caps,
 		"cap",
-		"one or more volume capabilities. "+
-			"ex: --cap 1,block --cap 5,mount,xfs,uid=500")
+		"one or more volume capabilities")
 
 	valVolCapsCmd.Flags().Var(
 		&valVolCaps.attribs,

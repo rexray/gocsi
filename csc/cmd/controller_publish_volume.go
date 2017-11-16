@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -21,11 +20,13 @@ var controllerPublishVolumeCmd = &cobra.Command{
 	Use:     "publishvolume",
 	Aliases: []string{"a", "att", "pub", "attach", "publish"},
 	Short:   `invokes the rpc "ControllerPublishVolume"`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Example: `
+USAGE
 
-		if len(args) == 0 {
-			return errors.New("volume ID required")
-		}
+    csc controller publishvolume [flags] VOLUME_ID [VOLUME_ID...]
+`,
+	Args: cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ControllerPublishVolumeRequest{
 			Version:          &root.version.Version,

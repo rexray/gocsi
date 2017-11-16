@@ -25,7 +25,7 @@ func (s *mapOfStringArg) String() string {
 }
 
 func (s *mapOfStringArg) Type() string {
-	return "map[string]string"
+	return "key=val[,key=val,...]"
 }
 
 func (s *mapOfStringArg) Set(val string) error {
@@ -54,7 +54,7 @@ func (s *csiVersionArg) String() string {
 }
 
 func (s *csiVersionArg) Type() string {
-	return "csi.Version"
+	return "major.minor.patch"
 }
 
 func (s *csiVersionArg) Set(val string) error {
@@ -77,7 +77,7 @@ func (s *volumeCapabilitySliceArg) String() string {
 }
 
 func (s *volumeCapabilitySliceArg) Type() string {
-	return "csi.VolumeCapability"
+	return "mode,type[,fstype,mntflags]"
 }
 
 func (s *volumeCapabilitySliceArg) Set(val string) error {

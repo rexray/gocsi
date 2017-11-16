@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -23,11 +22,26 @@ var createVolumeCmd = &cobra.Command{
 	Use:     "createvolume",
 	Aliases: []string{"c", "n", "new", "create"},
 	Short:   `invokes the rpc "CreateVolume"`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Example: `
+USAGE
 
-		if len(args) == 0 {
-			return errors.New("volume name required")
-		}
+    csc controller createvolume [flags] VOLUME_NAME [VOLUME_NAME...]
+
+
+CREATING MULTIPLE VOLUMES
+
+The following example illustrates how to create two volumes with the
+same characteristics at the same time:
+
+    csc controller new --endpoint /csi/server.sock
+                       --cap 1,block \
+                       --cap MULTI_NODE_MULTI_WRITER,mount,xfs,uid=500 \
+                       --params region=us,zone=texas
+                       --params disabled=false
+                       MyNewVolume1 MyNewVolume2
+`,
+	Args: cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.CreateVolumeRequest{
 			Version:            &root.version.Version,
@@ -85,8 +99,7 @@ func init() {
 	createVolumeCmd.Flags().Var(
 		&createVolume.caps,
 		"cap",
-		"one or more volume capabilities. "+
-			"ex: --cap 1,block --cap 5,mount,xfs,uid=500")
+		"one or more volume capabilities")
 
 	createVolumeCmd.Flags().Var(
 		&createVolume.params,
