@@ -16,8 +16,8 @@ var nodeUnpublishVolume struct {
 }
 
 var nodeUnpublishVolumeCmd = &cobra.Command{
-	Use:     "unpublishvolume",
-	Aliases: []string{"upub", "unpub", "umount", "unmount", "unpublish"},
+	Use:     "unpublish",
+	Aliases: []string{"umount", "unmount"},
 	Short:   `invokes the rpc "NodeUnpublishVolume"`,
 	Example: `
 USAGE
@@ -60,11 +60,11 @@ func init() {
 		&nodeUnpublishVolume.targetPath,
 		"target-path",
 		"",
-		"the path from which to unmount the volume")
+		"The path from which to unmount the volume")
 
 	nodeUnpublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresCreds,
 		"with-requires-credentials",
 		false,
-		"marks the request's credentials as a required field")
+		withRequiresCredsDesc)
 }

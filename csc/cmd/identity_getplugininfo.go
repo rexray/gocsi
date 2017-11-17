@@ -10,8 +10,8 @@ import (
 )
 
 var pluginInfoCmd = &cobra.Command{
-	Use:     "plugininfo",
-	Aliases: []string{"info", "getp"},
+	Use:     "plugin-info",
+	Aliases: []string{"info"},
 	Short:   `invokes the rpc "GetPluginInfo"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 

@@ -11,8 +11,8 @@ import (
 )
 
 var deleteVolumeCmd = &cobra.Command{
-	Use:     "deletevolume",
-	Aliases: []string{"d", "del", "rm", "delete"},
+	Use:     "delete-volume",
+	Aliases: []string{"rm", "delete"},
 	Short:   `invokes the rpc "DeleteVolume"`,
 	Example: `
 USAGE
@@ -53,11 +53,12 @@ func init() {
 		&root.withRequiresCreds,
 		"with-requires-credentials",
 		false,
-		"marks the request's credentials as a required field")
+		withRequiresCredsDesc)
 
 	deleteVolumeCmd.Flags().BoolVar(
 		&root.withSuccessDeleteVolumeNotFound,
-		"with-success-already-exists",
+		"with-success-not-found",
 		false,
-		"treats a not found error as success")
+		`Treats a NotFound error code as a successful response.
+        Enabling this option also enables --with-spec-validation.`)
 }

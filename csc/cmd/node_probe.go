@@ -9,9 +9,8 @@ import (
 )
 
 var nodeProbeCmd = &cobra.Command{
-	Use:     "nodeprobe",
-	Aliases: []string{"probe"},
-	Short:   `invokes the rpc "NodeProbe"`,
+	Use:   "probe",
+	Short: `invokes the rpc "NodeProbe"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		ctx, cancel := context.WithTimeout(root.ctx, root.timeout)

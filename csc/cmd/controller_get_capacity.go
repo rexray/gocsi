@@ -14,8 +14,8 @@ var getCapacity struct {
 }
 
 var getCapacityCmd = &cobra.Command{
-	Use:     "getcapacity",
-	Aliases: []string{"getcapac", "capac"},
+	Use:     "get-capacity",
+	Aliases: []string{"capacity"},
 	Short:   `invokes the rpc "GetCapacity"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 

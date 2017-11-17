@@ -10,8 +10,8 @@ import (
 )
 
 var supportedVersCmd = &cobra.Command{
-	Use:     "supportedversions",
-	Aliases: []string{"ver", "version", "gets"},
+	Use:     "supported-versions",
+	Aliases: []string{"version"},
 	Short:   `invokes the rpc "GetSupportedVersions"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 

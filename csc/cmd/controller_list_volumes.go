@@ -17,8 +17,8 @@ var listVolumes struct {
 }
 
 var listVolumesCmd = &cobra.Command{
-	Use:     "listvolumes",
-	Aliases: []string{"l", "ls", "list"},
+	Use:     "list-volumes",
+	Aliases: []string{"ls", "list", "volumes"},
 	Short:   `invokes the rpc "ListVolumes"`,
 	RunE: func(*cobra.Command, []string) error {
 		ctx, cancel := context.WithTimeout(root.ctx, root.timeout)
@@ -86,4 +86,10 @@ func init() {
 		"format",
 		"",
 		"the go template format used to emit the results")
+
+	listVolumesCmd.Flags().BoolVar(
+		&root.withRequiresVolumeAttributes,
+		"with-requires-attributes",
+		false,
+		withRequiresRepAttribsDesc)
 }
