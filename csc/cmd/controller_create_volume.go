@@ -19,26 +19,20 @@ var createVolume struct {
 }
 
 var createVolumeCmd = &cobra.Command{
-	Use:     "createvolume",
-	Aliases: []string{"c", "n", "new", "create"},
+	Use:     "create-volume",
+	Aliases: []string{"new", "create"},
 	Short:   `invokes the rpc "CreateVolume"`,
 	Example: `
-USAGE
-
-    csc controller createvolume [flags] VOLUME_NAME [VOLUME_NAME...]
-
-
 CREATING MULTIPLE VOLUMES
+        The following example illustrates how to create two volumes with the
+        same characteristics at the same time:
 
-The following example illustrates how to create two volumes with the
-same characteristics at the same time:
-
-    csc controller new --endpoint /csi/server.sock
-                       --cap 1,block \
-                       --cap MULTI_NODE_MULTI_WRITER,mount,xfs,uid=500 \
-                       --params region=us,zone=texas
-                       --params disabled=false
-                       MyNewVolume1 MyNewVolume2
+            csc controller new --endpoint /csi/server.sock
+                               --cap 1,block \
+                               --cap MULTI_NODE_MULTI_WRITER,mount,xfs,uid=500 \
+                               --params region=us,zone=texas
+                               --params disabled=false
+                               MyNewVolume1 MyNewVolume2
 `,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -88,39 +82,45 @@ func init() {
 		&createVolume.reqBytes,
 		"req-bytes",
 		0,
-		"the required size of the volume in bytes")
+		"The required size of the volume in bytes")
 
 	createVolumeCmd.Flags().Uint64Var(
 		&createVolume.limBytes,
 		"lim-bytes",
 		0,
-		"the limit to the size of the volume in bytes")
+		"The limit to the size of the volume in bytes")
 
 	createVolumeCmd.Flags().Var(
 		&createVolume.caps,
 		"cap",
-		"one or more volume capabilities")
+		volumeCapabilityDesc)
 
 	createVolumeCmd.Flags().Var(
 		&createVolume.params,
 		"params",
-		"one or more volume parameter key/value pairs")
+		paramsDesc)
 
 	createVolumeCmd.Flags().BoolVar(
 		&root.withRequiresCreds,
 		"with-requires-credentials",
 		false,
-		"marks the request's credentials as a required field")
+		withRequiresCredsDesc)
 
 	createVolumeCmd.Flags().BoolVar(
 		&root.withRequiresVolumeAttributes,
 		"with-requires-attributes",
 		false,
-		"marks the response's attributes as a required field")
+		withRequiresRepAttribsDesc)
 
 	createVolumeCmd.Flags().BoolVar(
 		&root.withSuccessCreateVolumeAlreadyExists,
 		"with-success-already-exists",
 		false,
-		"treats an already exists error as success")
+		`Treats an AlreadyExists error code as a successful response.
+        Enabling this option also enables --with-spec-validation.`)
 }
+
+const paramsDesc = `One or more key/value pairs may be specified to send with
+        the request as its Parameters field:
+
+            --params key1=val1,key2=val2 --params=key3=val3`

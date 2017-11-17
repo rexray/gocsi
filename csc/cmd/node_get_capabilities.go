@@ -10,8 +10,8 @@ import (
 )
 
 var nodeGetCapabilitiesCmd = &cobra.Command{
-	Use:     "getcapabilities",
-	Aliases: []string{"getcapab", "capab"},
+	Use:     "get-capabilities",
+	Aliases: []string{"capabilities"},
 	Short:   `invokes the rpc "NodeGetCapabilities"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 

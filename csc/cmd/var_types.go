@@ -6,22 +6,21 @@ import (
 	"strings"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
 )
-
-const userCredsKey = "X_CSI_USER_CREDENTIALS"
 
 // mapOfStringArg is used for parsing a csv, key=value arg into
 // a map[string]string
 type mapOfStringArg struct {
 	sync.Once
-	val  string
 	data map[string]string
 }
 
 func (s *mapOfStringArg) String() string {
-	return s.val
+	return ""
 }
 
 func (s *mapOfStringArg) Type() string {
@@ -46,11 +45,10 @@ func (s *mapOfStringArg) Set(val string) error {
 // csiVersionArg is used for parsing a CSI version argument
 type csiVersionArg struct {
 	csi.Version
-	val string
 }
 
 func (s *csiVersionArg) String() string {
-	return s.val
+	return "0.0.0"
 }
 
 func (s *csiVersionArg) Type() string {
@@ -68,12 +66,11 @@ func (s *csiVersionArg) Set(val string) error {
 // volumeCapabilitySliceArg is used for parsing one or more volume
 // capabilities from the command line
 type volumeCapabilitySliceArg struct {
-	val  string
 	data []*csi.VolumeCapability
 }
 
 func (s *volumeCapabilitySliceArg) String() string {
-	return s.val
+	return ""
 }
 
 func (s *volumeCapabilitySliceArg) Type() string {
@@ -143,4 +140,57 @@ func (s *volumeCapabilitySliceArg) Set(val string) error {
 	}
 
 	return fmt.Errorf("invalid volume capability: %s", val)
+}
+
+// docTypeArg is used for parsing the doc type to generate
+type docTypeArg struct {
+	val string
+}
+
+func (s *docTypeArg) String() string {
+	return "md"
+}
+
+func (s *docTypeArg) Type() string {
+	return "md|man|rst"
+}
+
+func (s *docTypeArg) Set(val string) error {
+	val = strings.ToLower(val)
+	switch val {
+	case "md":
+		s.val = val
+		return nil
+	case "man":
+		s.val = val
+		return nil
+	case "rst":
+		s.val = val
+		return nil
+	}
+	return fmt.Errorf("invalid doc type: %s", val)
+}
+
+// logLevelArg is used for parsing the log level
+type logLevelArg struct {
+	val log.Level
+	set bool
+}
+
+func (s *logLevelArg) String() string {
+	return "warn"
+}
+
+func (s *logLevelArg) Type() string {
+	return "panic|fatal|error|warn|info|debug"
+}
+
+func (s *logLevelArg) Set(val string) error {
+	lvl, err := log.ParseLevel(val)
+	if err != nil {
+		return err
+	}
+	s.val = lvl
+	s.set = true
+	return nil
 }

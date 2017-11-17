@@ -20,8 +20,8 @@ var nodePublishVolume struct {
 }
 
 var nodePublishVolumeCmd = &cobra.Command{
-	Use:     "publishvolume",
-	Aliases: []string{"pub", "mnt", "mount", "publish"},
+	Use:     "publish",
+	Aliases: []string{"mnt", "mount"},
 	Short:   `invokes the rpc "NodePublishVolume"`,
 	Example: `
 USAGE
@@ -71,44 +71,48 @@ func init() {
 		&nodePublishVolume.targetPath,
 		"target-path",
 		"",
-		"the path to which to mount the volume")
+		"The path to which to mount the volume")
 
 	nodePublishVolumeCmd.Flags().Var(
 		&nodePublishVolume.pubVolInfo,
 		"pub-info",
-		"one or more publication info key/value pairs")
+		`One or more key/value pairs may be specified to send with
+        the request as its PublishVolumeInfo field:
+
+                --pub-info key1=val1,key2=val2 --pub-infoparams=key3=val3`)
 
 	nodePublishVolumeCmd.Flags().Var(
 		&nodePublishVolume.attribs,
 		"attrib",
-		"one or more volume attributes key/value pairs")
+		attribsDesc)
 
 	nodePublishVolumeCmd.Flags().Var(
 		&nodePublishVolume.caps,
 		"cap",
-		"the volume capability to publish")
+		volumeCapabilityDesc)
 
 	nodePublishVolumeCmd.Flags().BoolVar(
 		&nodePublishVolume.readOnly,
 		"read-only",
 		false,
-		"a flag that indicates whether or not the volume is read-only")
+		"Mark the volume as read-only")
 
 	nodePublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresCreds,
 		"with-requires-credentials",
 		false,
-		"marks the request's credentials as a required field")
+		withRequiresCredsDesc)
 
 	nodePublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresPubVolInfo,
 		"with-requires-pub-info",
 		false,
-		"marks the request's publish volume info as a required field")
+		`Marks the request's PublishVolumeInfo field as required.
+        Enabling this option also enables --with-spec-validation.`)
 
 	nodePublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresVolumeAttributes,
 		"with-requires-attributes",
 		false,
-		"marks the request's attributes as a required field")
+		withRequiresReqAttribsDesc)
 }

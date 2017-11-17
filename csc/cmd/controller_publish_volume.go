@@ -17,8 +17,8 @@ var controllerPublishVolume struct {
 }
 
 var controllerPublishVolumeCmd = &cobra.Command{
-	Use:     "publishvolume",
-	Aliases: []string{"a", "att", "pub", "attach", "publish"},
+	Use:     "publish",
+	Aliases: []string{"attach"},
 	Short:   `invokes the rpc "ControllerPublishVolume"`,
 	Example: `
 USAGE
@@ -70,39 +70,41 @@ func init() {
 		&controllerPublishVolume.nodeID,
 		"node-id",
 		"",
-		"the id of the node to which to publish the volume")
+		"The ID of the node to which to publish the volume")
 
 	controllerPublishVolumeCmd.Flags().Var(
 		&controllerPublishVolume.caps,
 		"cap",
-		"the volume capability to publish")
+		volumeCapabilityDesc)
 
 	controllerPublishVolumeCmd.Flags().Var(
 		&controllerPublishVolume.attribs,
 		"attrib",
-		"one or more volume attributes key/value pairs")
+		attribsDesc)
 
 	controllerPublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresCreds,
 		"with-requires-credentials",
 		false,
-		"marks the request's credentials as a required field")
+		withRequiresCredsDesc)
 
 	controllerPublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresNodeID,
 		"with-requires-node-id",
 		false,
-		"marks the request's node ID as a required field")
+		`Marks the request's NodeId field as required.
+        Enabling this option also enables --with-spec-validation.`)
 
 	controllerPublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresPubVolInfo,
 		"with-requires-pub-info",
 		false,
-		"marks the response's publish volume info as a required field")
+		`Marks the response's PublishVolumeInfo field as required.
+        Enabling this option also enables --with-spec-validation.`)
 
 	controllerPublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresVolumeAttributes,
 		"with-requires-attributes",
 		false,
-		"marks the request's attributes as a required field")
+		withRequiresReqAttribsDesc)
 }

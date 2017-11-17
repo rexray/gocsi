@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -17,6 +18,15 @@ import (
 	"github.com/thecodeteam/gocsi"
 )
 
+const (
+	debugKey     = "CSC_DEBUG"
+	userCredsKey = "X_CSI_USER_CREDENTIALS"
+)
+
+var (
+	debug, _ = strconv.ParseBool(os.Getenv(debugKey))
+)
+
 var root struct {
 	ctx       context.Context
 	client    *grpc.ClientConn
@@ -24,7 +34,7 @@ var root struct {
 	userCreds map[string]string
 
 	genMarkdown bool
-	logLevel    string
+	logLevel    logLevelArg
 	format      string
 	endpoint    string
 	insecure    bool
@@ -46,16 +56,30 @@ var root struct {
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:     "csc",
-	Short:   "a command line client for csi storage plug-ins",
-	Example: rootExample,
+	Use:   "csc",
+	Short: "a command line container storage interface (CSI) client",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 
-		ll, err := log.ParseLevel(root.logLevel)
-		if err != nil {
-			return fmt.Errorf("invalid log level: %v: %v", root.logLevel, err)
+		// Enable debug level logging and request and response logging
+		// if the environment variable that controls deubg mode is set
+		// to a truthy value.
+
+		if debug {
+			root.logLevel.val = log.DebugLevel
+			root.logLevel.set = true
+			root.withReqLogging = true
+			root.withRepLogging = true
 		}
-		log.SetLevel(ll)
+
+		// If the log level was not set then set it to WARN.
+		if !root.logLevel.set {
+			root.logLevel.val = log.WarnLevel
+		}
+		log.SetLevel(root.logLevel.val)
+
+		if debug {
+			log.Warn("debug mode enabled")
+		}
 
 		root.ctx = context.Background()
 		log.Debug("assigned the root context")
@@ -204,6 +228,7 @@ var RootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	setHelpAndUsage(RootCmd)
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -211,64 +236,63 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(
+
+	RootCmd.PersistentFlags().VarP(
 		&root.logLevel,
 		"log-level",
 		"l",
-		"warn",
-		"the log level")
+		logLevelDescription)
 
 	RootCmd.PersistentFlags().StringVarP(
 		&root.endpoint,
 		"endpoint",
 		"e",
 		os.Getenv("CSI_ENDPOINT"),
-		"the csi endpoint")
+		endpointDescription)
 
 	RootCmd.PersistentFlags().DurationVarP(
 		&root.timeout,
 		"timeout",
 		"t",
 		time.Duration(60)*time.Second,
-		"the timeout used for dialing the csi endpoint and invoking rpcs")
+		timeoutDescription)
 
 	RootCmd.PersistentFlags().BoolVarP(
 		&root.insecure,
 		"insecure",
 		"i",
 		true,
-		"a flag that disables tls")
+		insecureDescription)
 
 	RootCmd.PersistentFlags().VarP(
 		&root.metadata,
 		"metadata",
 		"m",
-		"one or more key/value pairs used as grpc metadata")
+		metadataDescription)
 
 	RootCmd.PersistentFlags().VarP(
 		&root.version,
 		"version",
 		"v",
-		"the csi version to send with an rpc")
+		versionDescription)
 
 	RootCmd.PersistentFlags().BoolVar(
 		&root.withReqLogging,
 		"with-request-logging",
 		false,
-		"enables request logging")
+		withReqLogDesc)
 
 	RootCmd.PersistentFlags().BoolVar(
 		&root.withRepLogging,
 		"with-response-logging",
 		false,
-		"enables response logging")
+		withRepLogDesc)
 
 	RootCmd.PersistentFlags().BoolVar(
 		&root.withSpecValidator,
 		"with-spec-validation",
 		false,
-		"enables validation of request/response data "+
-			"against the CSI specification")
+		withSpecValDesc)
 }
 
 type logger struct {
@@ -293,86 +317,43 @@ func (l *logger) Write(data []byte) (int, error) {
 	return l.w.Write(data)
 }
 
-const rootExample = `
-CSI ENDPOINT
+const endpointDescription = `The CSI endpoint may also be specified by the environment variable
+        CSI_ENDPOINT. The endpoint should adhere to Go's network address
+        pattern:
 
-The CSI endpoint is specified with either the environment variable
-CSI_ENDPOINT or the flag -e, --endpoint. The specified endpoint value
-should adhere to the Go network address pattern(s):
+            * tcp://host:port
+            * unix:///path/to/file.sock.
 
-    csc --endpoint tcp://host:port
+        If the network type is omitted then the value is assumed to be an
+        absolute or relative filesystem path to a UNIX socket file`
 
-    csc --endpoint unix://path/to/file.sock
+const insecureDescription = `This flag disables transport security for the client via the gRPC dial
+        option WithInsecure (https://goo.gl/Y95SfW)`
 
-Additionally, if the network type is omitted then this program
-assumes the provided endpoint value is the relative or absolute path
-to a UNIX socket file:
+const logLevelDescription = `Set the log level: panic, fatal, error, warn, info, debug`
 
-    csc --endpoint file.sock
+const metadataDescription = `Sets one or more key/value pairs to use as gRPC metadata sent with all
+        RPCs. gRPC metadata is similar to HTTP headers. For example:
 
+            --metadata key1=val1 --m key2=val2,key3=val3
 
-USER CREDENTIALS
+            -m key1=val1,key2=val2 --metadata key3=val3
 
-While this program does support CSI user credentials, there is
-no flag for specifying them on the command line. This is a design
-choice in order to prevent sensitive information from being part of
-a process listing.
+        Read more on gRPC metadata at https://goo.gl/iTci67`
 
-User credentials may be specified via the environment variable
-X_CSI_USER_CREDENTIALS. The format of this variable supports multiple
-credential pairs:
+const timeoutDescription = `A duration string that specifies the timeout used when dialing the CSI
+        endpoint. Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", and
+        "h"`
 
-    X_CSI_USER_CREDENTIALS=user1=pass user2="pass with trailing space "
+const versionDescription = `The version sent with an RPC may be specified as MAJOR.MINOR.PATCH
+       `
 
-As illustrated above, the value of the enviroment variable is one
-or more key/value pairs. Both the key and value may be quoted to
-preserve whitespace.
+const withReqLogDesc = `Enable gRPC request logging. Please note that the interceptor responsible
+        for logging gRPC requests does so using the info log level.`
 
+const withRepLogDesc = `Enable gRPC response logging. Please note that the interceptor responsible
+        for logging gRPC responses does so using the info log level.`
 
-VOLUME CAPABILITIES
-
-When specifying volume capabilities on the command line, the following
-format is used:
-
-    ACCESS_MODE,ACCESS_TYPE[,FS_TYPE,MOUNT_FLAGS]
-
-The ACCESS_MODE value may be the mode's full name or its integer value.
-For example, the following two values are equivalent:
-
-    MULTI_NODE_MULTI_WRITER
-    5
-
-The ACCESS_TYPE value may also reflect the type name or numeric value.
-For example:
-
-    block
-    1
-
-If the ACCESS_TYPE specifies is "mount" (or its numeric equivalent of 2)
-then it's also possible to specify a filesystem type and mount flags
-for the mount capability. Here are some examples:
-
-    --cap 1,block
-    --cap MULTI_NODE_MULTI_WRITER,mount,xfs,uid=500,gid=500
-
-
-LOGGING
-
-The log level may be adjusted with the flag -l,--log-level. In order to
-enable gRPC request or response logging the flags --with-request-logging,
---with-response-logging must also be used. These flags enable the
-GoCSI client-side logging interceptor. Please note that this interceptor
-logs request and response data at the INFO level, so set the log level
-accordingly.
-
-
-SPEC VALIDATION
-
-Please note that there are many flags, --with-ABC, that enable
-client-side request and response validation against the CSI
-specification. These flags enable a GoCSI gRPC interceptor to provide
-validation. There are also flags that enable optional components of the
-spec validation, such as treating the node ID as required, or treating
-an ALREADY_EXISTS error from CreateVolume as successful. None of these
-options are enabled by default.
-`
+const withSpecValDesc = `Enables client-side validation of outgoing and incoming gRPC requests and
+        response data against the CSI specification. Please note that certain
+        commands may support additional validation options.`

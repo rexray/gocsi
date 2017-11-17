@@ -10,7 +10,7 @@ import (
 )
 
 var nodeGetIDCmd = &cobra.Command{
-	Use:     "getid",
+	Use:     "get-id",
 	Aliases: []string{"id"},
 	Short:   `invokes the rpc "GetNodeID"`,
 	RunE: func(cmd *cobra.Command, args []string) error {

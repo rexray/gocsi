@@ -16,8 +16,8 @@ var valVolCaps struct {
 }
 
 var valVolCapsCmd = &cobra.Command{
-	Use:     "validatevolumecapabilities",
-	Aliases: []string{"v", "vv", "vvc", "validate"},
+	Use:     "validate-volume-capabilities",
+	Aliases: []string{"validate"},
 	Short:   `invokes the rpc "ValidateVolumeCapabilities"`,
 	Example: `
 USAGE
@@ -62,16 +62,16 @@ func init() {
 	valVolCapsCmd.Flags().Var(
 		&valVolCaps.caps,
 		"cap",
-		"one or more volume capabilities")
+		volumeCapabilityDesc)
 
 	valVolCapsCmd.Flags().Var(
 		&valVolCaps.attribs,
 		"attrib",
-		"one or more volume attributes key/value pairs")
+		attribsDesc)
 
 	valVolCapsCmd.Flags().BoolVar(
 		&root.withRequiresVolumeAttributes,
 		"with-requires-attributes",
 		false,
-		"marks the request's attributes as a required field")
+		withRequiresReqAttribsDesc)
 }
