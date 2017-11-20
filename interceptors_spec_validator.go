@@ -3,13 +3,32 @@ package gocsi
 import (
 	"sync"
 
-	"github.com/thecodeteam/gocsi/csi"
-
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/thecodeteam/gocsi/csi"
 )
+
+var nilResponses = map[string]interface{}{
+	CreateVolume:               (*csi.CreateVolumeResponse)(nil),
+	DeleteVolume:               (*csi.DeleteVolumeResponse)(nil),
+	ControllerPublishVolume:    (*csi.ControllerPublishVolumeResponse)(nil),
+	ControllerUnpublishVolume:  (*csi.ControllerUnpublishVolumeResponse)(nil),
+	ValidateVolumeCapabilities: (*csi.ValidateVolumeCapabilitiesResponse)(nil),
+	ListVolumes:                (*csi.ListVolumesResponse)(nil),
+	GetCapacity:                (*csi.GetCapacityResponse)(nil),
+	ControllerGetCapabilities:  (*csi.ControllerGetCapabilitiesResponse)(nil),
+	ControllerProbe:            (*csi.ControllerProbeResponse)(nil),
+	GetSupportedVersions:       (*csi.GetSupportedVersionsResponse)(nil),
+	GetPluginInfo:              (*csi.GetPluginInfoResponse)(nil),
+	GetNodeID:                  (*csi.GetNodeIDResponse)(nil),
+	NodePublishVolume:          (*csi.NodePublishVolumeResponse)(nil),
+	NodeUnpublishVolume:        (*csi.NodeUnpublishVolumeResponse)(nil),
+	NodeProbe:                  (*csi.NodeProbeResponse)(nil),
+	NodeGetCapabilities:        (*csi.NodeGetCapabilitiesResponse)(nil),
+}
 
 // SpecValidatorOption configures the spec validator interceptor.
 type SpecValidatorOption func(*specValidatorOpts)
@@ -25,6 +44,7 @@ type specValidatorOpts struct {
 }
 
 func (o *specValidatorOpts) setSuccessfulExitCode(m string, c codes.Code) {
+
 	o.Lock()
 	defer o.Unlock()
 	if o.successfulExitCodes == nil {
@@ -210,7 +230,7 @@ func (s *specValidator) handle(
 	ctx context.Context,
 	method string,
 	req interface{},
-	next func() (interface{}, error)) (rep interface{}, failed error) {
+	next func() (interface{}, error)) (interface{}, error) {
 
 	// If the request is nil then pass control to the next handler
 	// in the chain.
@@ -229,13 +249,34 @@ func (s *specValidator) handle(
 	}
 
 	// Use the function passed into this one to get the response. On the
-	// server-side this actually invokes further interceptors. On the client
-	// side this invokes the RPC.
-	rep, failed = next()
+	// server-side this could possibly invoke additional interceptors or
+	// the RPC. On the client side this invokes the RPC.
+	rep, err := next()
 
-	// Handle possible non-zero successful exit codes in a deferred function.
-	if failed = s.handleResponseError(method, failed); failed != nil {
-		return nil, failed
+	// Determine whether or not the response is nil. Otherwise it
+	// will no longer be possible to perform a nil equality check on the
+	// response to the interface{} rules for nil comparison. For more info
+	// please see https://golang.org/doc/faq#nil_error and
+	// https://github.com/grpc/grpc-go/issues/532.
+	var isNilRep bool
+	if nilRep := nilResponses[method]; rep == nilRep {
+		isNilRep = true
+	}
+
+	// Handle possible non-zero successful exit codes.
+	if err := s.handleResponseError(method, err); err != nil {
+		if isNilRep {
+			return nil, err
+		}
+		return rep, err
+	}
+
+	// If the response is nil then go ahead and return a nil value
+	// directly in order to fulfill Go's rules about nil values and
+	// interface{} types. For more information please see the links
+	// in the previous comment.
+	if isNilRep {
+		return nil, nil
 	}
 
 	// Validate the response against the CSI specification.
@@ -243,6 +284,7 @@ func (s *specValidator) handle(
 }
 
 func (s *specValidator) handleResponseError(method string, err error) error {
+
 	// If the returned error does not contain a gRPC error code then
 	// return early from this function.
 	stat, ok := status.FromError(err)

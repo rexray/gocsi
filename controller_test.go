@@ -313,6 +313,14 @@ var _ = Describe("Controller", func() {
 				Ω(err).Should(Σ(gocsi.ErrVolumeIDRequired))
 			})
 		})
+		Context("Not Found", func() {
+			BeforeEach(func() {
+				volID = "5"
+			})
+			It("Should Be Valid", func() {
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+		})
 		Context("Missing Version", func() {
 			BeforeEach(func() {
 				version = nil

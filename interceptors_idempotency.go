@@ -457,6 +457,7 @@ func (i *idempotencyInterceptor) deleteVolume(
 			return nil, err
 		}
 		if volInfo == nil {
+			log.WithField("volumeID", req.VolumeId).Info("idempotent delete.a")
 			return nil, status.Error(codes.NotFound, req.VolumeId)
 		}
 		volExists = true
@@ -474,8 +475,8 @@ func (i *idempotencyInterceptor) deleteVolume(
 
 	// Indicate an idempotent delete operation if the volume does not exist.
 	if !volExists {
-		log.WithField("volumeID", req.VolumeId).Info("idempotent delete")
-		return &csi.DeleteVolumeResponse{}, nil
+		log.WithField("volumeID", req.VolumeId).Info("idempotent delete.b")
+		return nil, status.Error(codes.NotFound, req.VolumeId)
 	}
 
 	return handler(ctx, req)

@@ -57,7 +57,7 @@ func (s *service) DeleteVolume(
 		s.vols = s.vols[:len(s.vols)-1]
 	}()
 
-	return &csi.DeleteVolumeResponse{}, nil
+	return nil, status.Error(codes.NotFound, req.VolumeId)
 }
 
 func (s *service) ControllerPublishVolume(
