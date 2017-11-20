@@ -39,10 +39,5 @@ var getCapacityCmd = &cobra.Command{
 
 func init() {
 	controllerCmd.AddCommand(getCapacityCmd)
-
-	getCapacityCmd.Flags().Var(
-		&getCapacity.caps,
-		"cap",
-		"one or more volume capabilities. "+
-			"ex: --cap 1,block --cap 5,mount,xfs,uid=500")
+	flagVolumeCapabilities(getCapacityCmd.Flags(), &getCapacity.caps)
 }

@@ -62,9 +62,6 @@ func init() {
 		"",
 		"The path from which to unmount the volume")
 
-	nodeUnpublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresCreds,
-		"with-requires-credentials",
-		false,
-		withRequiresCredsDesc)
+	flagWithRequiresCreds(
+		nodeUnpublishVolumeCmd.Flags(), &root.withRequiresCreds, "")
 }

@@ -20,7 +20,7 @@ var createVolume struct {
 
 var createVolumeCmd = &cobra.Command{
 	Use:     "create-volume",
-	Aliases: []string{"new", "create"},
+	Aliases: []string{"n", "c", "new", "create"},
 	Short:   `invokes the rpc "CreateVolume"`,
 	Example: `
 CREATING MULTIPLE VOLUMES
@@ -91,36 +91,27 @@ func init() {
 		"The limit to the size of the volume in bytes")
 
 	createVolumeCmd.Flags().Var(
-		&createVolume.caps,
-		"cap",
-		volumeCapabilityDesc)
-
-	createVolumeCmd.Flags().Var(
 		&createVolume.params,
 		"params",
-		paramsDesc)
-
-	createVolumeCmd.Flags().BoolVar(
-		&root.withRequiresCreds,
-		"with-requires-credentials",
-		false,
-		withRequiresCredsDesc)
-
-	createVolumeCmd.Flags().BoolVar(
-		&root.withRequiresVolumeAttributes,
-		"with-requires-attributes",
-		false,
-		withRequiresRepAttribsDesc)
-
-	createVolumeCmd.Flags().BoolVar(
-		&root.withSuccessCreateVolumeAlreadyExists,
-		"with-success-already-exists",
-		false,
-		`Treats an AlreadyExists error code as a successful response.
-        Enabling this option also enables --with-spec-validation.`)
-}
-
-const paramsDesc = `One or more key/value pairs may be specified to send with
+		`One or more key/value pairs may be specified to send with
         the request as its Parameters field:
 
-            --params key1=val1,key2=val2 --params=key3=val3`
+            --params key1=val1,key2=val2 --params=key3=val3`)
+
+	flagVolumeCapabilities(createVolumeCmd.Flags(), &createVolume.caps)
+
+	flagWithSuccessAlreadyExists(
+		createVolumeCmd.Flags(),
+		&root.withSuccessCreateVolumeAlreadyExists,
+		"")
+
+	flagWithRequiresCreds(
+		createVolumeCmd.Flags(),
+		&root.withRequiresCreds,
+		"")
+
+	flagWithRequiresAttribs(
+		createVolumeCmd.Flags(),
+		&root.withRequiresVolumeAttributes,
+		"")
+}
