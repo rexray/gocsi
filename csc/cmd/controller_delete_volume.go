@@ -12,7 +12,7 @@ import (
 
 var deleteVolumeCmd = &cobra.Command{
 	Use:     "delete-volume",
-	Aliases: []string{"rm", "delete"},
+	Aliases: []string{"d", "rm", "del", "delete"},
 	Short:   `invokes the rpc "DeleteVolume"`,
 	Example: `
 USAGE
@@ -49,16 +49,13 @@ USAGE
 func init() {
 	controllerCmd.AddCommand(deleteVolumeCmd)
 
-	deleteVolumeCmd.Flags().BoolVar(
+	flagWithRequiresCreds(
+		deleteVolumeCmd.Flags(),
 		&root.withRequiresCreds,
-		"with-requires-credentials",
-		false,
-		withRequiresCredsDesc)
+		"")
 
-	deleteVolumeCmd.Flags().BoolVar(
+	flagWithSuccessNotFound(
+		deleteVolumeCmd.Flags(),
 		&root.withSuccessDeleteVolumeNotFound,
-		"with-success-not-found",
-		false,
-		`Treats a NotFound error code as a successful response.
-        Enabling this option also enables --with-spec-validation.`)
+		"")
 }

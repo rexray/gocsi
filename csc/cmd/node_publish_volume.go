@@ -81,27 +81,11 @@ func init() {
 
                 --pub-info key1=val1,key2=val2 --pub-infoparams=key3=val3`)
 
-	nodePublishVolumeCmd.Flags().Var(
-		&nodePublishVolume.attribs,
-		"attrib",
-		attribsDesc)
-
-	nodePublishVolumeCmd.Flags().Var(
-		&nodePublishVolume.caps,
-		"cap",
-		volumeCapabilityDesc)
-
 	nodePublishVolumeCmd.Flags().BoolVar(
 		&nodePublishVolume.readOnly,
 		"read-only",
 		false,
 		"Mark the volume as read-only")
-
-	nodePublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresCreds,
-		"with-requires-credentials",
-		false,
-		withRequiresCredsDesc)
 
 	nodePublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresPubVolInfo,
@@ -110,9 +94,15 @@ func init() {
 		`Marks the request's PublishVolumeInfo field as required.
         Enabling this option also enables --with-spec-validation.`)
 
-	nodePublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresVolumeAttributes,
-		"with-requires-attributes",
-		false,
-		withRequiresReqAttribsDesc)
+	flagVolumeAttributes(
+		nodePublishVolumeCmd.Flags(), &nodePublishVolume.attribs)
+
+	flagVolumeCapability(
+		nodePublishVolumeCmd.Flags(), &nodePublishVolume.caps)
+
+	flagWithRequiresCreds(
+		nodePublishVolumeCmd.Flags(), &root.withRequiresCreds, "")
+
+	flagWithRequiresAttribs(
+		nodePublishVolumeCmd.Flags(), &root.withRequiresVolumeAttributes, "")
 }

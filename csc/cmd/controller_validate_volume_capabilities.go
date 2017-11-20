@@ -59,19 +59,12 @@ USAGE
 func init() {
 	controllerCmd.AddCommand(valVolCapsCmd)
 
-	valVolCapsCmd.Flags().Var(
-		&valVolCaps.caps,
-		"cap",
-		volumeCapabilityDesc)
+	flagVolumeAttributes(valVolCapsCmd.Flags(), &valVolCaps.attribs)
 
-	valVolCapsCmd.Flags().Var(
-		&valVolCaps.attribs,
-		"attrib",
-		attribsDesc)
+	flagVolumeCapabilities(valVolCapsCmd.Flags(), &valVolCaps.caps)
 
-	valVolCapsCmd.Flags().BoolVar(
+	flagWithRequiresAttribs(
+		valVolCapsCmd.Flags(),
 		&root.withRequiresVolumeAttributes,
-		"with-requires-attributes",
-		false,
-		withRequiresReqAttribsDesc)
+		"")
 }

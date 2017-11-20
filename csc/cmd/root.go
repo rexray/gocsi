@@ -18,14 +18,7 @@ import (
 	"github.com/thecodeteam/gocsi"
 )
 
-const (
-	debugKey     = "CSC_DEBUG"
-	userCredsKey = "X_CSI_USER_CREDENTIALS"
-)
-
-var (
-	debug, _ = strconv.ParseBool(os.Getenv(debugKey))
-)
+var debug, _ = strconv.ParseBool(os.Getenv("X_CSI_DEBUG"))
 
 var root struct {
 	ctx       context.Context
@@ -54,6 +47,11 @@ var root struct {
 	withRequiresVolumeAttributes         bool
 }
 
+var (
+	activeArgs []string
+	activeCmd  *cobra.Command
+)
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "csc",
@@ -63,19 +61,15 @@ var RootCmd = &cobra.Command{
 		// Enable debug level logging and request and response logging
 		// if the environment variable that controls deubg mode is set
 		// to a truthy value.
-
 		if debug {
-			root.logLevel.val = log.DebugLevel
-			root.logLevel.set = true
+			root.logLevel.Set(log.DebugLevel.String())
 			root.withReqLogging = true
-			root.withRepLogging = true
+			root.withReqLogging = true
 		}
 
-		// If the log level was not set then set it to WARN.
-		if !root.logLevel.set {
-			root.logLevel.val = log.WarnLevel
-		}
-		log.SetLevel(root.logLevel.val)
+		// Set the log level.
+		lvl, _ := root.logLevel.Val()
+		log.SetLevel(lvl)
 
 		if debug {
 			log.Warn("debug mode enabled")
@@ -110,7 +104,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		// Parse the credentials if they exist.
-		root.userCreds = gocsi.ParseMap(os.Getenv(userCredsKey))
+		root.userCreds = gocsi.ParseMap(os.Getenv("X_CSI_USER_CREDENTIALS"))
 
 		// Create the gRPC client connection.
 		opts := []grpc.DialOption{
@@ -138,21 +132,20 @@ var RootCmd = &cobra.Command{
 			// is enabled.
 			iceptors = append(iceptors,
 				gocsi.NewClientRequestIDInjector())
-			log.Debug("enable request ID injector")
+			log.Debug("enabled request ID injector")
 
 			var (
 				loggingOpts []gocsi.LoggingOption
-				lout        = newLogger(log.Infof)
+				w           = newLogger(log.Infof)
 			)
+
 			if root.withReqLogging {
-				loggingOpts = append(loggingOpts,
-					gocsi.WithRequestLogging(lout))
-				log.Debug("enable request logging")
+				loggingOpts = append(loggingOpts, gocsi.WithRequestLogging(w))
+				log.Debug("enabled request logging")
 			}
 			if root.withRepLogging {
-				loggingOpts = append(loggingOpts,
-					gocsi.WithResponseLogging(lout))
-				log.Debug("enable response logging")
+				loggingOpts = append(loggingOpts, gocsi.WithResponseLogging(w))
+				log.Debug("enabled response logging")
 			}
 			iceptors = append(iceptors,
 				gocsi.NewClientLogger(loggingOpts...))
@@ -176,32 +169,32 @@ var RootCmd = &cobra.Command{
 					gocsi.WithRequiresControllerUnpublishVolumeCredentials(),
 					gocsi.WithRequiresNodePublishVolumeCredentials(),
 					gocsi.WithRequiresNodeUnpublishVolumeCredentials())
-				log.Debug("enable spec validator opt: requires creds")
+				log.Debug("enabled spec validator opt: requires creds")
 			}
 			if root.withRequiresNodeID {
 				specOpts = append(specOpts,
 					gocsi.WithRequiresNodeID())
-				log.Debug("enable spec validator opt: requires node ID")
+				log.Debug("enabled spec validator opt: requires node ID")
 			}
 			if root.withRequiresPubVolInfo {
 				specOpts = append(specOpts,
 					gocsi.WithRequiresPublishVolumeInfo())
-				log.Debug("enable spec validator opt: requires pub vol info")
+				log.Debug("enabled spec validator opt: requires pub vol info")
 			}
 			if root.withRequiresVolumeAttributes {
 				specOpts = append(specOpts,
 					gocsi.WithRequiresVolumeAttributes())
-				log.Debug("enable spec validator opt: requires vol attribs")
+				log.Debug("enabled spec validator opt: requires vol attribs")
 			}
 			if root.withSuccessCreateVolumeAlreadyExists {
 				specOpts = append(specOpts,
 					gocsi.WithSuccessCreateVolumeAlreadyExists())
-				log.Debug("enable spec validator opt: create exists success")
+				log.Debug("enabled spec validator opt: create exists success")
 			}
 			if root.withSuccessDeleteVolumeNotFound {
 				specOpts = append(specOpts,
 					gocsi.WithSuccessDeleteVolumeNotFound())
-				log.Debug("enable spec validator opt: delete !exists success")
+				log.Debug("enabled spec validator opt: delete !exists success")
 			}
 			iceptors = append(iceptors,
 				gocsi.NewClientSpecValidator(specOpts...))
@@ -228,71 +221,75 @@ var RootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	setHelpAndUsage(RootCmd)
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintf(
+			os.Stderr,
+			"%v\n\nPlease use -h,--help for more information\n",
+			err)
 		os.Exit(1)
 	}
 }
 
 func init() {
+	setHelpAndUsage(RootCmd)
 
-	RootCmd.PersistentFlags().VarP(
+	flagLogLevel(
+		RootCmd.PersistentFlags(),
 		&root.logLevel,
-		"log-level",
-		"l",
-		logLevelDescription)
+		"warn")
 
-	RootCmd.PersistentFlags().StringVarP(
+	flagEndpoint(
+		RootCmd.PersistentFlags(),
 		&root.endpoint,
-		"endpoint",
-		"e",
-		os.Getenv("CSI_ENDPOINT"),
-		endpointDescription)
+		os.Getenv("CSI_ENDPOINT"))
 
-	RootCmd.PersistentFlags().DurationVarP(
+	flagTimeout(
+		RootCmd.PersistentFlags(),
 		&root.timeout,
-		"timeout",
-		"t",
-		time.Duration(60)*time.Second,
-		timeoutDescription)
+		"1m")
+
+	flagWithRequestLogging(
+		RootCmd.PersistentFlags(),
+		&root.withReqLogging,
+		"false")
+
+	flagWithResponseLogging(
+		RootCmd.PersistentFlags(),
+		&root.withRepLogging,
+		"false")
+
+	flagWithSpecValidation(
+		RootCmd.PersistentFlags(),
+		&root.withSpecValidator,
+		"false")
 
 	RootCmd.PersistentFlags().BoolVarP(
 		&root.insecure,
 		"insecure",
 		"i",
 		true,
-		insecureDescription)
+		`Disables transport security for the client via the gRPC dial option
+        WithInsecure (https://goo.gl/Y95SfW)`)
 
 	RootCmd.PersistentFlags().VarP(
 		&root.metadata,
 		"metadata",
 		"m",
-		metadataDescription)
+		`Sets one or more key/value pairs to use as gRPC metadata sent with all
+        RPCs. gRPC metadata is similar to HTTP headers. For example:
+
+            --metadata key1=val1 --m key2=val2,key3=val3
+
+            -m key1=val1,key2=val2 --metadata key3=val3
+
+        Read more on gRPC metadata at https://goo.gl/iTci67`)
 
 	RootCmd.PersistentFlags().VarP(
 		&root.version,
 		"version",
 		"v",
-		versionDescription)
+		`The version sent with an RPC may be specified as MAJOR.MINOR.PATCH`)
 
-	RootCmd.PersistentFlags().BoolVar(
-		&root.withReqLogging,
-		"with-request-logging",
-		false,
-		withReqLogDesc)
-
-	RootCmd.PersistentFlags().BoolVar(
-		&root.withRepLogging,
-		"with-response-logging",
-		false,
-		withRepLogDesc)
-
-	RootCmd.PersistentFlags().BoolVar(
-		&root.withSpecValidator,
-		"with-spec-validation",
-		false,
-		withSpecValDesc)
 }
 
 type logger struct {
@@ -316,44 +313,3 @@ func newLogger(f func(msg string, args ...interface{})) *logger {
 func (l *logger) Write(data []byte) (int, error) {
 	return l.w.Write(data)
 }
-
-const endpointDescription = `The CSI endpoint may also be specified by the environment variable
-        CSI_ENDPOINT. The endpoint should adhere to Go's network address
-        pattern:
-
-            * tcp://host:port
-            * unix:///path/to/file.sock.
-
-        If the network type is omitted then the value is assumed to be an
-        absolute or relative filesystem path to a UNIX socket file`
-
-const insecureDescription = `This flag disables transport security for the client via the gRPC dial
-        option WithInsecure (https://goo.gl/Y95SfW)`
-
-const logLevelDescription = `Set the log level: panic, fatal, error, warn, info, debug`
-
-const metadataDescription = `Sets one or more key/value pairs to use as gRPC metadata sent with all
-        RPCs. gRPC metadata is similar to HTTP headers. For example:
-
-            --metadata key1=val1 --m key2=val2,key3=val3
-
-            -m key1=val1,key2=val2 --metadata key3=val3
-
-        Read more on gRPC metadata at https://goo.gl/iTci67`
-
-const timeoutDescription = `A duration string that specifies the timeout used when dialing the CSI
-        endpoint. Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", and
-        "h"`
-
-const versionDescription = `The version sent with an RPC may be specified as MAJOR.MINOR.PATCH
-       `
-
-const withReqLogDesc = `Enable gRPC request logging. Please note that the interceptor responsible
-        for logging gRPC requests does so using the info log level.`
-
-const withRepLogDesc = `Enable gRPC response logging. Please note that the interceptor responsible
-        for logging gRPC responses does so using the info log level.`
-
-const withSpecValDesc = `Enables client-side validation of outgoing and incoming gRPC requests and
-        response data against the CSI specification. Please note that certain
-        commands may support additional validation options.`

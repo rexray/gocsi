@@ -63,9 +63,8 @@ func init() {
 		"",
 		"The ID of the node from which to unpublish the volume")
 
-	controllerUnpublishVolumeCmd.Flags().BoolVar(
+	flagWithRequiresCreds(
+		controllerUnpublishVolumeCmd.Flags(),
 		&root.withRequiresCreds,
-		"with-requires-credentials",
-		false,
-		withRequiresCredsDesc)
+		"")
 }

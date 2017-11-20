@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/spf13/pflag"
 	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/csi"
 )
@@ -171,26 +172,36 @@ func (s *docTypeArg) Set(val string) error {
 	return fmt.Errorf("invalid doc type: %s", val)
 }
 
-// logLevelArg is used for parsing the log level
 type logLevelArg struct {
+	pflag.Value
 	val log.Level
 	set bool
 }
 
-func (s *logLevelArg) String() string {
-	return "warn"
+func (a *logLevelArg) Val() (log.Level, bool) {
+	if a.set {
+		return a.val, false
+	}
+	return log.WarnLevel, true
 }
 
-func (s *logLevelArg) Type() string {
-	return "panic|fatal|error|warn|info|debug"
+func (a *logLevelArg) String() string {
+	if a.set {
+		return a.val.String()
+	}
+	return "WARN"
 }
 
-func (s *logLevelArg) Set(val string) error {
+func (a *logLevelArg) Type() string {
+	return "PANIC|FATAL|ERROR|WARN|INFO|DEBUG"
+}
+
+func (a *logLevelArg) Set(val string) error {
 	lvl, err := log.ParseLevel(val)
 	if err != nil {
 		return err
 	}
-	s.val = lvl
-	s.set = true
+	a.val = lvl
+	a.set = true
 	return nil
 }

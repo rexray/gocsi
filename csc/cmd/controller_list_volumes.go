@@ -67,29 +67,28 @@ func init() {
 		&listVolumes.maxEntries,
 		"max-entries",
 		0,
-		"the maximum number of entries to return")
+		"The maximum number of entries to return")
 
 	listVolumesCmd.Flags().StringVar(
 		&listVolumes.startingToken,
 		"starting-token",
 		"",
-		"the starting token used to retrieve paged data")
+		"The starting token used to retrieve paged data")
 
 	listVolumesCmd.Flags().BoolVar(
 		&listVolumes.paging,
 		"paging",
 		false,
-		"a flag that enables auto-paging")
+		"Enables auto-paging")
 
 	listVolumesCmd.Flags().StringVar(
 		&root.format,
 		"format",
 		"",
-		"the go template format used to emit the results")
+		"The Go template format used to emit the results")
 
-	listVolumesCmd.Flags().BoolVar(
+	flagWithRequiresAttribs(
+		listVolumesCmd.Flags(),
 		&root.withRequiresVolumeAttributes,
-		"with-requires-attributes",
-		false,
-		withRequiresRepAttribsDesc)
+		"")
 }

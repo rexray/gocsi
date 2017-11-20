@@ -72,22 +72,6 @@ func init() {
 		"",
 		"The ID of the node to which to publish the volume")
 
-	controllerPublishVolumeCmd.Flags().Var(
-		&controllerPublishVolume.caps,
-		"cap",
-		volumeCapabilityDesc)
-
-	controllerPublishVolumeCmd.Flags().Var(
-		&controllerPublishVolume.attribs,
-		"attrib",
-		attribsDesc)
-
-	controllerPublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresCreds,
-		"with-requires-credentials",
-		false,
-		withRequiresCredsDesc)
-
 	controllerPublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresNodeID,
 		"with-requires-node-id",
@@ -102,9 +86,19 @@ func init() {
 		`Marks the response's PublishVolumeInfo field as required.
         Enabling this option also enables --with-spec-validation.`)
 
-	controllerPublishVolumeCmd.Flags().BoolVar(
+	flagVolumeAttributes(
+		controllerPublishVolumeCmd.Flags(), &controllerPublishVolume.attribs)
+
+	flagVolumeCapability(
+		controllerPublishVolumeCmd.Flags(), &controllerPublishVolume.caps)
+
+	flagWithRequiresCreds(
+		controllerPublishVolumeCmd.Flags(),
+		&root.withRequiresCreds,
+		"")
+
+	flagWithRequiresAttribs(
+		controllerPublishVolumeCmd.Flags(),
 		&root.withRequiresVolumeAttributes,
-		"with-requires-attributes",
-		false,
-		withRequiresReqAttribsDesc)
+		"")
 }
