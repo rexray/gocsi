@@ -111,12 +111,14 @@ func (s *loggingInterceptor) handle(
 	reqID, reqIDOK := GetRequestID(ctx)
 
 	// Print the request
-	fmt.Fprintf(w, "%s: ", method)
-	if reqIDOK {
-		fmt.Fprintf(w, "REQ %04d", reqID)
+	if s.opts.reqw != nil {
+		fmt.Fprintf(w, "%s: ", method)
+		if reqIDOK {
+			fmt.Fprintf(w, "REQ %04d", reqID)
+		}
+		rprintReqOrRep(w, req)
+		fmt.Fprintln(s.opts.reqw, w.String())
 	}
-	rprintReqOrRep(w, req)
-	fmt.Fprintln(s.opts.reqw, w.String())
 
 	w.Reset()
 
