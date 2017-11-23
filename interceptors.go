@@ -7,25 +7,6 @@ import (
 	"github.com/thecodeteam/gocsi/csi"
 )
 
-var nilResponses = map[string]interface{}{
-	CreateVolume:               (*csi.CreateVolumeResponse)(nil),
-	DeleteVolume:               (*csi.DeleteVolumeResponse)(nil),
-	ControllerPublishVolume:    (*csi.ControllerPublishVolumeResponse)(nil),
-	ControllerUnpublishVolume:  (*csi.ControllerUnpublishVolumeResponse)(nil),
-	ValidateVolumeCapabilities: (*csi.ValidateVolumeCapabilitiesResponse)(nil),
-	ListVolumes:                (*csi.ListVolumesResponse)(nil),
-	GetCapacity:                (*csi.GetCapacityResponse)(nil),
-	ControllerGetCapabilities:  (*csi.ControllerGetCapabilitiesResponse)(nil),
-	ControllerProbe:            (*csi.ControllerProbeResponse)(nil),
-	GetSupportedVersions:       (*csi.GetSupportedVersionsResponse)(nil),
-	GetPluginInfo:              (*csi.GetPluginInfoResponse)(nil),
-	GetNodeID:                  (*csi.GetNodeIDResponse)(nil),
-	NodePublishVolume:          (*csi.NodePublishVolumeResponse)(nil),
-	NodeUnpublishVolume:        (*csi.NodeUnpublishVolumeResponse)(nil),
-	NodeProbe:                  (*csi.NodeProbeResponse)(nil),
-	NodeGetCapabilities:        (*csi.NodeGetCapabilitiesResponse)(nil),
-}
-
 // ChainUnaryClient chains one or more unary, client interceptors
 // together into a left-to-right series that can be provided to a
 // new gRPC client.
@@ -124,6 +105,25 @@ func ChainUnaryServer(
 		}
 		return c(ctx, req)
 	}
+}
+
+var nilResponses = map[string]interface{}{
+	CreateVolume:               (*csi.CreateVolumeResponse)(nil),
+	DeleteVolume:               (*csi.DeleteVolumeResponse)(nil),
+	ControllerPublishVolume:    (*csi.ControllerPublishVolumeResponse)(nil),
+	ControllerUnpublishVolume:  (*csi.ControllerUnpublishVolumeResponse)(nil),
+	ValidateVolumeCapabilities: (*csi.ValidateVolumeCapabilitiesResponse)(nil),
+	ListVolumes:                (*csi.ListVolumesResponse)(nil),
+	GetCapacity:                (*csi.GetCapacityResponse)(nil),
+	ControllerGetCapabilities:  (*csi.ControllerGetCapabilitiesResponse)(nil),
+	ControllerProbe:            (*csi.ControllerProbeResponse)(nil),
+	GetSupportedVersions:       (*csi.GetSupportedVersionsResponse)(nil),
+	GetPluginInfo:              (*csi.GetPluginInfoResponse)(nil),
+	GetNodeID:                  (*csi.GetNodeIDResponse)(nil),
+	NodePublishVolume:          (*csi.NodePublishVolumeResponse)(nil),
+	NodeUnpublishVolume:        (*csi.NodeUnpublishVolumeResponse)(nil),
+	NodeProbe:                  (*csi.NodeProbeResponse)(nil),
+	NodeGetCapabilities:        (*csi.NodeGetCapabilitiesResponse)(nil),
 }
 
 func isResponseNil(method string, rep interface{}) bool {
