@@ -208,6 +208,16 @@ $(GINKGO):
 ifneq (true,$(TRAVIS))
 test:  build
 endif
+
+# Because Travis-CI's containers have limited resources, the Mock SP's
+# idempotency provider's timeout needs to be increased from the default
+# value of 0 to 1s. This ensures that lack of system resources will not
+# prevent a single, non-concurrent RPC from failing due to an OpPending
+# error.
+ifeq (true,$(TRAVIS))
+export X_CSI_MOCK_IDEMPOTENCY_TIMEOUT=1s
+endif
+
 test: | $(GINKGO)
 	$(GINKGO) $(GINKGO_RUN_OPTS) . || test "$$?" -eq "197"
 
