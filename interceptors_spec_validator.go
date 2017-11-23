@@ -240,11 +240,11 @@ func (s *specValidator) handle(
 	isNilRep := isResponseNil(method, rep)
 
 	// Handle possible non-zero successful exit codes.
-	if err2 := s.handleResponseError(method, err); err2 != nil {
+	if err := s.handleResponseError(method, err); err != nil {
 		if isNilRep {
-			return nil, err2
+			return nil, err
 		}
-		return nil, err2
+		return nil, err
 	}
 
 	// If the response is nil then go ahead and return a nil value
