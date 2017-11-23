@@ -142,7 +142,7 @@ func (s *loggingInterceptor) handle(
 	}
 
 	// Print the response data if it is set.
-	if rep != nil {
+	if !isResponseNil(method, rep) {
 		rprintReqOrRep(w, rep)
 	}
 	fmt.Fprintln(s.opts.repw, w.String())
