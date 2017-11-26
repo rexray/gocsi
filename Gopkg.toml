@@ -3,11 +3,6 @@
 #
 # Refer to https://github.com/toml-lang/toml for detailed TOML docs.
 
-required = [
-  "github.com/golang/protobuf/protoc-gen-go",
-  "github.com/container-storage-interface/spec/lib/go",
-]
-
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
   branch = "master"

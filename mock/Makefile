@@ -2,7 +2,7 @@ all: build
 
 PROG := mock
 
-$(PROG): *.go ../*.go ../csi/csi.pb.go
+$(PROG): *.go ./provider/*.go ./service/*.go ../*.go
 	@go install .
 	go build -o "$@" .
 
