@@ -2,7 +2,7 @@ all: build
 
 PROG := csc
 
-$(PROG): *.go ../*.go ../csi/csi.pb.go
+$(PROG): *.go ./cmd/*.go ../*.go
 	@go install .
 	go build -o "$@" .
 

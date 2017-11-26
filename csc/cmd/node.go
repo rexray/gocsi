@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/thecodeteam/gocsi/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 var node struct {

@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/thecodeteam/gocsi/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 const (

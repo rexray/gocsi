@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/thecodeteam/gocsi"
-	"github.com/thecodeteam/gocsi/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
