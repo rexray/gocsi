@@ -29,6 +29,47 @@ creating $GOPATH/src/github.com/thecodeteam/csi-sp/service/node.go
 building csi-sp
 ```
 
+The new SP adheres to the following structure:
+
+```
+|-- provider
+|   |
+|   |-- provider.go
+|
+|-- service
+|   |
+|   |-- controller.go
+|   |-- identity.go
+|   |-- node.go
+|   |-- service.go
+|
+|-- main.go
+```
+
+### Provider
+The `provider` package leverages `csp` to construct an SP from the CSI
+services defined in `services` package. The file `provider.go` may be
+modified to:
+
+* Add an idempotency provider
+* Supply default values for the SP's environment variable configuration properties
+
+Please see the Mock SP's [`provider.go`](../mock/provider/provider.go) file
+for an example of each.
+
+### Service
+The `service` package is where the business logic occurs. The files `controller.go`,
+`identity.go`, and `node.go` each correspond to their eponymous CSI services. A
+developer creating a new CSI SP with `csp` will work mostly in these files. Each
+of the files have a complete skeleton implementation for their respective service's
+remote procedure calls (RPC).
+
+### Main
+The root, or `main`, package leverages `csp` to launch the SP as a stand-alone
+server process. The only requirement is that the environment variable `CSI_ENDPOINT`
+must be set, otherwise a help screen is emitted that lists all of the SP's available
+configuration options (environment variables).
+
 ## Configuration
 All CSI SPs created using this package are able to leverage the following
 environment variables:
