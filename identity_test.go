@@ -42,8 +42,9 @@ var _ = Describe("Identity", func() {
 			version       csi.Version
 		)
 		BeforeEach(func() {
-			version, err = gocsi.ParseVersion(CTest().ComponentTexts[3])
-			Ω(err).ShouldNot(HaveOccurred())
+			var ok bool
+			version, ok = gocsi.ParseVersion(CTest().ComponentTexts[3])
+			Ω(ok).ShouldNot(BeFalse())
 			var res *csi.GetPluginInfoResponse
 			res, err = client.GetPluginInfo(ctx, &csi.GetPluginInfoRequest{
 				Version: &csi.Version{
@@ -100,13 +101,17 @@ var _ = Describe("Identity", func() {
 
 	Describe("GetSupportedVersions", func() {
 		It("Should Be Valid", func() {
-			res, err := client.GetSupportedVersions(
+			rep, err := client.GetSupportedVersions(
 				ctx, &csi.GetSupportedVersionsRequest{})
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(res).ShouldNot(BeNil())
-			resVersions := res.SupportedVersions
-			Ω(resVersions).Should(HaveLen(len(mockSupportedVersions)))
-			for i, v := range resVersions {
+			Ω(rep).ShouldNot(BeNil())
+			fmt.Fprintf(
+				GinkgoWriter, "expVersions: %v\n", mockSupportedVersions)
+			fmt.Fprintf(
+				GinkgoWriter, "actVersions: %v\n", rep.SupportedVersions)
+
+			Ω(rep.SupportedVersions).Should(HaveLen(len(mockSupportedVersions)))
+			for i, v := range rep.SupportedVersions {
 				Ω(*v).Should(Equal(mockSupportedVersions[i]))
 			}
 		})

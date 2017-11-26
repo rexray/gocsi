@@ -9,7 +9,8 @@ of CSI plug-ins and provides the following:
 |-----------|-------------|
 | [GoCSI](#library) | CSI Go library |
 | [csc](#client) | CSI command line interface (CLI) client |
-| [mock](#mock-plug-in) | CSI mock plug-in |
+| [csp](#csp) | CSI storage plug-in (CSP) bootstrapper |
+| [mock](#mock-plug-in) | CSI mock storage plug-in (SP) |
 
 ## Library
 The root of the GoCSI project is a general purpose library for CSI
@@ -39,6 +40,13 @@ from the command line.
 
 Please see the `csc` package for
 [additional documentation](./csc/README.md).
+
+## CSP
+The CSP package enables the rapid development of Container Storage Interface
+(CSI) storage plug-ins (SP).
+
+Please see the `csp` package for
+[additional documentation](./csp/README.md).
 
 ## Mock Plug-in
 The mock plug-in is a stand-alone binary that implements the CSI

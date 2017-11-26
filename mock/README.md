@@ -27,13 +27,20 @@ INFO  2017/08/22 16:23:53 main.go:64: server stopped gracefully
 ```
 
 ## Configuration
-The Mock CSI plug-in can be configured with the following environment variables:
+The Mock CSI plug-in is created using the GoCSI CSP package. Please
+see its [configuration section](../csp/README.md#configuration) for
+a complete list of the environment variables that may be used to
+configure the Mock SP.
 
-| Name | Description | Default |
-|------|-------------|---------|
-| `X_CSI_MOCK_REQ_LOGGING_ENABLED` | Enable request logging | `true` |
-| `X_CSI_MOCK_REP_LOGGING_ENABLED` | Enable response logging | `true` |
-| `X_CSI_MOCK_REQ_ID_INJECTION_ENABLED` | Enable request ID injection | `true` |
-| `X_CSI_MOCK_SPEC_VALIDATION_ENABLED` | Enable validation of request data against the CSI specification | `true` |
-| `X_CSI_MOCK_IDEMPOTENCY_ENABLED` | Enable idempotency | `true` |
-| `X_CSI_MOCK_IDEMPOTENCY_TIMEOUT` | A Go duration string that determines how long a request waits when serial access to volumes is enforced by the idempotency interceptor. This value has no effect if `X_CSI_MOCK_IDEMPOTENCY_ENABLED=false`. | `0` |
+The following table is a list of the Mock SP's default configuration
+values:
+
+| Name | Value |
+|------|---------|
+| `X_CSI_IDEMP` | `true` |
+| `X_CSI_IDEMP_REQUIRE_VOL` | `true` |
+| `X_CSI_REQUIRE_NODE_ID` | `true` |
+| `X_CSI_REQUIRE_PUB_VOL_INFO` | `true` |
+| `X_CSI_CREATE_VOL_ALREADY_EXISTS` | `true` |
+| `X_CSI_DELETE_VOL_NOT_FOUND` | `true` |
+| `X_CSI_SUPPORTED_VERSIONS` | `0.1.0 0.2.0 1.0.0 1.1.0` |

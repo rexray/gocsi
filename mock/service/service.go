@@ -16,32 +16,9 @@ const (
 
 	// VendorVersion is the version returned by GetPluginInfo.
 	VendorVersion = "0.1.0"
-)
 
-var (
 	// SupportedVersions is a list of supported CSI versions.
-	SupportedVersions = []*csi.Version{
-		&csi.Version{
-			Major: 0,
-			Minor: 1,
-			Patch: 0,
-		},
-		&csi.Version{
-			Major: 0,
-			Minor: 2,
-			Patch: 0,
-		},
-		&csi.Version{
-			Major: 1,
-			Minor: 0,
-			Patch: 0,
-		},
-		&csi.Version{
-			Major: 1,
-			Minor: 1,
-			Patch: 0,
-		},
-	}
+	SupportedVersions = "0.1.0 0.2.0 1.0.0 1.1.0"
 )
 
 // Service is the CSI Mock service provider.

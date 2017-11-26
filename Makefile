@@ -186,6 +186,7 @@ $(GOCSI_A): $(CSI_GOSRC) *.go
 	@go install .
 	go build -o "$@" .
 
+
 ########################################################################
 ##                               TEST                                 ##
 ########################################################################
@@ -215,7 +216,7 @@ endif
 # prevent a single, non-concurrent RPC from failing due to an OpPending
 # error.
 ifeq (true,$(TRAVIS))
-export X_CSI_MOCK_IDEMPOTENCY_TIMEOUT=1s
+export X_CSI_IDEMP_TIMEOUT=1s
 endif
 
 test: | $(GINKGO)
