@@ -4,40 +4,48 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"regexp"
+	"strconv"
 
 	"github.com/thecodeteam/gocsi/csi"
 )
 
-// Version is a type that responds with Major, Minor, and Patch
-// information typical of a semantic version.
-type Version interface {
-	GetMajor() uint32
-	GetMinor() uint32
-	GetPatch() uint32
-}
-
 const maxuint32 = 4294967295
 
-// ParseVersion parses any string that matches \d+\.\d+\.\d+ and
-// returns a Version.
-func ParseVersion(s string) (version csi.Version, failed error) {
-	n, err := fmt.Sscanf(
-		s, "%d.%d.%d",
-		&version.Major,
-		&version.Minor,
-		&version.Patch)
-	if err != nil {
-		failed = err
-		return
+// ParseVersion parses a string for a CSI version.
+func ParseVersion(s string) (csi.Version, bool) {
+	if versions := ParseVersions(s); len(versions) > 0 {
+		return versions[0], true
 	}
-	if n != 3 {
-		failed = fmt.Errorf("error: parsed %d vals", n)
-		return
+	return csi.Version{}, false
+}
+
+// ParseVersions parses a string for one or more CSI versions.
+func ParseVersions(s string) []csi.Version {
+	if s == "" {
+		return nil
 	}
-	return
+
+	rx := regexp.MustCompile(`(\d+)\.(\d+)\.(\d+)`)
+	matches := rx.FindAllStringSubmatch(s, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	versions := make([]csi.Version, len(matches))
+	for i, m := range matches {
+		major, _ := strconv.Atoi(m[1])
+		minor, _ := strconv.Atoi(m[2])
+		patch, _ := strconv.Atoi(m[3])
+		versions[i].Major = uint32(major)
+		versions[i].Minor = uint32(minor)
+		versions[i].Patch = uint32(patch)
+	}
+
+	return versions
 }
 
 // SprintfVersion formats a Version as a string.
@@ -45,12 +53,17 @@ func SprintfVersion(v csi.Version) string {
 	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
 
+// FprintfVersion formats a Version as a string to the specified writer.
+func FprintfVersion(w io.Writer, v csi.Version) (int, error) {
+	return fmt.Fprintf(w, "%d.%d.%d", v.Major, v.Minor, v.Patch)
+}
+
 // CompareVersions compares two versions and returns:
 //
 //   -1 if a > b
 //    0 if a = b
 //    1 if a < b
-func CompareVersions(a, b Version) int8 {
+func CompareVersions(a, b *csi.Version) int8 {
 	if a == nil && b == nil {
 		return 0
 	}
@@ -60,22 +73,22 @@ func CompareVersions(a, b Version) int8 {
 	if a == nil && b != nil {
 		return 1
 	}
-	if a.GetMajor() > b.GetMajor() {
+	if a.Major > b.Major {
 		return -1
 	}
-	if a.GetMajor() < b.GetMajor() {
+	if a.Major < b.Major {
 		return 1
 	}
-	if a.GetMinor() > b.GetMinor() {
+	if a.Minor > b.Minor {
 		return -1
 	}
-	if a.GetMinor() < b.GetMinor() {
+	if a.Minor < b.Minor {
 		return 1
 	}
-	if a.GetPatch() > b.GetPatch() {
+	if a.Patch > b.Patch {
 		return -1
 	}
-	if a.GetPatch() < b.GetPatch() {
+	if a.Patch < b.Patch {
 		return 1
 	}
 	return 0

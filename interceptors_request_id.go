@@ -1,7 +1,6 @@
 package gocsi
 
 import (
-	goctx "context"
 	"fmt"
 	"strconv"
 	"sync/atomic"
@@ -106,28 +105,4 @@ func (s *requestIDInjector) handleClient(
 	}
 
 	return invoker(ctx, method, req, rep, cc, opts...)
-}
-
-// GetRequestID inspects the context for gRPC metadata and returns
-// its request ID if available.
-func GetRequestID(ctx goctx.Context) (uint64, bool) {
-	var (
-		szID   []string
-		szIDOK bool
-	)
-
-	// Prefer the incoming context, but look in both types.
-	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		szID, szIDOK = md[requestIDKey]
-	} else if md, ok := metadata.FromOutgoingContext(ctx); ok {
-		szID, szIDOK = md[requestIDKey]
-	}
-
-	if szIDOK && len(szID) == 1 {
-		if id, err := strconv.ParseUint(szID[0], 10, 64); err == nil {
-			return id, true
-		}
-	}
-
-	return 0, false
 }

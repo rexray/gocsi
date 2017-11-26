@@ -10,9 +10,9 @@ import (
 
 var _ = Describe("ParseVersion", func() {
 	shouldParse := func() csi.Version {
-		v, err := gocsi.ParseVersion(
+		v, ok := gocsi.ParseVersion(
 			CurrentGinkgoTestDescription().ComponentTexts[1])
-		Ω(err).ShouldNot(HaveOccurred())
+		Ω(ok).Should(BeTrue())
 		return v
 	}
 	Context("0.0.0", func() {
@@ -37,6 +37,34 @@ var _ = Describe("ParseVersion", func() {
 			Ω(v.GetMajor()).Should(Equal(uint32(1)))
 			Ω(v.GetMinor()).Should(Equal(uint32(1)))
 			Ω(v.GetPatch()).Should(Equal(uint32(0)))
+		})
+	})
+})
+
+var _ = Describe("ParseVersions", func() {
+	shouldParse := func() []csi.Version {
+		return gocsi.ParseVersions(
+			CurrentGinkgoTestDescription().ComponentTexts[1])
+	}
+	Context("0.1.0 0.2.0 1.0.0 1.1.0", func() {
+		It("Should Parse", func() {
+			v := shouldParse()
+			Ω(v).Should(HaveLen(4))
+			Ω(v[0].Major).Should(Equal(uint32(0)))
+			Ω(v[0].Minor).Should(Equal(uint32(1)))
+			Ω(v[0].Patch).Should(Equal(uint32(0)))
+
+			Ω(v[1].Major).Should(Equal(uint32(0)))
+			Ω(v[1].Minor).Should(Equal(uint32(2)))
+			Ω(v[1].Patch).Should(Equal(uint32(0)))
+
+			Ω(v[2].Major).Should(Equal(uint32(1)))
+			Ω(v[2].Minor).Should(Equal(uint32(0)))
+			Ω(v[2].Patch).Should(Equal(uint32(0)))
+
+			Ω(v[3].Major).Should(Equal(uint32(1)))
+			Ω(v[3].Minor).Should(Equal(uint32(1)))
+			Ω(v[3].Patch).Should(Equal(uint32(0)))
 		})
 	})
 })
