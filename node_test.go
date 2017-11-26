@@ -37,7 +37,7 @@ var _ = Describe("Node", func() {
 	})
 
 	listVolumes := func() (vols []csi.VolumeInfo, err error) {
-		cvol, cerr := gocsi.PageAllVolumes(
+		cvol, cerr := gocsi.PageVolumes(
 			ctx,
 			csi.NewControllerClient(gclient),
 			csi.ListVolumesRequest{Version: version})

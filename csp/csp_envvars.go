@@ -1,5 +1,10 @@
 package csp
 
+import (
+	"context"
+	"strings"
+)
+
 const (
 	// EnvVarEndpoint is the name of the environment variable used to
 	// specify the CSI endpoint.
@@ -123,3 +128,31 @@ const (
 	// checks to see if a volume exists before allowing an operation.
 	EnvVarIdempRequireVolume = "X_CSI_IDEMP_REQUIRE_VOL"
 )
+
+func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
+	// Copy the environment variables from the public EnvVar
+	// string slice to the private envVars map for quick lookup.
+	sp.envVars = map[string]string{}
+	for _, v := range sp.EnvVars {
+		// Environment variables must adhere to one of the following
+		// formats:
+		//
+		//     - ENV_VAR_KEY=
+		//     - ENV_VAR_KEY=ENV_VAR_VAL
+		pair := strings.SplitN(v, "=", 2)
+		if len(pair) < 1 || len(pair) > 2 {
+			continue
+		}
+
+		// Ensure the environment variable is stored in all upper-case
+		// to make subsequent map-lookups deterministic.
+		key := strings.ToUpper(pair[0])
+		var val string
+		if len(pair) == 2 {
+			val = pair[1]
+		}
+		sp.envVars[key] = val
+	}
+
+	return
+}

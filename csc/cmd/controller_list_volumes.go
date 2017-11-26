@@ -40,7 +40,7 @@ var listVolumesCmd = &cobra.Command{
 		}
 
 		// Paging is enabled.
-		cvol, cerr := gocsi.PageAllVolumes(ctx, controller.client, req)
+		cvol, cerr := gocsi.PageVolumes(ctx, controller.client, req)
 		for {
 			select {
 			case v, ok := <-cvol:
