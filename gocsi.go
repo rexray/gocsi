@@ -137,9 +137,9 @@ func NewBlockCapability(
 	}
 }
 
-// PageAllVolumes issues one or more ListVolumes requests to retrieve
+// PageVolumes issues one or more ListVolumes requests to retrieve
 // all available volumes, returning them over a Go channel.
-func PageAllVolumes(
+func PageVolumes(
 	ctx context.Context,
 	client csi.ControllerClient,
 	req csi.ListVolumesRequest,

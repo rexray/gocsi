@@ -75,7 +75,7 @@ var _ = Describe("Controller", func() {
 	})
 
 	listVolumes := func() (vols []csi.VolumeInfo, err error) {
-		cvol, cerr := gocsi.PageAllVolumes(
+		cvol, cerr := gocsi.PageVolumes(
 			ctx,
 			client,
 			csi.ListVolumesRequest{Version: version})
