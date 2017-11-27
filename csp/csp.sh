@@ -362,13 +362,24 @@ dep_init() {
     chmod 0755 "$DEP_BIN"
     mv -f "$DEP_BIN" "$DEP"
   fi
-  if [ -e Gopkg.toml ]; then
-    echo "  executing dep ensure"
-    if ! "$DEP" ensure > "$DEP_LOG" 2>&1; then cat "$DEP_LOG"; fi
-  else
-    echo "  executing dep init"
-    if ! "$DEP" init > "$DEP_LOG" 2>&1; then cat "$DEP_LOG"; fi
+  if [ ! -e Gopkg.toml ]; then
+    cat << EOF > Gopkg.toml
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# Refer to https://github.com/toml-lang/toml for detailed TOML docs.
+
+[[constraint]]
+  name = "github.com/container-storage-interface/spec"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/thecodeteam/gocsi"
+  branch = "master"
+EOF
   fi
+  echo "  executing dep ensure"
+  if ! "$DEP" ensure > "$DEP_LOG" 2>&1; then cat "$DEP_LOG"; fi
   rm -f "$DEP_LOG"
 }
 

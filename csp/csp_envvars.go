@@ -3,6 +3,8 @@ package csp
 import (
 	"context"
 	"strings"
+
+	"github.com/thecodeteam/gocsi"
 )
 
 const (
@@ -28,6 +30,22 @@ const (
 	// no value is specified then the SP does not perform a version check on
 	// the RPC.
 	EnvVarSupportedVersions = "X_CSI_SUPPORTED_VERSIONS"
+
+	// EnvVarPluginInfo is the name of the environment variable used to specify
+	// the plug-in info in the format:
+	//
+	//         NAME,VENDOR_VERSION,MANIFEST
+	//
+	// The MANIFEST value may be a series of key/value pairs where either
+	// the key or value may be quoted to preserve leading or trailing
+	// whitespace. For example:
+	//
+	//         key1=val1 key2="val2 " "key 3"=' val3'
+	//
+	// Setting this environment variable will cause the program to
+	// bypass the SP's GetPluginInfo RPC and returns the specified
+	// information instead.
+	EnvVarPluginInfo = "X_CSI_PLUGIN_INFO"
 
 	// EnvVarReqLogging is the name of the environment variable
 	// used to determine whether or not to enable request logging.
@@ -147,12 +165,43 @@ func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
 		// Ensure the environment variable is stored in all upper-case
 		// to make subsequent map-lookups deterministic.
 		key := strings.ToUpper(pair[0])
+
+		// Check to see if the value for the key is available from the
+		// context's os.Environ or os.LookupEnv functions. If neither
+		// return a value then use the provided default value.
 		var val string
-		if len(pair) == 2 {
+		if v, ok := gocsi.LookupEnv(ctx, key); ok {
+			val = v
+		} else if len(pair) > 1 {
 			val = pair[1]
 		}
 		sp.envVars[key] = val
 	}
 
 	return
+}
+
+func (sp *StoragePlugin) initSupportedVersions(ctx context.Context) {
+	szVersions, ok := gocsi.LookupEnv(ctx, EnvVarSupportedVersions)
+	if !ok {
+		return
+	}
+	sp.supportedVersions = gocsi.ParseVersions(szVersions)
+}
+
+func (sp *StoragePlugin) initPluginInfo(ctx context.Context) {
+	szInfo, ok := gocsi.LookupEnv(ctx, EnvVarPluginInfo)
+	if !ok {
+		return
+	}
+	info := strings.SplitN(szInfo, ",", 3)
+	if len(info) > 0 {
+		sp.pluginInfo.Name = info[0]
+	}
+	if len(info) > 1 {
+		sp.pluginInfo.VendorVersion = info[1]
+	}
+	if len(info) > 2 {
+		sp.pluginInfo.Manifest = gocsi.ParseMap(info[2])
+	}
 }
