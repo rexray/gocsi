@@ -66,6 +66,7 @@ csi-sp: $(CSI_SP)
 	  else sleep 0.1; fi \
 	done
 	csc/csc -e csi.sock i version
+	csc/csc -e csi.sock i info
 	@pkill -2 csi-sp
 	@cat csi.log
 
