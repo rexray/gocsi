@@ -2,7 +2,6 @@ package gocsi_test
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"path"
 	"sync"
@@ -10,8 +9,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/mock/service"
 )
 
@@ -205,15 +204,15 @@ var _ = Describe("Controller", func() {
 					float64(count), float64(bucketSize)); r > 0 {
 					buckets++
 				}
-				fmt.Fprintf(
-					GinkgoWriter, "count=%d, buckets=%d\n", count, buckets)
+				//fmt.Fprintf(
+				//	GinkgoWriter, "count=%d, buckets=%d\n", count, buckets)
 				for i := 0; i < buckets; i++ {
 					go func(i int) {
 						defer GinkgoRecover()
 						start := i * bucketSize
 						for j := start; j < start+bucketSize && j < count; j++ {
-							fmt.Fprintf(
-								GinkgoWriter, "bucket=%d, index=%d\n", i, j)
+							//fmt.Fprintf(
+							//	GinkgoWriter, "bucket=%d, index=%d\n", i, j)
 							go worker()
 						}
 					}(i)

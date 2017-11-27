@@ -7,8 +7,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gocsi"
 )
 
 func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
@@ -185,12 +185,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		sp.Interceptors = append(sp.Interceptors,
 			gocsi.NewIdempotentInterceptor(sp.IdempotencyProvider, opts...))
 		log.WithFields(fields).Debug("enabled idempotency provider")
-	}
-
-	// Add interceptors to the client if any are configured.
-	if len(sp.Interceptors) > 0 {
-		sp.ServerOpts = append(sp.ServerOpts,
-			grpc.UnaryInterceptor(gocsi.ChainUnaryServer(sp.Interceptors...)))
 	}
 
 	return

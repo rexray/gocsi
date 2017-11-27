@@ -2,6 +2,7 @@ package csp
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -14,11 +15,10 @@ import (
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gocsi"
 )
 
 // Run launches a CSI storage plug-in.
@@ -175,6 +175,13 @@ type StoragePlugin struct {
 	// ensuring idempotency.
 	IdempotencyProvider gocsi.IdempotencyProvider
 
+	// BeforeServe is an optional callback that is invoked after the
+	// StoragePlugin has been initialized, just prior to the creation
+	// of the gRPC server. This callback may be used to perform custom
+	// initialization logic, modify the interceptors and server options,
+	// or prevent the server from starting by returning a non-nil error.
+	BeforeServe func(context.Context, *StoragePlugin, net.Listener) error
+
 	// EnvVars is a list of default environment variables and values.
 	EnvVars []string
 
@@ -184,18 +191,6 @@ type StoragePlugin struct {
 
 	envVars           map[string]string
 	supportedVersions []csi.Version
-}
-
-// EnvVar is an environment variable used with a StoragePlugin.
-type EnvVar struct {
-	// Name is the environment variable's name.
-	Name string
-
-	// DefaultValue is environment variable's default value.
-	DefaultValue string
-
-	// Description is the environment variable's description.
-	Description string
 }
 
 // Serve accepts incoming connections on the listener lis, creating
@@ -223,6 +218,20 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 
 		// Initialize the interceptors.
 		sp.initInterceptors(ctx)
+
+		// Invoke the SP's BeforeServe function to give the SP a chance
+		// to perform any local initialization routines.
+		if f := sp.BeforeServe; f != nil {
+			if err = f(ctx, sp, lis); err != nil {
+				return
+			}
+		}
+
+		// Add the interceptors to the server if any are configured.
+		if i := sp.Interceptors; len(i) > 0 {
+			sp.ServerOpts = append(sp.ServerOpts,
+				grpc.UnaryInterceptor(gocsi.ChainUnaryServer(i...)))
+		}
 
 		// Initialize the gRPC server.
 		sp.server = grpc.NewServer(sp.ServerOpts...)
