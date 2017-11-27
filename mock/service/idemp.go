@@ -1,15 +1,14 @@
 package service
 
 import (
+	"context"
 	"path"
-
-	xctx "golang.org/x/net/context"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func (s *service) GetVolumeID(
-	ctx xctx.Context,
+	ctx context.Context,
 	name string) (string, error) {
 
 	i, v := s.findVol("name", name)
@@ -20,7 +19,7 @@ func (s *service) GetVolumeID(
 }
 
 func (s *service) GetVolumeInfo(
-	ctx xctx.Context,
+	ctx context.Context,
 	id, name string) (*csi.VolumeInfo, error) {
 
 	var (
@@ -42,7 +41,7 @@ func (s *service) GetVolumeInfo(
 }
 
 func (s *service) IsControllerPublished(
-	ctx xctx.Context,
+	ctx context.Context,
 	id, nodeID string) (map[string]string, error) {
 
 	_, v := s.findVol("id", id)
@@ -53,7 +52,7 @@ func (s *service) IsControllerPublished(
 }
 
 func (s *service) IsNodePublished(
-	ctx xctx.Context,
+	ctx context.Context,
 	id string,
 	pubInfo map[string]string,
 	targetPath string) (bool, error) {

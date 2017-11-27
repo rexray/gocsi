@@ -1,16 +1,17 @@
 package gocsi
 
 import (
+	"context"
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"golang.org/x/net/context"
+	xctx "golang.org/x/net/context"
 )
 
 // IdempotencyProvider is the interface that works with a server-side,
@@ -145,7 +146,7 @@ func isOpPending(err error) bool {
 }
 
 func (i *idempotencyInterceptor) handle(
-	ctx context.Context,
+	ctx xctx.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {

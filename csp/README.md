@@ -20,13 +20,25 @@ path `github.com/thecodeteam/csi-sp`:
 
 ```shell
 $ ./csp.sh github.com/thecodeteam/csi-sp
-creating $GOPATH/src/github.com/thecodeteam/csi-sp/main.go
-creating $GOPATH/src/github.com/thecodeteam/csi-sp/provider/provider.go
-creating $GOPATH/src/github.com/thecodeteam/csi-sp/service/service.go
-creating $GOPATH/src/github.com/thecodeteam/csi-sp/service/controller.go
-creating $GOPATH/src/github.com/thecodeteam/csi-sp/service/identity.go
-creating $GOPATH/src/github.com/thecodeteam/csi-sp/service/node.go
-building csi-sp
+creating project directories:
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/provider
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/service
+creating project files:
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/main.go
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/provider/provider.go
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/service.go
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/controller.go
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/idemp.go
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/identity.go
+  /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/node.go
+use golang/dep? Enter yes (default) or no and press [ENTER]:
+  downloading golang/dep@v0.3.2
+  executing dep init
+building csi-sp:
+  success!
+  example: CSI_ENDPOINT=csi.sock \
+           /home/akutz/go/src/github.com/thecodeteam/csi-sp/csi-sp
 ```
 
 The new SP adheres to the following structure:
@@ -39,6 +51,7 @@ The new SP adheres to the following structure:
 |-- service
 |   |
 |   |-- controller.go
+|   |-- idemp.go
 |   |-- identity.go
 |   |-- node.go
 |   |-- service.go
@@ -54,8 +67,15 @@ modified to:
 * Add an idempotency provider
 * Supply default values for the SP's environment variable configuration properties
 
+The generated file configures the following options and their default values:
+
+| Option | Value | Description |
+|--------|-------|-------------|
+| `X_CSI_IDEMP` | `true` | In concert with the file `service/idemp.go`, this option enables idempotency for the SP |
+| `X_CSI_SUPPORTED_VERSIONS` | `0.0.0` | The CSI versions supported by the SP. Settings this option also relieves the SP of its responsibility to provide an implementation of the RPC `GetSupportedVersions` |
+
 Please see the Mock SP's [`provider.go`](../mock/provider/provider.go) file
-for an example of each.
+for a more complete example.
 
 ### Service
 The `service` package is where the business logic occurs. The files `controller.go`,
@@ -63,6 +83,11 @@ The `service` package is where the business logic occurs. The files `controller.
 developer creating a new CSI SP with `csp` will work mostly in these files. Each
 of the files have a complete skeleton implementation for their respective service's
 remote procedure calls (RPC).
+
+The file `idemp.go` contains a skeleton implementation of the interface
+[`gocsi.IdemptotencyProvider`](../interceptors_idempotency.go). An SP is able
+to achieve idempotency simply by implementing the functions contained in this
+file.
 
 ### Main
 The root, or `main`, package leverages `csp` to launch the SP as a stand-alone
