@@ -53,6 +53,7 @@ import (
 	"context"
 	"net"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/thecodeteam/gocsi/csp"
 
 	"$SP_PATH/service"
@@ -397,7 +398,10 @@ cd - > /dev/null 2>&1 || exit 1
 if [ "$BUILD_RESULT" -eq 0 ]; then
   echo "  success!"
   echo '  example: CSI_ENDPOINT=csi.sock \'
+  echo '           X_CSI_LOG_LEVEL=info \'
   echo "           $SP_DIR/$SP_NAME"
+  echo
+  echo "  help available online at https://goo.gl/GBnreq"
 else
   exit 1
 fi
