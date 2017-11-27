@@ -4,10 +4,10 @@ const usage = `NAME
     {{.Name}} -- {{.Description}}
 
 SYNOPSIS
-    {{.BinPath}}{{if .Usage}}
+    {{.BinPath}}
+{{if .Usage}}
 STORAGE OPTIONS
-    {{.Usage}}{{end}}
-
+{{.Usage}}{{end}}
 GLOBAL OPTIONS
     CSI_ENDPOINT
         The CSI endpoint may also be specified by the environment variable
