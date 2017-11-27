@@ -43,6 +43,38 @@ $(GOCSI_A): $(CSI_GOSRC) *.go
 
 
 ########################################################################
+##                               CSI-SP                               ##
+########################################################################
+CSI_SP_IMPORT := github.com/csi-sp
+CSI_SP_DIR := $(GOPATH)/src/$(CSI_SP_IMPORT)
+CSI_SP := $(CSI_SP_DIR)/csi-sp
+$(CSI_SP):
+	USE_DEP=true csp/csp.sh $(CSI_SP_IMPORT)
+
+csi-sp: $(CSI_SP)
+	$(MAKE) -C csc
+	@rm -f csi.log
+	CSI_ENDPOINT=csi.sock \
+	  X_CSI_LOG_LEVEL=debug \
+	  X_CSI_REQ_LOGGING=true \
+	  X_CSI_REP_LOGGING=true \
+	  X_CSI_SUPPORTED_VERSIONS="0.1.0 0.1.1 0.2.0" \
+	  X_CSI_PLUGIN_INFO="My CSI Plug-in,0.1.0,status=online" \
+	  $? > csi.log 2>&1 &
+	@for i in 1 2 3 4 5 6 7 8 9 10; do \
+	  if grep -q "msg=serving" csi.log; then break; \
+	  else sleep 0.1; fi \
+	done
+	csc/csc -e csi.sock i version
+	@pkill -2 csi-sp
+	@cat csi.log
+
+csi-sp-clean:
+	rm -fr $(CSI_SP_DIR)/*
+
+.PHONY: csi-sp csi-sp-clean
+
+########################################################################
 ##                               TEST                                 ##
 ########################################################################
 GINKGO := ./ginkgo

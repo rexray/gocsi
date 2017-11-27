@@ -43,6 +43,22 @@ GLOBAL OPTIONS
         bypass the SP's GetSupportedVersions RPC and return the list of
         specified versions instead.
 
+    X_CSI_PLUGIN_INFO
+        The plug-in information is specified via the following
+        comma-separated format:
+
+            NAME,VENDOR_VERSION,MANIFEST
+
+        The MANIFEST value may be a series of key/value pairs where either
+        the key or value may be quoted to preserve leading or trailing
+        whitespace. For example:
+
+            key1=val1 key2="val2 " "key 3"=' val3'
+
+        Setting this environment variable will cause the program to
+        bypass the SP's GetPluginInfo RPC and returns the specified
+        information instead.
+
     X_CSI_REQ_LOGGING
         A flag that enables logging of incoming requests to STDOUT.
 

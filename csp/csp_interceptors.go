@@ -158,7 +158,13 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			gocsi.NewServerSpecValidator(specOpts...))
 	}
 
+	if _, ok := gocsi.LookupEnv(ctx, EnvVarPluginInfo); ok {
+		log.Debug("enabled GetPluginInfo interceptor")
+		sp.Interceptors = append(sp.Interceptors, sp.getPluginInfo)
+	}
+
 	if len(sp.supportedVersions) > 0 {
+		log.Debug("enabled GetSupportedVersions interceptor")
 		sp.Interceptors = append(sp.Interceptors, sp.getSupportedVersions)
 	}
 
@@ -219,4 +225,16 @@ func (sp *StoragePlugin) getSupportedVersions(
 	}
 
 	return rep, nil
+}
+
+func (sp *StoragePlugin) getPluginInfo(
+	ctx context.Context,
+	req interface{},
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler) (interface{}, error) {
+
+	if info.FullMethod != gocsi.GetPluginInfo || sp.pluginInfo.Name == "" {
+		return handler(ctx, req)
+	}
+	return &sp.pluginInfo, nil
 }

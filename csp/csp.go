@@ -190,6 +190,7 @@ type StoragePlugin struct {
 	server    *grpc.Server
 
 	envVars           map[string]string
+	pluginInfo        csi.GetPluginInfoResponse
 	supportedVersions []csi.Version
 }
 
@@ -206,15 +207,18 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		// important and should not be altered unless by someone aware
 		// of how they work.
 
-		// Initialize the storage plug-in's environment variables map.
-		sp.initEnvVars(ctx)
-
 		// Adding this function to the context allows `gocsi.LookupEnv`
 		// to search this SP's default env vars for a value.
 		ctx = gocsi.WithLookupEnv(ctx, sp.lookupEnv)
 
+		// Initialize the storage plug-in's environment variables map.
+		sp.initEnvVars(ctx)
+
 		// Initialize the storage plug-in's list of supported versions.
 		sp.initSupportedVersions(ctx)
+
+		// Initialize the storage plug-in's info.
+		sp.initPluginInfo(ctx)
 
 		// Initialize the interceptors.
 		sp.initInterceptors(ctx)
@@ -279,14 +283,6 @@ func (sp *StoragePlugin) GracefulStop(ctx context.Context) {
 		sp.server.GracefulStop()
 		log.Info("gracefully stopped")
 	})
-}
-
-func (sp *StoragePlugin) initSupportedVersions(ctx context.Context) {
-	szVersions, ok := gocsi.LookupEnv(ctx, EnvVarSupportedVersions)
-	if !ok {
-		return
-	}
-	sp.supportedVersions = gocsi.ParseVersions(szVersions)
 }
 
 func (sp *StoragePlugin) lookupEnv(key string) (string, bool) {

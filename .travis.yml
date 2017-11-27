@@ -31,6 +31,13 @@ jobs:
         install: true
         script:  make -C $PROG
 
+      # Test GoCSI's csp.sh script by creating and serving new SP and
+      # then using csc to invoke GetSupportedVersions and GetPluginInfo
+      - stage:   test
+        env:     JOB=csi-sp
+        install: make -C csc
+        script:  make csi-sp
+
       # Test GoCSI using the Mock CSI plug-in.
       - stage:   test
         env:     JOB=test
