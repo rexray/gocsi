@@ -3,7 +3,7 @@ The Container Storage Interface
 ([CSI](https://github.com/container-storage-interface/spec))
 is an industry standard specification for creating storage plug-ins
 for container orchestrators. GoCSI aids in the development and testing
-of CSI plug-ins and provides the following:
+of CSI plug-ins:
 
 | Component | Description |
 |-----------|-------------|
@@ -11,6 +11,19 @@ of CSI plug-ins and provides the following:
 | [csc](./csc/) | CSI command line interface (CLI) client |
 | [csp](./csp) | CSI storage plug-in (CSP) bootstrapper |
 | [mock](./mock) | CSI mock storage plug-in (SP) |
+
+## Quick Start
+The following example illustrates using Docker in combination with the
+GoCSI SP bootstrapper [csp](./csp) to create a new CSI SP from scratch,
+serve it on a UNIX socket, and then use the GoCSI command line client
+[`csc`](./csc/) to invoke the `GetSupportedVersions` and `GetPluginInfo`
+RPCs:
+
+```shell
+$ docker run -it golang:latest sh -c \
+  "go get github.com/thecodeteam/gocsi && \
+  make -C src/github.com/thecodeteam/gocsi csi-sp"
+```
 
 ## Library
 The root of the GoCSI project is a general purpose library for CSI. This

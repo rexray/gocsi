@@ -1,6 +1,22 @@
 all: build
 
 ################################################################################
+##                                 HOME                                       ##
+################################################################################
+HOME ?= /tmp/gocsi
+export HOME
+
+
+################################################################################
+##                                GOPATH                                      ##
+################################################################################
+# Ensure GOPATH is set and that it contains only a single element.
+GOPATH ?= $(HOME)/go
+GOPATH := $(word 1,$(subst :, ,$(GOPATH)))
+export GOPATH
+
+
+################################################################################
 ##                                   DEP                                      ##
 ################################################################################
 DEP ?= ./dep
@@ -45,35 +61,58 @@ $(GOCSI_A): $(CSI_GOSRC) *.go
 ########################################################################
 ##                               CSI-SP                               ##
 ########################################################################
-CSI_SP_IMPORT := github.com/csi-sp
+CSI_SP_IMPORT := csi-sp
 CSI_SP_DIR := $(GOPATH)/src/$(CSI_SP_IMPORT)
 CSI_SP := $(CSI_SP_DIR)/csi-sp
+CSI_SP_SOCK := $(notdir $(CSI_SP)).sock
+CSI_SP_LOG := $(notdir $(CSI_SP)).log
 $(CSI_SP):
 	USE_DEP=true csp/csp.sh $(CSI_SP_IMPORT)
 
-csi-sp: $(CSI_SP)
+csi-sp: $(CSI_SP_LOG)
+$(CSI_SP_LOG): $(CSI_SP)
 	$(MAKE) -C csc
-	@rm -f csi.log
-	CSI_ENDPOINT=csi.sock \
+	@echo && \
+	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
+	  printf "%-74s" "starting $(<F)" && printf ' ==\n' && \
+	  printf '=%.0s' $$(seq 1 80) && echo
+	CSI_ENDPOINT=$(CSI_SP_SOCK) \
 	  X_CSI_LOG_LEVEL=debug \
 	  X_CSI_REQ_LOGGING=true \
 	  X_CSI_REP_LOGGING=true \
 	  X_CSI_SUPPORTED_VERSIONS="0.1.0 0.1.1 0.2.0" \
 	  X_CSI_PLUGIN_INFO="My CSI Plug-in,0.1.0,status=online" \
-	  $? > csi.log 2>&1 &
+	  $< > $(CSI_SP_LOG) 2>&1 &
 	@for i in 1 2 3 4 5 6 7 8 9 10; do \
-	  if grep -q "msg=serving" csi.log; then break; \
+	  if grep -q "msg=serving" $(CSI_SP_LOG); then break; \
 	  else sleep 0.1; fi \
 	done
-	csc/csc -e csi.sock i version
-	csc/csc -e csi.sock i info
-	@pkill -2 csi-sp
-	@cat csi.log
+	@echo && \
+	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
+	  printf "%-74s" "invoking GetSupportedVersions" && printf ' ==\n' && \
+	  printf '=%.0s' $$(seq 1 80) && echo
+	csc/csc -e $(CSI_SP_SOCK) i version
+	@echo && \
+	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
+	  printf "%-74s" "invoking GetPluginInfo" && printf ' ==\n' && \
+	  printf '=%.0s' $$(seq 1 80) && echo
+	csc/csc -e $(CSI_SP_SOCK) i info
+	@echo && \
+	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
+	  printf "%-74s" "killing $(<F) with SIGINT" && printf ' ==\n' && \
+	  printf '=%.0s' $$(seq 1 80) && echo
+	pkill -2 $(<F)
+	@echo && \
+	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
+	  printf "%-74s" "$(<F) log file" && printf ' ==\n' && \
+	  printf '=%.0s' $$(seq 1 80) && echo
+	@cat $(CSI_SP_LOG)
 
 csi-sp-clean:
-	rm -fr $(CSI_SP_DIR)/*
+	rm -fr $(CSI_SP_LOG) $(CSI_SP_DIR)/*
 
 .PHONY: csi-sp csi-sp-clean
+
 
 ########################################################################
 ##                               TEST                                 ##
