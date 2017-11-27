@@ -389,7 +389,7 @@ else
 fi
 
 echo "building $SP_NAME:"
-go build . 2> /dev/null
+go build .
 BUILD_RESULT=$?
 
 cd - > /dev/null 2>&1 || exit 1
