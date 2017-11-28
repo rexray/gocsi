@@ -12,6 +12,26 @@ const (
 	// specify the CSI endpoint.
 	EnvVarEndpoint = "CSI_ENDPOINT"
 
+	// EnvVarEndpointPerms is the name of the environment variable used
+	// to specify the file permissions for the CSI endpoint when it is
+	// a UNIX socket file. This setting has no effect if CSI_ENDPOINT
+	// specifies a TCP socket. The default value is 0755.
+	EnvVarEndpointPerms = "X_CSI_ENDPOINT_PERMS"
+
+	// EnvVarEndpointUser is the name of the environment variable used
+	// to specify the UID or name of the user that owns the endpoint's
+	// UNIX socket file. This setting has no effect if CSI_ENDPOINT
+	// specifies a TCP socket. The default value is the user that starts
+	// the process.
+	EnvVarEndpointUser = "X_CSI_ENDPOINT_USER"
+
+	// EnvVarEndpointGroup is the name of the environment variable used
+	// to specify the GID or name of the group that owns the endpoint's
+	// UNIX socket file. This setting has no effect if CSI_ENDPOINT
+	// specifies a TCP socket. The default value is the group that starts
+	// the process.
+	EnvVarEndpointGroup = "X_CSI_ENDPOINT_GROUP"
+
 	// EnvVarDebug is the name of the environment variable used to
 	// determine whether or not debug mode is enabled.
 	//

@@ -9,6 +9,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"os/user"
+	"regexp"
 	"strconv"
 	"sync"
 	"syscall"
@@ -94,15 +96,18 @@ func Run(
 
 	// Define a lambda that can be used in the exit handler
 	// to remove a potential UNIX sock file.
+	var rmSockFileOnce sync.Once
 	rmSockFile := func() {
-		if l == nil || l.Addr() == nil {
-			return
-		}
-		if l.Addr().Network() == "unix" {
-			sockFile := l.Addr().String()
-			os.RemoveAll(sockFile)
-			log.WithField("path", sockFile).Info("removed sock file")
-		}
+		rmSockFileOnce.Do(func() {
+			if l == nil || l.Addr() == nil {
+				return
+			}
+			if l.Addr().Network() == netUnix {
+				sockFile := l.Addr().String()
+				os.RemoveAll(sockFile)
+				log.WithField("path", sockFile).Info("removed sock file")
+			}
+		})
 	}
 
 	trapSignals(func() {
@@ -116,8 +121,8 @@ func Run(
 	})
 
 	if err := sp.Serve(ctx, l); err != nil {
+		rmSockFile()
 		log.WithError(err).Fatal("grpc failed")
-		os.Exit(1)
 	}
 }
 
@@ -214,6 +219,16 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		// Initialize the storage plug-in's environment variables map.
 		sp.initEnvVars(ctx)
 
+		// Adjust the endpoint's file permissions.
+		if err = sp.initEndpointPerms(ctx, lis); err != nil {
+			return
+		}
+
+		// Adjust the endpoint's file ownership.
+		if err = sp.initEndpointOwner(ctx, lis); err != nil {
+			return
+		}
+
 		// Initialize the storage plug-in's list of supported versions.
 		sp.initSupportedVersions(ctx)
 
@@ -283,6 +298,125 @@ func (sp *StoragePlugin) GracefulStop(ctx context.Context) {
 		sp.server.GracefulStop()
 		log.Info("gracefully stopped")
 	})
+}
+
+const netUnix = "unix"
+
+func (sp *StoragePlugin) initEndpointPerms(
+	ctx context.Context, lis net.Listener) error {
+
+	if lis.Addr().Network() != netUnix {
+		return nil
+	}
+
+	v, ok := gocsi.LookupEnv(ctx, EnvVarEndpointPerms)
+	if !ok || v == "0755" {
+		return nil
+	}
+	u, err := strconv.ParseUint(v, 8, 32)
+	if err != nil {
+		return err
+	}
+
+	p := lis.Addr().String()
+	m := os.FileMode(u)
+
+	log.WithFields(map[string]interface{}{
+		"path": p,
+		"mode": m,
+	}).Info("chmod csi endpoint")
+
+	if err := os.Chmod(p, m); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sp *StoragePlugin) initEndpointOwner(
+	ctx context.Context, lis net.Listener) error {
+
+	if lis.Addr().Network() != netUnix {
+		return nil
+	}
+
+	var (
+		usrName string
+		grpName string
+
+		uid  = os.Getuid()
+		gid  = os.Getgid()
+		puid = uid
+		pgid = gid
+	)
+
+	if v, ok := gocsi.LookupEnv(ctx, EnvVarEndpointUser); ok {
+		m, err := regexp.MatchString(`^\d+$`, v)
+		if err != nil {
+			return err
+		}
+		usrName = v
+		szUID := v
+		if m {
+			u, err := user.LookupId(v)
+			if err != nil {
+				return err
+			}
+			usrName = u.Username
+		} else {
+			u, err := user.Lookup(v)
+			if err != nil {
+				return err
+			}
+			szUID = u.Uid
+		}
+		iuid, err := strconv.Atoi(szUID)
+		if err != nil {
+			return err
+		}
+		uid = iuid
+	}
+
+	if v, ok := gocsi.LookupEnv(ctx, EnvVarEndpointGroup); ok {
+		m, err := regexp.MatchString(`^\d+$`, v)
+		if err != nil {
+			return err
+		}
+		grpName = v
+		szGID := v
+		if m {
+			u, err := user.LookupGroupId(v)
+			if err != nil {
+				return err
+			}
+			grpName = u.Name
+		} else {
+			u, err := user.LookupGroup(v)
+			if err != nil {
+				return err
+			}
+			szGID = u.Gid
+		}
+		igid, err := strconv.Atoi(szGID)
+		if err != nil {
+			return err
+		}
+		gid = igid
+	}
+
+	if uid != puid || gid != pgid {
+		f := lis.Addr().String()
+		log.WithFields(map[string]interface{}{
+			"uid":  usrName,
+			"gid":  grpName,
+			"path": f,
+		}).Info("chown csi endpoint")
+		if err := os.Chown(f, uid, gid); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (sp *StoragePlugin) lookupEnv(key string) (string, bool) {
