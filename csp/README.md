@@ -122,6 +122,36 @@ environment variables:
       </td>
     </tr>
     <tr>
+      <td><code>X_CSI_ENDPOINT_PERMS</code></td>
+      <td>
+        <p>When <code>CSI_ENDPOINT</code> is set to a UNIX socket file
+        this environment variable may be used to specify the socket's file
+        permissions. Please note this value has no effect if
+        <code>CSI_ENDPOINT</code> specifies a TCP socket.</p>
+        <p>The default value is 0755.</p>
+      </td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_ENDPOINT_USER</code></td>
+      <td>
+        <p>When <code>CSI_ENDPOINT</code> is set to a UNIX socket file
+        this environment variable may be used to specify the UID or name
+        of the user that owns the file. Please note this value has no effect
+        if <code>CSI_ENDPOINT</code> specifies a TCP socket.</p>
+        <p>The default value is the user that starts the process.</p>
+      </td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_ENDPOINT_GROUP</code></td>
+      <td>
+        <p>When <code>CSI_ENDPOINT</code> is set to a UNIX socket file
+        this environment variable may be used to specify the GID or name
+        of the group that owns the file. Please note this value has no effect
+        if <code>CSI_ENDPOINT</code> specifies a TCP socket.</p>
+        <p>The default value is the group that starts the process.</p>
+      </td>
+    </tr>
+    <tr>
       <td><code>X_CSI_DEBUG</code></td>
       <td>A <code>true</code> value is equivalent to:
         <ul>
