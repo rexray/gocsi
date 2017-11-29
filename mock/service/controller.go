@@ -6,12 +6,13 @@ import (
 	"path"
 	"strconv"
 
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"golang.org/x/net/context"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gocsi"
 )
 
 func (s *service) CreateVolume(
@@ -44,20 +45,23 @@ func (s *service) DeleteVolume(
 	req *csi.DeleteVolumeRequest) (
 	*csi.DeleteVolumeResponse, error) {
 
-	func() {
-		s.volsRWL.Lock()
-		defer s.volsRWL.Unlock()
-		i, _ := s.findVolNoLock("id", req.VolumeId)
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
 
+	if i, _ := s.findVolNoLock("id", req.VolumeId); i >= 0 {
 		// This delete logic preserves order and prevents potential memory
 		// leaks. The slice's elements may not be pointers, but the structs
 		// themselves have fields that are.
 		copy(s.vols[i:], s.vols[i+1:])
 		s.vols[len(s.vols)-1] = csi.VolumeInfo{}
 		s.vols = s.vols[:len(s.vols)-1]
-	}()
+		log.WithField("volumeID", req.VolumeId).Debug("mock delete volume")
+		return &csi.DeleteVolumeResponse{}, nil
+	}
 
-	return nil, status.Error(codes.NotFound, req.VolumeId)
+	log.WithField("volumeID", req.VolumeId).Debug(
+		"mock delete volume not found")
+	return nil, gocsi.ErrVolumeNotFound(req.VolumeId)
 }
 
 func (s *service) ControllerPublishVolume(

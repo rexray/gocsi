@@ -3,6 +3,7 @@ package gocsi
 import (
 	"sync"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -244,7 +245,6 @@ func (s *specValidator) handle(
 		if isNilRep {
 			return nil, err
 		}
-		return nil, err
 	}
 
 	// If the response is nil then go ahead and return a nil value
@@ -256,7 +256,11 @@ func (s *specValidator) handle(
 	}
 
 	// Validate the response against the CSI specification.
-	return rep, s.validateResponse(ctx, method, rep)
+	if err := s.validateResponse(ctx, method, rep); err != nil {
+		return rep, err
+	}
+
+	return rep, err
 }
 
 func (s *specValidator) handleResponseError(method string, err error) error {
@@ -278,6 +282,10 @@ func (s *specValidator) handleResponseError(method string, err error) error {
 	// exit code matches any of them, then clear the error.
 	for exitCode := range s.opts.successfulExitCodes[method] {
 		if stat.Code() == exitCode {
+			log.WithFields(log.Fields{
+				"code": stat.Code(),
+				"msg":  stat.Message(),
+			}).Debug("dropping error")
 			return nil
 		}
 	}

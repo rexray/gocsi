@@ -7,6 +7,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// ErrVolumeNotFound returns an error indicating a volume with the
+// specified ID cannot be found. This function must be used by SPs
+// for the idempotent interceptor to be accurate. That or SPs should,
+// for a NotFound error relating to a volume, prefix the associated
+// message with "volumeID=".
+func ErrVolumeNotFound(id string) error {
+	return status.Errorf(codes.NotFound, "volumeID=%s", id)
+}
+
 // ErrMissingCSIEndpoint occurs when the value for the environment
 // variable CSI_ENDPOINT is not set.
 var ErrMissingCSIEndpoint = errors.New("missing CSI_ENDPOINT")

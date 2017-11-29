@@ -2,6 +2,7 @@ package csp
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/thecodeteam/gocsi"
@@ -168,6 +169,7 @@ const (
 )
 
 func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
+
 	// Copy the environment variables from the public EnvVar
 	// string slice to the private envVars map for quick lookup.
 	sp.envVars = map[string]string{}
@@ -196,6 +198,14 @@ func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
 			val = pair[1]
 		}
 		sp.envVars[key] = val
+	}
+
+	// Check for the debug value.
+	if v, ok := gocsi.LookupEnv(ctx, EnvVarDebug); ok {
+		if ok, _ := strconv.ParseBool(v); ok {
+			gocsi.Setenv(ctx, EnvVarReqLogging, "true")
+			gocsi.Setenv(ctx, EnvVarRepLogging, "true")
+		}
 	}
 
 	return
