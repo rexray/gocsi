@@ -216,6 +216,10 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		// to search this SP's default env vars for a value.
 		ctx = gocsi.WithLookupEnv(ctx, sp.lookupEnv)
 
+		// Adding this function to the context allows `gocsi.Setenv`
+		// to set environment variables in this SP's env var store.
+		ctx = gocsi.WithSetenv(ctx, sp.setenv)
+
 		// Initialize the storage plug-in's environment variables map.
 		sp.initEnvVars(ctx)
 
@@ -422,6 +426,11 @@ func (sp *StoragePlugin) initEndpointOwner(
 func (sp *StoragePlugin) lookupEnv(key string) (string, bool) {
 	val, ok := sp.envVars[key]
 	return val, ok
+}
+
+func (sp *StoragePlugin) setenv(key, val string) error {
+	sp.envVars[key] = val
+	return nil
 }
 
 func (sp *StoragePlugin) getEnvBool(ctx context.Context, key string) bool {

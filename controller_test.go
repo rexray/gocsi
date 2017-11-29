@@ -8,9 +8,11 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/csp"
 	"github.com/thecodeteam/gocsi/mock/service"
 )
 
@@ -24,26 +26,20 @@ var _ = Describe("Controller", func() {
 
 		version *csi.Version
 
-		vol       *csi.VolumeInfo
-		volID     string
-		volName   string
-		reqBytes  uint64
-		limBytes  uint64
-		fsType    string
-		mntFlags  []string
-		params    map[string]string
-		userCreds map[string]string
-
+		vol        *csi.VolumeInfo
+		volID      string
+		volName    string
+		reqBytes   uint64
+		limBytes   uint64
+		fsType     string
+		mntFlags   []string
+		params     map[string]string
+		userCreds  map[string]string
 		pubVolInfo map[string]string
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
-		gclient, stopMock, err = startMockServer(ctx)
-		Ω(err).ShouldNot(HaveOccurred())
-		client = csi.NewControllerClient(gclient)
-
 		version = &mockSupportedVersions[0]
-
 		volID = "4"
 		volName = "Test Volume"
 		reqBytes = 1.074e+10 //  10GiB
@@ -52,6 +48,11 @@ var _ = Describe("Controller", func() {
 		mntFlags = []string{"-o noexec"}
 		params = map[string]string{"tag": "gold"}
 		userCreds = map[string]string{"beour": "guest"}
+	})
+	JustBeforeEach(func() {
+		gclient, stopMock, err = startMockServer(ctx)
+		Ω(err).ShouldNot(HaveOccurred())
+		client = csi.NewControllerClient(gclient)
 	})
 	AfterEach(func() {
 		ctx = nil
@@ -280,13 +281,16 @@ var _ = Describe("Controller", func() {
 		AfterEach(func() {
 			volID = ""
 		})
-		JustBeforeEach(func() {
+		deleteVolume := func() {
 			_, err = client.DeleteVolume(
 				ctx,
 				&csi.DeleteVolumeRequest{
 					Version:  version,
 					VolumeId: volID,
 				})
+		}
+		JustBeforeEach(func() {
+			deleteVolume()
 		})
 		Context("1", func() {
 			It("Should Be Valid", func() {
@@ -316,8 +320,39 @@ var _ = Describe("Controller", func() {
 			BeforeEach(func() {
 				volID = "5"
 			})
+
 			It("Should Be Valid", func() {
 				Ω(err).ShouldNot(HaveOccurred())
+				deleteVolume()
+				Ω(err).ShouldNot(HaveOccurred())
+				deleteVolume()
+				Ω(err).ShouldNot(HaveOccurred())
+				deleteVolume()
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+			Context("With NotFound Error", func() {
+				BeforeEach(func() {
+					ctx = gocsi.WithEnviron(ctx,
+						[]string{
+							csp.EnvVarDeleteVolNotFoundSuccess + "=false",
+						})
+				})
+				shouldNotBeFound := func() {
+					Ω(err).Should(HaveOccurred())
+					stat, ok := status.FromError(err)
+					Ω(ok).Should(BeTrue())
+					Ω(stat).ShouldNot(BeNil())
+					Ω(stat.Code()).Should(Equal(codes.NotFound))
+				}
+				It("Should Be Valid", func() {
+					shouldNotBeFound()
+					deleteVolume()
+					shouldNotBeFound()
+					deleteVolume()
+					shouldNotBeFound()
+					deleteVolume()
+					shouldNotBeFound()
+				})
 			})
 		})
 		Context("Missing Version", func() {
@@ -349,9 +384,10 @@ var _ = Describe("Controller", func() {
 			})
 		})
 		Context("Create Volume Then List", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				createNewVolume()
 				validateNewVolume()
+				vols, err = listVolumes()
 			})
 			It("Should Be Valid", func() {
 				Ω(err).ShouldNot(HaveOccurred())
@@ -386,7 +422,7 @@ var _ = Describe("Controller", func() {
 			Ω(pubVolInfo["device"]).Should(Equal("/dev/mock"))
 		}
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			publishVolume()
 		})
 		Context("PublishVolume", func() {
@@ -400,7 +436,7 @@ var _ = Describe("Controller", func() {
 		})
 
 		Context("UnpublishVolume", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				shouldBePublished()
 				_, err := client.ControllerUnpublishVolume(
 					ctx,

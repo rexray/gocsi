@@ -2,6 +2,7 @@ package gocsi
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -138,13 +139,6 @@ func (i *idempotencyInterceptor) lockWithName(name string) *volLockInfo {
 	return lock
 }
 
-func isOpPending(err error) bool {
-	stat, ok := status.FromError(err)
-	return ok &&
-		stat.Code() == codes.FailedPrecondition &&
-		stat.Message() == "op pending"
-}
-
 func (i *idempotencyInterceptor) handle(
 	ctx xctx.Context,
 	req interface{},
@@ -179,22 +173,14 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 	if !lock.TryLock(i.opts.timeout) {
 		return nil, ErrOpPending
 	}
-
-	// At the end of this function check for a response error or if
-	// the response itself contains an error. If either is true then
-	// mark the current method as in error.
-	//
-	// If neither is true then check to see if the method has been
-	// marked in error in the past and remove that mark to reclaim
-	// memory.
-	defer func() {
-		if resErr != nil {
-			lock.methodInErr[info.FullMethod] = struct{}{}
-		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			delete(lock.methodInErr, info.FullMethod)
-		}
-	}()
 	defer lock.Unlock()
+
+	// At the end of this function check for a response error. If there
+	// is an error that isn't VolumeNotFound then mark this method as
+	// in error so the next call bypasses idempotency.
+	defer func() {
+		handleErr(info, lock, resErr)
+	}()
 
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
@@ -211,7 +197,7 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 			return nil, err
 		}
 		if volInfo == nil {
-			return nil, status.Error(codes.NotFound, req.VolumeId)
+			return nil, ErrVolumeNotFound(req.VolumeId)
 		}
 	}
 
@@ -240,22 +226,14 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 	if !lock.TryLock(i.opts.timeout) {
 		return nil, ErrOpPending
 	}
-
-	// At the end of this function check for a response error or if
-	// the response itself contains an error. If either is true then
-	// mark the current method as in error.
-	//
-	// If neither is true then check to see if the method has been
-	// marked in error in the past and remove that mark to reclaim
-	// memory.
-	defer func() {
-		if resErr != nil {
-			lock.methodInErr[info.FullMethod] = struct{}{}
-		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			delete(lock.methodInErr, info.FullMethod)
-		}
-	}()
 	defer lock.Unlock()
+
+	// At the end of this function check for a response error. If there
+	// is an error that isn't VolumeNotFound then mark this method as
+	// in error so the next call bypasses idempotency.
+	defer func() {
+		handleErr(info, lock, resErr)
+	}()
 
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
@@ -272,7 +250,7 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 			return nil, err
 		}
 		if volInfo == nil {
-			return nil, status.Error(codes.NotFound, req.VolumeId)
+			return nil, ErrVolumeNotFound(req.VolumeId)
 		}
 	}
 
@@ -309,29 +287,14 @@ func (i *idempotencyInterceptor) createVolume(
 	if !nameLock.TryLock(i.opts.timeout) {
 		return nil, ErrOpPending
 	}
-
-	// At the end of this function check for a response error or if
-	// the response itself contains an error. If either is true then
-	// mark the current method as in error.
-	//
-	// If neither is true then check to see if the method has been
-	// marked in error in the past and remove that mark to reclaim
-	// memory.
-	defer func() {
-		if resErr != nil {
-
-			// Check to see if the error code indicates an operation is
-			// pending for this resource. If it is then do not mark this
-			// method in error.
-			if isOpPending(resErr) {
-				return
-			}
-			nameLock.methodInErr[info.FullMethod] = struct{}{}
-		} else if _, ok := nameLock.methodInErr[info.FullMethod]; ok {
-			delete(nameLock.methodInErr, info.FullMethod)
-		}
-	}()
 	defer nameLock.Unlock()
+
+	// At the end of this function check for a response error. If there
+	// is an error that isn't VolumeNotFound then mark this method as
+	// in error so the next call bypasses idempotency.
+	defer func() {
+		handleErrFor(info, nameLock, resErr, true)
+	}()
 
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
@@ -361,22 +324,14 @@ func (i *idempotencyInterceptor) createVolume(
 	if !idLock.TryLock(i.opts.timeout) {
 		return nil, ErrOpPending
 	}
-
-	// At the end of this function check for a response error or if
-	// the response itself contains an error. If either is true then
-	// mark the current method as in error.
-	//
-	// If neither is true then check to see if the method has been
-	// marked in error in the past and remove that mark to reclaim
-	// memory.
-	defer func() {
-		if resErr != nil {
-			idLock.methodInErr[info.FullMethod] = struct{}{}
-		} else if _, ok := idLock.methodInErr[info.FullMethod]; ok {
-			delete(idLock.methodInErr, info.FullMethod)
-		}
-	}()
 	defer idLock.Unlock()
+
+	// At the end of this function check for a response error. If there
+	// is an error that isn't VolumeNotFound then mark this method as
+	// in error so the next call bypasses idempotency.
+	defer func() {
+		handleErrFor(info, idLock, resErr, true)
+	}()
 
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
@@ -410,9 +365,13 @@ func (i *idempotencyInterceptor) createVolume(
 		"requestID":  reqID,
 		"volumeID":   volInfo.Id,
 		"volumeName": req.Name}).Info("idempotent create")
+
+	// TODO It would be nice if this idempotent response could include
+	//      an error denoting such. Please see https://goo.gl/xEG72U
+	//      for more information.
 	return &csi.CreateVolumeResponse{
 		VolumeInfo: volInfo,
-	}, nil
+	}, nil // status.Error(codes.AlreadyExists, req.Name)
 }
 
 func (i *idempotencyInterceptor) deleteVolume(
@@ -425,27 +384,20 @@ func (i *idempotencyInterceptor) deleteVolume(
 	if !lock.TryLock(i.opts.timeout) {
 		return nil, ErrOpPending
 	}
-
-	// At the end of this function check for a response error or if
-	// the response itself contains an error. If either is true then
-	// mark the current method as in error.
-	//
-	// If neither is true then check to see if the method has been
-	// marked in error in the past and remove that mark to reclaim
-	// memory.
-	defer func() {
-		if resErr != nil {
-			lock.methodInErr[info.FullMethod] = struct{}{}
-		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			delete(lock.methodInErr, info.FullMethod)
-		}
-	}()
 	defer lock.Unlock()
+
+	// At the end of this function check for a response error. If there
+	// is an error that isn't VolumeNotFound then mark this method as
+	// in error so the next call bypasses idempotency.
+	defer func() {
+		handleErr(info, lock, resErr)
+	}()
 
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
 	// subsequent call should bypass idempotency.
 	if _, ok := lock.methodInErr[info.FullMethod]; ok {
+		log.Debug("delete in err")
 		return handler(ctx, req)
 	}
 
@@ -459,7 +411,7 @@ func (i *idempotencyInterceptor) deleteVolume(
 		}
 		if volInfo == nil {
 			log.WithField("volumeID", req.VolumeId).Info("idempotent delete.a")
-			return nil, status.Error(codes.NotFound, req.VolumeId)
+			return nil, ErrVolumeNotFound(req.VolumeId)
 		}
 		volExists = true
 	}
@@ -477,7 +429,7 @@ func (i *idempotencyInterceptor) deleteVolume(
 	// Indicate an idempotent delete operation if the volume does not exist.
 	if !volExists {
 		log.WithField("volumeID", req.VolumeId).Info("idempotent delete.b")
-		return nil, status.Error(codes.NotFound, req.VolumeId)
+		return nil, ErrVolumeNotFound(req.VolumeId)
 	}
 
 	return handler(ctx, req)
@@ -493,22 +445,14 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 	if !lock.TryLock(i.opts.timeout) {
 		return nil, ErrOpPending
 	}
-
-	// At the end of this function check for a response error or if
-	// the response itself contains an error. If either is true then
-	// mark the current method as in error.
-	//
-	// If neither is true then check to see if the method has been
-	// marked in error in the past and remove that mark to reclaim
-	// memory.
-	defer func() {
-		if resErr != nil {
-			lock.methodInErr[info.FullMethod] = struct{}{}
-		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			delete(lock.methodInErr, info.FullMethod)
-		}
-	}()
 	defer lock.Unlock()
+
+	// At the end of this function check for a response error. If there
+	// is an error that isn't VolumeNotFound then mark this method as
+	// in error so the next call bypasses idempotency.
+	defer func() {
+		handleErr(info, lock, resErr)
+	}()
 
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
@@ -525,7 +469,7 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 			return nil, err
 		}
 		if volInfo == nil {
-			return nil, status.Error(codes.NotFound, req.VolumeId)
+			return nil, ErrVolumeNotFound(req.VolumeId)
 		}
 	}
 
@@ -552,22 +496,14 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 	if !lock.TryLock(i.opts.timeout) {
 		return nil, ErrOpPending
 	}
-
-	// At the end of this function check for a response error or if
-	// the response itself contains an error. If either is true then
-	// mark the current method as in error.
-	//
-	// If neither is true then check to see if the method has been
-	// marked in error in the past and remove that mark to reclaim
-	// memory.
-	defer func() {
-		if resErr != nil {
-			lock.methodInErr[info.FullMethod] = struct{}{}
-		} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			delete(lock.methodInErr, info.FullMethod)
-		}
-	}()
 	defer lock.Unlock()
+
+	// At the end of this function check for a response error. If there
+	// is an error that isn't VolumeNotFound then mark this method as
+	// in error so the next call bypasses idempotency.
+	defer func() {
+		handleErr(info, lock, resErr)
+	}()
 
 	// If the method has been marked in error then it means a previous
 	// call to this function returned an error. In these cases a
@@ -584,7 +520,7 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 			return nil, err
 		}
 		if volInfo == nil {
-			return nil, status.Error(codes.NotFound, req.VolumeId)
+			return nil, ErrVolumeNotFound(req.VolumeId)
 		}
 	}
 
@@ -599,4 +535,53 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 	}
 
 	return handler(ctx, req)
+}
+
+func isOpPending(err error) bool {
+	stat, ok := status.FromError(err)
+	return ok &&
+		stat.Code() == codes.FailedPrecondition &&
+		stat.Message() == "op pending"
+}
+
+func isVolumeNotFound(err error) bool {
+	stat, ok := status.FromError(err)
+	notFound := ok && stat.Code() == codes.NotFound
+	isVolNotFound := strings.HasPrefix(stat.Message(), "volumeID=")
+	if notFound && isVolNotFound {
+		return true
+	}
+	if notFound && !isVolNotFound {
+		log.Warn("unable to determine if not found error related to volume")
+	}
+	return false
+}
+
+func handleErr(info *grpc.UnaryServerInfo, lock *volLockInfo, err error) {
+	handleErrFor(info, lock, err, false)
+}
+
+func handleErrFor(
+	info *grpc.UnaryServerInfo,
+	lock *volLockInfo,
+	err error,
+	createVolumeOp bool) {
+
+	if err != nil {
+		if isOpPending(err) {
+			return
+		} else if createVolumeOp {
+			if stat, ok := status.FromError(err); ok &&
+				stat.Code() == codes.AlreadyExists {
+				return
+			}
+		} else {
+			if isVolumeNotFound(err) {
+				return
+			}
+		}
+		lock.methodInErr[info.FullMethod] = struct{}{}
+	} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
+		delete(lock.methodInErr, info.FullMethod)
+	}
 }
