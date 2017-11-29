@@ -3,6 +3,7 @@ package csp
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -260,14 +261,55 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		sp.server = grpc.NewServer(sp.ServerOpts...)
 
 		// Register the CSI services.
-		if s := sp.Controller; s != nil {
-			csi.RegisterControllerServer(sp.server, s)
+		// Always require the identity service.
+		if sp.Identity == nil {
+			err = errors.New("identity service is required")
+			return
 		}
-		if s := sp.Identity; s != nil {
-			csi.RegisterIdentityServer(sp.server, s)
+		// Either a Controller or Node service should be supplied.
+		if sp.Controller == nil && sp.Node == nil {
+			err = errors.New(
+				"either a controller or node service is required")
+			return
 		}
-		if s := sp.Node; s != nil {
-			csi.RegisterNodeServer(sp.server, s)
+
+		// Always register the identity service.
+		csi.RegisterIdentityServer(sp.server, sp.Identity)
+		log.Info("identity service registered")
+
+		// Determine which of the controller/node services to register
+		csvc := sp.getEnvBool(ctx, EnvVarCtrlSvcOnly)
+		nsvc := sp.getEnvBool(ctx, EnvVarNodeSvcOnly)
+
+		if csvc && nsvc {
+			err = fmt.Errorf(
+				"invalid service restriction: %s=true %s=true",
+				EnvVarCtrlSvcOnly, EnvVarCtrlSvcOnly)
+			return
+		}
+		if csvc {
+			if sp.Controller == nil {
+				err = errors.New("controller service is required")
+				return
+			}
+			csi.RegisterControllerServer(sp.server, sp.Controller)
+			log.Info("controller service registered")
+		} else if nsvc {
+			if sp.Node == nil {
+				err = errors.New("node service is required")
+				return
+			}
+			csi.RegisterNodeServer(sp.server, sp.Node)
+			log.Info("node service registered")
+		} else {
+			if sp.Controller != nil {
+				csi.RegisterControllerServer(sp.server, sp.Controller)
+				log.Info("controller service registered")
+			}
+			if sp.Node != nil {
+				csi.RegisterNodeServer(sp.server, sp.Node)
+				log.Info("node service registered")
+			}
 		}
 
 		endpoint := fmt.Sprintf(
