@@ -24,5 +24,6 @@ func (s *service) GetPluginInfo(
 	return &csi.GetPluginInfoResponse{
 		Name:          Name,
 		VendorVersion: VendorVersion,
+		Manifest:      Manifest,
 	}, nil
 }

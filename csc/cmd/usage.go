@@ -148,8 +148,12 @@ ENVIRONMENT OPTIONS
         to prevent sensitive information from appearing as part of a process
         listing.
 
-        One or more credential pairs may be specified, and either the user name
-        or passphrase may be quoted to preserve leading or trailing whitespace:
+        One or more credentials may be specified as comma-separated key/value
+        pairs:
 
-            user1=pass user2="trailing whitespace " "user 3"=' pass'
+            user1=pass, "user2=trailing whitespace ", "user 3= pass"
+
+        Please see the encoding/csv package (https://goo.gl/1j1xb9) for
+        information on how to quote keys and/or values to include leading
+        and trailing whitespace.
 `

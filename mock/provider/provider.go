@@ -50,6 +50,11 @@ func New() csp.StoragePluginProvider {
 			// not a volume exists before proceeding with the operation
 			csp.EnvVarIdempRequireVolume + "=true",
 
+			// Tell the idempotency interceptor to cache errors for
+			// method/volume and ignore idempotency on subsequent call
+			// to same method/volume.
+			csp.EnvVarIdempCacheErrors + "=true",
+
 			// Treat the following fields as required:
 			//    * ControllerPublishVolumeRequest.NodeId
 			//    * GetNodeIDResponse.NodeId

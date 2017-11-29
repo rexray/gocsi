@@ -64,7 +64,7 @@ GLOBAL OPTIONS
         The default value is WARN.
 
     X_CSI_SUPPORTED_VERSIONS
-        A space-delimited list of versions formatted MAJOR.MINOR.PATCH.
+        A list of comma-separated versions strings: MAJOR.MINOR.PATCH.
         Setting this environment variable will cause the program to
         bypass the SP's GetSupportedVersions RPC and return the list of
         specified versions instead.
@@ -73,13 +73,14 @@ GLOBAL OPTIONS
         The plug-in information is specified via the following
         comma-separated format:
 
-            NAME,VENDOR_VERSION,MANIFEST
+            NAME, VENDOR_VERSION[, MANIFEST...]
 
-        The MANIFEST value may be a series of key/value pairs where either
-        the key or value may be quoted to preserve leading or trailing
-        whitespace. For example:
+        The MANIFEST value may be a series of additional
+        comma-separated key/value pairs.
 
-            key1=val1 key2="val2 " "key 3"=' val3'
+        Please see the encoding/csv package (https://goo.gl/1j1xb9) for
+        information on how to quote keys and/or values to include
+        leading and trailing whitespace.
 
         Setting this environment variable will cause the program to
         bypass the SP's GetPluginInfo RPC and returns the specified
@@ -200,6 +201,25 @@ GLOBAL OPTIONS
     X_CSI_IDEMP_REQUIRE_VOL
         A flag that indicates whether the idempotency interceptor validates
         the existence of a volume before allowing an operation to proceed.
+
+    X_CSI_IDEMP_CACHE_ERRORS
+        A flag that indicates whether the idempotency interceptor should
+        cache errors and allow the subsequent operation for a volume to
+        bypass the idempotency check if the previous operation was in
+        error.
+
+    X_CSI_PRIVATE_MOUNT_DIR
+        Specifies the path of the private mount directory. During a
+        NodePublishVolume RPC, the SP will mount a device into the
+        private mount area depending on the volume capability:
+
+            * For a Block capability the device will be bind mounted
+              to a file in the private mount directory.
+            * For a Mount capability the device will be mounted to a
+              directory in the private mount directory.
+
+        The SP then bind mounts the private mount to the target path
+        specified in the NodePublishVolumeRequest.
 
 The flags -?,-h,-help may be used to print this screen.
 `

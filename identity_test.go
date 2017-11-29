@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/mock/service"
 )
 
@@ -68,7 +68,8 @@ var _ = Describe("Identity", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(name).Should(Equal(service.Name))
 			Ω(vendorVersion).Should(Equal(service.VendorVersion))
-			Ω(manifest).Should(BeNil())
+			Ω(manifest).Should(HaveLen(1))
+			Ω(manifest["url"]).Should(Equal(service.Manifest["url"]))
 		}
 		shouldNotBeValid := func() {
 			Ω(err).Should(ΣCM(
