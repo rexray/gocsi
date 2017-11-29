@@ -10,7 +10,8 @@ import (
 )
 
 var getCapacity struct {
-	caps volumeCapabilitySliceArg
+	caps   volumeCapabilitySliceArg
+	params mapOfStringArg
 }
 
 var getCapacityCmd = &cobra.Command{
@@ -27,6 +28,7 @@ var getCapacityCmd = &cobra.Command{
 			&csi.GetCapacityRequest{
 				Version:            &root.version.Version,
 				VolumeCapabilities: getCapacity.caps.data,
+				Parameters:         getCapacity.params.data,
 			})
 		if err != nil {
 			return err
@@ -40,4 +42,12 @@ var getCapacityCmd = &cobra.Command{
 func init() {
 	controllerCmd.AddCommand(getCapacityCmd)
 	flagVolumeCapabilities(getCapacityCmd.Flags(), &getCapacity.caps)
+	getCapacityCmd.Flags().Var(
+		&getCapacity.params,
+		"params",
+		`One or more key/value pairs may be specified to send with
+        the request as its Parameters field:
+
+            --params key1=val1,key2=val2 --params=key3=val3`)
+
 }
