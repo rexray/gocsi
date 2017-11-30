@@ -188,12 +188,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			opts = append(opts, gocsi.WithIdempRequireVolumeExists())
 		}
 
-		// Check to see if the idempotency provider caches errors.
-		if sp.getEnvBool(ctx, EnvVarIdempCacheErrors) {
-			fields["idemp.cacheErrors"] = true
-			opts = append(opts, gocsi.WithIdempCacheErrs())
-		}
-
 		sp.Interceptors = append(sp.Interceptors,
 			gocsi.NewIdempotentInterceptor(sp.IdempotencyProvider, opts...))
 		log.WithFields(fields).Debug("enabled idempotency provider")

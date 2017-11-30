@@ -202,12 +202,6 @@ GLOBAL OPTIONS
         A flag that indicates whether the idempotency interceptor validates
         the existence of a volume before allowing an operation to proceed.
 
-    X_CSI_IDEMP_CACHE_ERRORS
-        A flag that indicates whether the idempotency interceptor should
-        cache errors and allow the subsequent operation for a volume to
-        bypass the idempotency check if the previous operation was in
-        error.
-
     X_CSI_PRIVATE_MOUNT_DIR
         Specifies the path of the private mount directory. During a
         NodePublishVolume RPC, the SP will mount a device into the

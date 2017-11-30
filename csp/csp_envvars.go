@@ -168,13 +168,6 @@ const (
 	// checks to see if a volume exists before allowing an operation.
 	EnvVarIdempRequireVolume = "X_CSI_IDEMP_REQUIRE_VOL"
 
-	// EnvVarIdempCacheErrors is the name of the environment variable
-	// used to determine whether or not the idempotency interceptor
-	// caches errors and allows the next, subsequent call for a volume
-	// to bypass idempotency if the previous, same call for that volume
-	// was in error.
-	EnvVarIdempCacheErrors = "X_CSI_IDEMP_CACHE_ERRORS"
-
 	// EnvVarPrivateMountDir is the name of the environment variable
 	// that specifies the path of the private mount directory used by
 	// SPs to mount a device during a NodePublishVolume RPC before

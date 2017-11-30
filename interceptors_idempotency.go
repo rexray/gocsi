@@ -2,15 +2,12 @@ package gocsi
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	xctx "golang.org/x/net/context"
 )
@@ -50,7 +47,6 @@ type IdempotentInterceptorOption func(*idempIntercOpts)
 type idempIntercOpts struct {
 	timeout       time.Duration
 	requireVolume bool
-	cacheErrs     bool
 }
 
 // WithIdempTimeout is an IdempotentInterceptorOption that sets the
@@ -58,15 +54,6 @@ type idempIntercOpts struct {
 func WithIdempTimeout(t time.Duration) IdempotentInterceptorOption {
 	return func(o *idempIntercOpts) {
 		o.timeout = t
-	}
-}
-
-// WithIdempCacheErrs is an IdempotentInterceptorOption that enables
-// caching an error for a volume and method and bypassing idempotency
-// the subsequent call to the same method for the same volume.
-func WithIdempCacheErrs() IdempotentInterceptorOption {
-	return func(o *idempIntercOpts) {
-		o.cacheErrs = true
 	}
 }
 
@@ -185,22 +172,6 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 	}
 	defer lock.Unlock()
 
-	if i.opts.cacheErrs {
-		// At the end of this function check for a response error. If there
-		// is an error that isn't VolumeNotFound then mark this method as
-		// in error so the next call bypasses idempotency.
-		defer func() {
-			handleErr(info, lock, resErr)
-		}()
-
-		// If the method has been marked in error then it means a previous
-		// call to this function returned an error. In these cases a
-		// subsequent call should bypass idempotency.
-		if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			return handler(ctx, req)
-		}
-	}
-
 	// If configured to do so, check to see if the volume exists and
 	// return an error if it does not.
 	if i.opts.requireVolume {
@@ -239,22 +210,6 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 		return nil, ErrOpPending
 	}
 	defer lock.Unlock()
-
-	if i.opts.cacheErrs {
-		// At the end of this function check for a response error. If there
-		// is an error that isn't VolumeNotFound then mark this method as
-		// in error so the next call bypasses idempotency.
-		defer func() {
-			handleErr(info, lock, resErr)
-		}()
-
-		// If the method has been marked in error then it means a previous
-		// call to this function returned an error. In these cases a
-		// subsequent call should bypass idempotency.
-		if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			return handler(ctx, req)
-		}
-	}
 
 	// If configured to do so, check to see if the volume exists and
 	// return an error if it does not.
@@ -303,23 +258,6 @@ func (i *idempotencyInterceptor) createVolume(
 	}
 	defer nameLock.Unlock()
 
-	if i.opts.cacheErrs {
-		// At the end of this function check for a response error. If there
-		// is an error that isn't VolumeNotFound then mark this method as
-		// in error so the next call bypasses idempotency.
-		defer func() {
-			handleErrFor(info, nameLock, resErr, true)
-		}()
-
-		// If the method has been marked in error then it means a previous
-		// call to this function returned an error. In these cases a
-		// subsequent call should bypass idempotency.
-		if _, ok := nameLock.methodInErr[info.FullMethod]; ok {
-			log.WithFields(fields).Debug("creating volume: nameInErr")
-			return handler(ctx, req)
-		}
-	}
-
 	// Next, attempt to get the volume info based on the name.
 	volInfo, err := i.p.GetVolumeInfo(ctx, "", req.Name)
 	if err != nil {
@@ -341,23 +279,6 @@ func (i *idempotencyInterceptor) createVolume(
 		return nil, ErrOpPending
 	}
 	defer idLock.Unlock()
-
-	if i.opts.cacheErrs {
-		// At the end of this function check for a response error. If there
-		// is an error that isn't VolumeNotFound then mark this method as
-		// in error so the next call bypasses idempotency.
-		defer func() {
-			handleErrFor(info, idLock, resErr, true)
-		}()
-
-		// If the method has been marked in error then it means a previous
-		// call to this function returned an error. In these cases a
-		// subsequent call should bypass idempotency.
-		if _, ok := idLock.methodInErr[info.FullMethod]; ok {
-			log.WithFields(fields).Debug("creating volume: idInErr")
-			return handler(ctx, req)
-		}
-	}
 
 	// The ID lock has been obtained. Once again call GetVolumeInfo,
 	// this time with the volume ID, now that the ID lock is held.
@@ -403,23 +324,6 @@ func (i *idempotencyInterceptor) deleteVolume(
 		return nil, ErrOpPending
 	}
 	defer lock.Unlock()
-
-	if i.opts.cacheErrs {
-		// At the end of this function check for a response error. If there
-		// is an error that isn't VolumeNotFound then mark this method as
-		// in error so the next call bypasses idempotency.
-		defer func() {
-			handleErr(info, lock, resErr)
-		}()
-
-		// If the method has been marked in error then it means a previous
-		// call to this function returned an error. In these cases a
-		// subsequent call should bypass idempotency.
-		if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			log.Debug("delete in err")
-			return handler(ctx, req)
-		}
-	}
 
 	// If configured to do so, check to see if the volume exists and
 	// return an error if it does not.
@@ -467,22 +371,6 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 	}
 	defer lock.Unlock()
 
-	if i.opts.cacheErrs {
-		// At the end of this function check for a response error. If there
-		// is an error that isn't VolumeNotFound then mark this method as
-		// in error so the next call bypasses idempotency.
-		defer func() {
-			handleErr(info, lock, resErr)
-		}()
-
-		// If the method has been marked in error then it means a previous
-		// call to this function returned an error. In these cases a
-		// subsequent call should bypass idempotency.
-		if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			return handler(ctx, req)
-		}
-	}
-
 	// If configured to do so, check to see if the volume exists and
 	// return an error if it does not.
 	if i.opts.requireVolume {
@@ -520,22 +408,6 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 	}
 	defer lock.Unlock()
 
-	if i.opts.cacheErrs {
-		// At the end of this function check for a response error. If there
-		// is an error that isn't VolumeNotFound then mark this method as
-		// in error so the next call bypasses idempotency.
-		defer func() {
-			handleErr(info, lock, resErr)
-		}()
-
-		// If the method has been marked in error then it means a previous
-		// call to this function returned an error. In these cases a
-		// subsequent call should bypass idempotency.
-		if _, ok := lock.methodInErr[info.FullMethod]; ok {
-			return handler(ctx, req)
-		}
-	}
-
 	// If configured to do so, check to see if the volume exists and
 	// return an error if it does not.
 	if i.opts.requireVolume {
@@ -559,53 +431,4 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 	}
 
 	return handler(ctx, req)
-}
-
-func isOpPending(err error) bool {
-	stat, ok := status.FromError(err)
-	return ok &&
-		stat.Code() == codes.FailedPrecondition &&
-		stat.Message() == "op pending"
-}
-
-func isVolumeNotFound(err error) bool {
-	stat, ok := status.FromError(err)
-	notFound := ok && stat.Code() == codes.NotFound
-	isVolNotFound := strings.HasPrefix(stat.Message(), "volumeID=")
-	if notFound && isVolNotFound {
-		return true
-	}
-	if notFound && !isVolNotFound {
-		log.Warn("unable to determine if not found error related to volume")
-	}
-	return false
-}
-
-func handleErr(info *grpc.UnaryServerInfo, lock *volLockInfo, err error) {
-	handleErrFor(info, lock, err, false)
-}
-
-func handleErrFor(
-	info *grpc.UnaryServerInfo,
-	lock *volLockInfo,
-	err error,
-	createVolumeOp bool) {
-
-	if err != nil {
-		if isOpPending(err) {
-			return
-		} else if createVolumeOp {
-			if stat, ok := status.FromError(err); ok &&
-				stat.Code() == codes.AlreadyExists {
-				return
-			}
-		} else {
-			if isVolumeNotFound(err) {
-				return
-			}
-		}
-		lock.methodInErr[info.FullMethod] = struct{}{}
-	} else if _, ok := lock.methodInErr[info.FullMethod]; ok {
-		delete(lock.methodInErr, info.FullMethod)
-	}
 }
