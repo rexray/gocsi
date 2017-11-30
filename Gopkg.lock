@@ -50,6 +50,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/thecodeteam/gofsutil"
+  packages = ["."]
+  revision = "c8c8c91566a91a907494e33a631b1b95c4aa0f19"
+  version = "v0.1.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -93,6 +99,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0d090865d4d8727abffb7ac693b4d0786bd7181ccb91bc73b1042dbed55e1d22"
+  inputs-digest = "58c20ed15d78b39ff5cdfbe892931f5c6b2782b2f503f56fb34450adc41d1f22"
   solver-name = "gps-cdcl"
   solver-version = 1
