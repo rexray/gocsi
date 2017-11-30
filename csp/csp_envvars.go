@@ -69,6 +69,16 @@ const (
 	// information instead.
 	EnvVarPluginInfo = "X_CSI_PLUGIN_INFO"
 
+	// EnvVarNodeSvcOnly is the name of the environment variable
+	// used to specify that only the CSI Node Service should be started,
+	// meaning that the Controller service should not
+	EnvVarNodeSvcOnly = "X_CSI_NODESVC_ONLY"
+
+	// EnvVarCtrlSvcOnly is the name of the environment variable
+	// used to specify that only the CSI Controller Service should be
+	// started, meaning that the Node service should not
+	EnvVarCtrlSvcOnly = "X_CSI_CTRLSVC_ONLY"
+
 	// EnvVarReqLogging is the name of the environment variable
 	// used to determine whether or not to enable request logging.
 	//
