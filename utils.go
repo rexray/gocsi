@@ -2,6 +2,7 @@ package gocsi
 
 import (
 	"bytes"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
@@ -183,12 +185,81 @@ func ParseProtoAddr(protoAddr string) (proto string, addr string, err error) {
 
 // ParseMap parses a string into a map. The string's expected pattern is:
 //
+//         KEY1=VAL1, "KEY2=VAL2 ", "KEY 3= VAL3"
+//
+// The key/value pairs are separated by a comma and optional whitespace.
+// Please see the encoding/csv package (https://goo.gl/1j1xb9) for information
+// on how to quote keys and/or values to include leading and trailing
+// whitespace.
+func ParseMap(line string) map[string]string {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return nil
+	}
+
+	r := csv.NewReader(strings.NewReader(line))
+	r.TrimLeadingSpace = true
+
+	record, err := r.Read()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		panic(err)
+	}
+
+	data := map[string]string{}
+	for i := range record {
+		p := strings.SplitN(record[i], "=", 2)
+		if len(p) == 0 {
+			continue
+		}
+		k := p[0]
+		var v string
+		if len(p) > 1 {
+			v = p[1]
+		}
+		data[k] = v
+	}
+
+	return data
+}
+
+// ParseSlice parses a string into a slice. The string's expected pattern is:
+//
+//         VAL1, "VAL2 ", " VAL3 "
+//
+// The values are separated by a comma and optional whitespace. Please see
+// the encoding/csv package (https://goo.gl/1j1xb9) for information on how to
+// quote values to include leading and trailing whitespace.
+func ParseSlice(line string) []string {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return nil
+	}
+
+	r := csv.NewReader(strings.NewReader(line))
+	r.TrimLeadingSpace = true
+
+	record, err := r.Read()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		panic(err)
+	}
+
+	return record
+}
+
+// ParseMapWS parses a string into a map. The string's expected pattern is:
+//
 //         KEY1=VAL1 KEY2="VAL2 " "KEY 3"=' VAL3'
 //
 // The key/value pairs are separated by one or more whitespace characters.
 // Keys and/or values with whitespace should be quoted with either single
 // or double quotes.
-func ParseMap(line string) map[string]string {
+func ParseMapWS(line string) map[string]string {
 	if line == "" {
 		return nil
 	}

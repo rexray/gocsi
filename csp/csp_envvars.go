@@ -47,21 +47,22 @@ const (
 	EnvVarLogLevel = "X_CSI_LOG_LEVEL"
 
 	// EnvVarSupportedVersions is the name of the environment variable used
-	// to specify a space-delimited list of versions supported by the SP. If
+	// to specify a list of comma-separated versions supported by the SP. If
 	// no value is specified then the SP does not perform a version check on
 	// the RPC.
 	EnvVarSupportedVersions = "X_CSI_SUPPORTED_VERSIONS"
 
-	// EnvVarPluginInfo is the name of the environment variable used to specify
-	// the plug-in info in the format:
+	// EnvVarPluginInfo is the name of the environment variable used to
+	// specify the plug-in info in the format:
 	//
-	//         NAME,VENDOR_VERSION,MANIFEST
+	//         NAME, VENDOR_VERSION[, MANIFEST...]
 	//
-	// The MANIFEST value may be a series of key/value pairs where either
-	// the key or value may be quoted to preserve leading or trailing
-	// whitespace. For example:
+	// The MANIFEST value may be a series of additional comma-separated
+	// key/value pairs.
 	//
-	//         key1=val1 key2="val2 " "key 3"=' val3'
+	// Please see the encoding/csv package (https://goo.gl/1j1xb9) for
+	// information on how to quote keys and/or values to include leading
+	// and trailing whitespace.
 	//
 	// Setting this environment variable will cause the program to
 	// bypass the SP's GetPluginInfo RPC and returns the specified
@@ -166,6 +167,13 @@ const (
 	// used to determine whether or not the idempotency interceptor
 	// checks to see if a volume exists before allowing an operation.
 	EnvVarIdempRequireVolume = "X_CSI_IDEMP_REQUIRE_VOL"
+
+	// EnvVarPrivateMountDir is the name of the environment variable
+	// that specifies the path of the private mount directory used by
+	// SPs to mount a device during a NodePublishVolume RPC before
+	// bind mounting the file/directory from the private mount area
+	// to the target path.
+	EnvVarPrivateMountDir = "X_CSI_PRIVATE_MOUNT_DIR"
 )
 
 func (sp *StoragePlugin) initEnvVars(ctx context.Context) {

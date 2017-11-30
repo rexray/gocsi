@@ -2,7 +2,7 @@ package cmd
 
 // volumeInfoFormat is the default Go template format for emitting a
 // csi.VolumeInfo
-const volumeInfoFormat = `{{printf "%q" .Id}}` +
+const volumeInfoFormat = `{{printf "%q\t%d" .Id .CapacityBytes}}` +
 	`{{if .Attributes}}{{"\t"}}` +
 	`{{range $k, $v := .Attributes}}{{printf "%q=%q\t" $k $v}}{{end}}` +
 	`{{end}}{{"\n"}}`
@@ -21,5 +21,6 @@ const supportedVersionsFormat = `{{range $v := .SupportedVersions}}` +
 
 // pluginInfoFormat is the default Go template for emitting a
 // csi.GetPluginInfoResponse
-const pluginInfoFormat = `{{printf "%q\t%q\n" .Name .VendorVersion}}` +
-	`{{range $k, $v := .Manifest}}{{printf "%q=%q\n" $k $v}}{{end}}`
+const pluginInfoFormat = `{{printf "%q\t%q" .Name .VendorVersion}}` +
+	`{{range $k, $v := .Manifest}}{{printf "\t%q=%q" $k $v}}{{end}}` +
+	`{{"\n"}}`

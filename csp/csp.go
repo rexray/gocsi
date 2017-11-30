@@ -39,11 +39,11 @@ func Run(
 	}
 
 	// Adjust the log level.
-	var lvl log.Level
+	lvl := log.InfoLevel
 	if v, ok := gocsi.LookupEnv(ctx, EnvVarLogLevel); ok {
 		var err error
 		if lvl, err = log.ParseLevel(v); err != nil {
-			lvl = log.WarnLevel
+			lvl = log.InfoLevel
 		}
 	}
 	log.SetLevel(lvl)

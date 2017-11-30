@@ -6,20 +6,25 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gocsi"
 )
 
 const (
 	// Name is the name of the CSI plug-in.
-	Name = "csi-mock"
+	Name = "com.thecodeteam.mock"
 
 	// VendorVersion is the version returned by GetPluginInfo.
 	VendorVersion = "0.1.0"
 
 	// SupportedVersions is a list of supported CSI versions.
-	SupportedVersions = "0.1.0 0.2.0 1.0.0 1.1.0"
+	SupportedVersions = "0.1.0, 0.2.0, 1.0.0, 1.1.0"
 )
+
+// Manifest is the SP's manifest.
+var Manifest = map[string]string{
+	"url": "https://github.com/thecodeteam/gocsi/tree/master/mock",
+}
 
 // Service is the CSI Mock service provider.
 type Service interface {
