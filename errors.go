@@ -8,12 +8,9 @@ import (
 )
 
 // ErrVolumeNotFound returns an error indicating a volume with the
-// specified ID cannot be found. This function must be used by SPs
-// for the idempotent interceptor to be accurate. That or SPs should,
-// for a NotFound error relating to a volume, prefix the associated
-// message with "volumeID=".
+// specified ID cannot be found.
 func ErrVolumeNotFound(id string) error {
-	return status.Errorf(codes.NotFound, "volumeID=%s", id)
+	return status.Errorf(codes.NotFound, "volume not found: %s", id)
 }
 
 // ErrMissingCSIEndpoint occurs when the value for the environment

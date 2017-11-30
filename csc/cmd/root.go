@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 
 	"github.com/thecodeteam/gocsi"
 )
@@ -144,11 +145,15 @@ var RootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Fprintf(
-			os.Stderr,
-			"%v\n\nPlease use -h,--help for more information\n",
-			err)
-		os.Exit(1)
+		exitCode := 1
+		if stat, ok := status.FromError(err); ok {
+			exitCode = int(stat.Code())
+			fmt.Fprintln(os.Stderr, stat.Message())
+		} else {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+		fmt.Fprintf(os.Stderr, "\nPlease use -h,--help for more information\n")
+		os.Exit(exitCode)
 	}
 }
 
