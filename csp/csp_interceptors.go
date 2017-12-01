@@ -38,6 +38,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withCredsCtrlrUnpubVol = sp.getEnvBool(ctx, EnvVarCredsCtrlrUnpubVol)
 		withCredsNodePubVol    = sp.getEnvBool(ctx, EnvVarCredsNodePubVol)
 		withCredsNodeUnpubVol  = sp.getEnvBool(ctx, EnvVarCredsNodeUnpubVol)
+		withNodePublicist      = sp.getEnvBool(ctx, EnvVarNodePublicist)
 	)
 
 	// Enable all cred requirements if the general option is enabled.
@@ -191,6 +192,22 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		sp.Interceptors = append(sp.Interceptors,
 			gocsi.NewIdempotentInterceptor(sp.IdempotencyProvider, opts...))
 		log.WithFields(fields).Debug("enabled idempotency provider")
+	}
+
+	if withNodePublicist && sp.NodePublicistProvider != nil {
+		var (
+			opts   []gocsi.NodePublicistOption
+			fields = map[string]interface{}{}
+		)
+
+		if sp.getEnvBool(ctx, EnvVarNodePublicistMultiMount) {
+			fields["node.multimount"] = true
+			opts = append(opts, gocsi.WithNodeMultiMount())
+		}
+
+		sp.Interceptors = append(sp.Interceptors,
+			gocsi.NewNodePublicist(sp.NodePublicistProvider, opts...))
+		log.WithFields(fields).Debug("enabled node publicist provider")
 	}
 
 	return
