@@ -328,9 +328,11 @@ func (s *specValidator) validateRequest(
 
 	// Check to see if the request has a node ID and if it is set.
 	// If the node ID is not set then return an error.
-	if treq, ok := req.(specValidatorHasNodeID); ok {
-		if treq.GetNodeId() == "" {
-			return ErrNodeIDRequired
+	if s.opts.requiresNodeID {
+		if treq, ok := req.(specValidatorHasNodeID); ok {
+			if treq.GetNodeId() == "" {
+				return ErrNodeIDRequired
+			}
 		}
 	}
 
@@ -625,7 +627,7 @@ func (s *specValidator) validateGetNodeIDResponse(
 	ctx context.Context,
 	rep csi.GetNodeIDResponse) error {
 
-	if rep.NodeId == "" {
+	if s.opts.requiresNodeID && rep.NodeId == "" {
 		return ErrEmptyNodeID
 	}
 	return nil
