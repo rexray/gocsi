@@ -184,6 +184,16 @@ const (
 	// bind mounting the file/directory from the private mount area
 	// to the target path.
 	EnvVarPrivateMountDir = "X_CSI_PRIVATE_MOUNT_DIR"
+
+	// EnvVarNodePublicist is the name of the environment variable
+	// that is used to enable the NodePublicist intercetor to guard
+	// against invalid node publication requests.
+	EnvVarNodePublicist = "X_CSI_NODE_PUBLICIST"
+
+	// EnvVarNodePublicistMultiMount is the name of the environment variable
+	// that is used to enable support for mounting a volume to more than
+	// one target path on a single node host.
+	EnvVarNodePublicistMultiMount = "X_CSI_NODE_PUBLICIST_MULTI_MOUNT"
 )
 
 func (sp *StoragePlugin) initEnvVars(ctx context.Context) {

@@ -42,6 +42,11 @@ var ErrVolumeNameRequired = status.Error(
 var ErrVolumeCapabilityRequired = status.Error(
 	codes.InvalidArgument, "volume capability required")
 
+// ErrReadOnlyInvalidForBlock occurs when the readonly flag is set
+// on a block volume capability.
+var ErrReadOnlyInvalidForBlock = status.Error(
+	codes.InvalidArgument, "the readonly flag is invalid for block capabilites")
+
 // ErrAccessModeRequired occurs when an RPC is made with
 // a missing acess mode argument.
 var ErrAccessModeRequired = status.Error(

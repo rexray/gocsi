@@ -181,6 +181,10 @@ type StoragePlugin struct {
 	// ensuring idempotency.
 	IdempotencyProvider gocsi.IdempotencyProvider
 
+	// NodePublicistProvider is used to guard against invalid node publication
+	// requests.
+	NodePublicistProvider gocsi.NodePublicistProvider
+
 	// BeforeServe is an optional callback that is invoked after the
 	// StoragePlugin has been initialized, just prior to the creation
 	// of the gRPC server. This callback may be used to perform custom

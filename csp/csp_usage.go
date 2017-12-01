@@ -215,5 +215,13 @@ GLOBAL OPTIONS
         The SP then bind mounts the private mount to the target path
         specified in the NodePublishVolumeRequest.
 
+    X_CSI_NODE_PUBLICIST
+        A flag that enables the NodePublicist and guards against invalid
+        node publication requests.
+
+    X_CSI_NODE_PUBLICIST_MULTI_MOUNT
+        A flag that enables support for mounting a volume to more than
+        one target path on a single node host.
+
 The flags -?,-h,-help may be used to print this screen.
 `
