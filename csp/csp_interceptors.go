@@ -69,7 +69,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 
 		var (
 			loggingOpts []gocsi.LoggingOption
-			w           = newLogger(log.Infof)
+			w           = newLogger(log.Debugf)
 		)
 
 		if withReqLogging {
