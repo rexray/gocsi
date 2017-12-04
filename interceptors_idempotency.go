@@ -389,7 +389,7 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 		return nil, err
 	}
 	if ok {
-		log.WithField("volumeId", req.VolumeId).Info("idempotent node publish")
+		log.WithField("volumeID", req.VolumeId).Info("idempotent node publish")
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
@@ -425,7 +425,7 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 		return nil, err
 	}
 	if !ok {
-		log.WithField("volumeId", req.VolumeId).Info(
+		log.WithField("volumeID", req.VolumeId).Info(
 			"idempotent node unpublish")
 		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
