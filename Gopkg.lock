@@ -3,6 +3,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/akutz/memconn"
+  packages = ["."]
+  revision = "6d806d44b3dd61d5ae90c1b5a4fb4c81b4d8d68b"
+
+[[projects]]
+  branch = "master"
   name = "github.com/container-storage-interface/spec"
   packages = ["lib/go/csi"]
   revision = "4ac2d13f89360f2da40d188473d77f2ec56b9d0d"
@@ -99,6 +105,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "15c1d6c36dd8907922bcb4a334b5673e0f0542a42db109129aef1f305dd92177"
+  inputs-digest = "c3795e8cd35577a75c990be75487f95222db9351b53485bba8dc4e40d3de3a0c"
   solver-name = "gps-cdcl"
   solver-version = 1

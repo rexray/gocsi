@@ -3,15 +3,18 @@ package gocsi_test
 import (
 	"context"
 	"fmt"
+	"net"
+	"time"
 
+	"github.com/akutz/memconn"
 	"github.com/onsi/ginkgo"
 	gomegaTypes "github.com/onsi/gomega/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/mock/provider"
 	"github.com/thecodeteam/gocsi/mock/service"
 )
@@ -20,17 +23,20 @@ func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {
 
 	// Create a new Mock SP instance and serve it with a piped connection.
 	sp := provider.New()
-	pipeconn := gocsi.NewPipeConn("csi-test")
+	lis, err := memconn.Listen("csi-test")
+	Ω(err).Should(BeNil())
 	go func() {
 		defer GinkgoRecover()
-		if err := sp.Serve(ctx, pipeconn); err != nil {
+		if err := sp.Serve(ctx, lis); err != nil {
 			Ω(err.Error()).Should(Equal("http: Server closed"))
 		}
 	}()
 
 	clientOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithDialer(pipeconn.DialGrpc),
+		grpc.WithDialer(func(string, time.Duration) (net.Conn, error) {
+			return memconn.Dial("csi-test")
+		}),
 	}
 
 	// Create a client-side CSI spec validator.
