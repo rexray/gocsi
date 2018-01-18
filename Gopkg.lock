@@ -50,6 +50,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/thecodeteam/gosync"
+  packages = ["."]
+  revision = "94b0033d0b5fc254594c3174329c19356c2c4f63"
+  version = "v0.1.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -93,6 +99,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0d090865d4d8727abffb7ac693b4d0786bd7181ccb91bc73b1042dbed55e1d22"
+  inputs-digest = "15c1d6c36dd8907922bcb4a334b5673e0f0542a42db109129aef1f305dd92177"
   solver-name = "gps-cdcl"
   solver-version = 1

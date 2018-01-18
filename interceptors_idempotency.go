@@ -5,11 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
 	log "github.com/sirupsen/logrus"
+	xctx "golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	xctx "golang.org/x/net/context"
+	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gosync"
 )
 
 // IdempotencyProvider is the interface that works with a server-side,
@@ -95,7 +96,7 @@ func NewIdempotentInterceptor(
 }
 
 type volLockInfo struct {
-	MutexWithTryLock
+	gosync.TryMutex
 	methodInErr map[string]struct{}
 }
 
@@ -114,8 +115,7 @@ func (i *idempotencyInterceptor) lockWithID(id string) *volLockInfo {
 	lock := i.volIDLocks[id]
 	if lock == nil {
 		lock = &volLockInfo{
-			MutexWithTryLock: NewMutexWithTryLock(),
-			methodInErr:      map[string]struct{}{},
+			methodInErr: map[string]struct{}{},
 		}
 		i.volIDLocks[id] = lock
 	}
@@ -128,8 +128,7 @@ func (i *idempotencyInterceptor) lockWithName(name string) *volLockInfo {
 	lock := i.volNameLocks[name]
 	if lock == nil {
 		lock = &volLockInfo{
-			MutexWithTryLock: NewMutexWithTryLock(),
-			methodInErr:      map[string]struct{}{},
+			methodInErr: map[string]struct{}{},
 		}
 		i.volNameLocks[name] = lock
 	}
