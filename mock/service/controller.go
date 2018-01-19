@@ -12,7 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi"
+
+	csierr "github.com/thecodeteam/gocsi/errors"
 )
 
 func (s *service) CreateVolume(
@@ -61,7 +62,7 @@ func (s *service) DeleteVolume(
 
 	log.WithField("volumeID", req.VolumeId).Debug(
 		"mock delete volume not found")
-	return nil, gocsi.ErrVolumeNotFound(req.VolumeId)
+	return nil, csierr.ErrVolumeNotFound(req.VolumeId)
 }
 
 func (s *service) ControllerPublishVolume(

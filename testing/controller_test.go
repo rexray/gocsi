@@ -12,9 +12,9 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	"github.com/thecodeteam/gocsi"
 	csictx "github.com/thecodeteam/gocsi/context"
 	"github.com/thecodeteam/gocsi/csp"
+	csierr "github.com/thecodeteam/gocsi/errors"
 	"github.com/thecodeteam/gocsi/mock/service"
 	"github.com/thecodeteam/gocsi/utils"
 )
@@ -128,7 +128,7 @@ var _ = Describe("Controller", func() {
 		err error) bool {
 
 		if err != nil {
-			Ω(err).Should(Σ(gocsi.ErrOpPending))
+			Ω(err).Should(Σ(csierr.ErrOpPending))
 			return true
 		}
 
@@ -167,7 +167,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Be Invalid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(gocsi.ErrVolumeNameRequired))
+				Ω(err).Should(Σ(csierr.ErrVolumeNameRequired))
 				Ω(vol).Should(BeNil())
 			})
 		})
@@ -316,7 +316,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(gocsi.ErrVolumeIDRequired))
+				Ω(err).Should(Σ(csierr.ErrVolumeIDRequired))
 			})
 		})
 		Context("Not Found", func() {

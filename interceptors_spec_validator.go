@@ -11,6 +11,7 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
+	csierr "github.com/thecodeteam/gocsi/errors"
 	"github.com/thecodeteam/gocsi/utils"
 )
 
@@ -274,7 +275,7 @@ func (s *specValidator) handleResponseError(method string, err error) error {
 		return err
 	}
 
-	// Error code OK always equals success, so clear the error.
+	// csierr.Error code OK always equals success, so clear the error.
 	if stat.Code() == codes.OK {
 		return nil
 	}
@@ -324,7 +325,7 @@ func (s *specValidator) validateRequest(
 	// If the volume ID is not set then return an error.
 	if treq, ok := req.(specValidatorHasVolumeID); ok {
 		if treq.GetVolumeId() == "" {
-			return ErrVolumeIDRequired
+			return csierr.ErrVolumeIDRequired
 		}
 	}
 
@@ -333,7 +334,7 @@ func (s *specValidator) validateRequest(
 	if s.opts.requiresNodeID {
 		if treq, ok := req.(specValidatorHasNodeID); ok {
 			if treq.GetNodeId() == "" {
-				return ErrNodeIDRequired
+				return csierr.ErrNodeIDRequired
 			}
 		}
 	}
@@ -344,7 +345,7 @@ func (s *specValidator) validateRequest(
 	if _, ok := s.opts.requiresCredentials[method]; ok {
 		if treq, ok := req.(specValidatorHasUserCredentials); ok {
 			if len(treq.GetUserCredentials()) == 0 {
-				return ErrUserCredentialsRequired
+				return csierr.ErrUserCredentialsRequired
 			}
 		}
 	}
@@ -355,7 +356,7 @@ func (s *specValidator) validateRequest(
 	if s.opts.requiresVolAttribs {
 		if treq, ok := req.(specValidatorHasVolumeAttributes); ok {
 			if len(treq.GetVolumeAttributes()) == 0 {
-				return ErrVolumeAttributesRequired
+				return csierr.ErrVolumeAttributesRequired
 			}
 		}
 	}
@@ -474,7 +475,7 @@ func (s *specValidator) validateCreateVolumeRequest(
 	req csi.CreateVolumeRequest) error {
 
 	if req.Name == "" {
-		return ErrVolumeNameRequired
+		return csierr.ErrVolumeNameRequired
 	}
 
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, true)
@@ -513,11 +514,11 @@ func (s *specValidator) validateNodePublishVolumeRequest(
 	req csi.NodePublishVolumeRequest) error {
 
 	if req.TargetPath == "" {
-		return ErrTargetPathRequired
+		return csierr.ErrTargetPathRequired
 	}
 
 	if s.opts.requiresPubVolInfo && len(req.PublishVolumeInfo) == 0 {
-		return ErrPublishVolumeInfoRequired
+		return csierr.ErrPublishVolumeInfoRequired
 	}
 
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
@@ -528,7 +529,7 @@ func (s *specValidator) validateNodeUnpublishVolumeRequest(
 	req csi.NodeUnpublishVolumeRequest) error {
 
 	if req.TargetPath == "" {
-		return ErrTargetPathRequired
+		return csierr.ErrTargetPathRequired
 	}
 
 	return nil
@@ -539,15 +540,15 @@ func (s *specValidator) validateCreateVolumeResponse(
 	rep csi.CreateVolumeResponse) error {
 
 	if rep.VolumeInfo == nil {
-		return ErrNilVolumeInfo
+		return csierr.ErrNilVolumeInfo
 	}
 
 	if rep.VolumeInfo.Id == "" {
-		return ErrEmptyVolumeID
+		return csierr.ErrEmptyVolumeID
 	}
 
 	if s.opts.requiresVolAttribs && len(rep.VolumeInfo.Attributes) == 0 {
-		return ErrNonNilEmptyAttribs
+		return csierr.ErrNonNilEmptyAttribs
 	}
 
 	return nil
@@ -558,7 +559,7 @@ func (s *specValidator) validateControllerPublishVolumeResponse(
 	rep csi.ControllerPublishVolumeResponse) error {
 
 	if s.opts.requiresPubVolInfo && len(rep.PublishVolumeInfo) == 0 {
-		return ErrEmptyPublishVolumeInfo
+		return csierr.ErrEmptyPublishVolumeInfo
 	}
 	return nil
 }
@@ -594,7 +595,7 @@ func (s *specValidator) validateControllerGetCapabilitiesResponse(
 	rep csi.ControllerGetCapabilitiesResponse) error {
 
 	if rep.Capabilities != nil && len(rep.Capabilities) == 0 {
-		return ErrNonNilControllerCapabilities
+		return csierr.ErrNonNilControllerCapabilities
 	}
 	return nil
 }
@@ -604,7 +605,7 @@ func (s *specValidator) validateGetSupportedVersionsResponse(
 	rep csi.GetSupportedVersionsResponse) error {
 
 	if len(rep.SupportedVersions) == 0 {
-		return ErrEmptySupportedVersions
+		return csierr.ErrEmptySupportedVersions
 	}
 	return nil
 }
@@ -614,13 +615,13 @@ func (s *specValidator) validateGetPluginInfoResponse(
 	rep csi.GetPluginInfoResponse) error {
 
 	if rep.Name == "" {
-		return ErrEmptyPluginName
+		return csierr.ErrEmptyPluginName
 	}
 	if rep.VendorVersion == "" {
-		return ErrEmptyVendorVersion
+		return csierr.ErrEmptyVendorVersion
 	}
 	if rep.Manifest != nil && len(rep.Manifest) == 0 {
-		return ErrNonNilEmptyPluginManifest
+		return csierr.ErrNonNilEmptyPluginManifest
 	}
 	return nil
 }
@@ -630,7 +631,7 @@ func (s *specValidator) validateGetNodeIDResponse(
 	rep csi.GetNodeIDResponse) error {
 
 	if s.opts.requiresNodeID && rep.NodeId == "" {
-		return ErrEmptyNodeID
+		return csierr.ErrEmptyNodeID
 	}
 	return nil
 }
@@ -640,7 +641,7 @@ func (s *specValidator) validateNodeGetCapabilitiesResponse(
 	rep csi.NodeGetCapabilitiesResponse) error {
 
 	if rep.Capabilities != nil && len(rep.Capabilities) == 0 {
-		return ErrNonNilNodeCapabilities
+		return csierr.ErrNonNilNodeCapabilities
 	}
 	return nil
 }
@@ -650,26 +651,26 @@ func validateVolumeCapabilityArg(
 	required bool) error {
 
 	if required && volCap == nil {
-		return ErrVolumeCapabilityRequired
+		return csierr.ErrVolumeCapabilityRequired
 	}
 
 	if volCap.AccessMode == nil {
-		return ErrAccessModeRequired
+		return csierr.ErrAccessModeRequired
 	}
 
 	atype := volCap.GetAccessType()
 	if atype == nil {
-		return ErrAccessTypeRequired
+		return csierr.ErrAccessTypeRequired
 	}
 
 	switch tatype := atype.(type) {
 	case *csi.VolumeCapability_Block:
 		if tatype.Block == nil {
-			return ErrBlockTypeRequired
+			return csierr.ErrBlockTypeRequired
 		}
 	case *csi.VolumeCapability_Mount:
 		if tatype.Mount == nil {
-			return ErrMountTypeRequired
+			return csierr.ErrMountTypeRequired
 		}
 	default:
 		return status.Errorf(
@@ -686,7 +687,7 @@ func validateVolumeCapabilitiesArg(
 
 	if len(volCaps) == 0 {
 		if required {
-			return ErrVolumeCapabilitiesRequired
+			return csierr.ErrVolumeCapabilitiesRequired
 		}
 		return nil
 	}

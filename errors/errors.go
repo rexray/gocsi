@@ -1,4 +1,4 @@
-package gocsi
+package errors
 
 import (
 	"errors"

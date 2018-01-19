@@ -57,13 +57,18 @@ $(CONTEXT_A): context/*.go
 	@go install ./$(basename $(@F))
 	go build -o "$@" ./$(basename $(@F))
 
+ERRORS_A := errors.a
+$(ERRORS_A): errors/*.go
+	@go install ./$(basename $(@F))
+	go build -o "$@" ./$(basename $(@F))
+
 UTILS_A := utils.a
 $(UTILS_A): utils/*.go
 	@go install ./$(basename $(@F))
 	go build -o "$@" ./$(basename $(@F))
 
 GOCSI_A := gocsi.a
-$(GOCSI_A): $(CSI_GOSRC) *.go $(CONTEXT_A) $(UTILS_A)
+$(GOCSI_A): $(CSI_GOSRC) *.go $(CONTEXT_A) $(ERRORS_A) $(UTILS_A)
 	@go install .
 	go build -o "$@" .
 
@@ -181,7 +186,7 @@ build: $(GOCSI_A)
 
 clean:
 	go clean -i -v . ./csp
-	rm -f "$(GOCSI_A)" "$(CONTEXT_A)" "$(UTILS_A)"
+	rm -f "$(GOCSI_A)" "$(CONTEXT_A)" "$(ERRORS_A)" "$(UTILS_A)"
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@
 
