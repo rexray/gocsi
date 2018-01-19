@@ -11,7 +11,9 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+
 	"github.com/thecodeteam/gocsi"
+	csictx "github.com/thecodeteam/gocsi/context"
 	"github.com/thecodeteam/gocsi/csp"
 	"github.com/thecodeteam/gocsi/mock/service"
 )
@@ -332,7 +334,7 @@ var _ = Describe("Controller", func() {
 			})
 			Context("With NotFound Error", func() {
 				BeforeEach(func() {
-					ctx = gocsi.WithEnviron(ctx,
+					ctx = csictx.WithEnviron(ctx,
 						[]string{
 							csp.EnvVarDeleteVolNotFoundSuccess + "=false",
 						})

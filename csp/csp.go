@@ -21,7 +21,9 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+
 	"github.com/thecodeteam/gocsi"
+	csictx "github.com/thecodeteam/gocsi/context"
 )
 
 // Run launches a CSI storage plug-in.
@@ -31,17 +33,17 @@ func Run(
 	sp StoragePluginProvider) {
 
 	// Check for the debug value.
-	if v, ok := gocsi.LookupEnv(ctx, EnvVarDebug); ok {
+	if v, ok := csictx.LookupEnv(ctx, EnvVarDebug); ok {
 		if ok, _ := strconv.ParseBool(v); ok {
-			gocsi.Setenv(ctx, EnvVarLogLevel, "debug")
-			gocsi.Setenv(ctx, EnvVarReqLogging, "true")
-			gocsi.Setenv(ctx, EnvVarRepLogging, "true")
+			csictx.Setenv(ctx, EnvVarLogLevel, "debug")
+			csictx.Setenv(ctx, EnvVarReqLogging, "true")
+			csictx.Setenv(ctx, EnvVarRepLogging, "true")
 		}
 	}
 
 	// Adjust the log level.
 	lvl := log.InfoLevel
-	if v, ok := gocsi.LookupEnv(ctx, EnvVarLogLevel); ok {
+	if v, ok := csictx.LookupEnv(ctx, EnvVarLogLevel); ok {
 		var err error
 		if lvl, err = log.ParseLevel(v); err != nil {
 			lvl = log.InfoLevel
@@ -213,13 +215,13 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		// important and should not be altered unless by someone aware
 		// of how they work.
 
-		// Adding this function to the context allows `gocsi.LookupEnv`
+		// Adding this function to the context allows `csictx.LookupEnv`
 		// to search this SP's default env vars for a value.
-		ctx = gocsi.WithLookupEnv(ctx, sp.lookupEnv)
+		ctx = csictx.WithLookupEnv(ctx, sp.lookupEnv)
 
-		// Adding this function to the context allows `gocsi.Setenv`
+		// Adding this function to the context allows `csictx.Setenv`
 		// to set environment variables in this SP's env var store.
-		ctx = gocsi.WithSetenv(ctx, sp.setenv)
+		ctx = csictx.WithSetenv(ctx, sp.setenv)
 
 		// Initialize the storage plug-in's environment variables map.
 		sp.initEnvVars(ctx)
@@ -355,7 +357,7 @@ func (sp *StoragePlugin) initEndpointPerms(
 		return nil
 	}
 
-	v, ok := gocsi.LookupEnv(ctx, EnvVarEndpointPerms)
+	v, ok := csictx.LookupEnv(ctx, EnvVarEndpointPerms)
 	if !ok || v == "0755" {
 		return nil
 	}
@@ -396,7 +398,7 @@ func (sp *StoragePlugin) initEndpointOwner(
 		pgid = gid
 	)
 
-	if v, ok := gocsi.LookupEnv(ctx, EnvVarEndpointUser); ok {
+	if v, ok := csictx.LookupEnv(ctx, EnvVarEndpointUser); ok {
 		m, err := regexp.MatchString(`^\d+$`, v)
 		if err != nil {
 			return err
@@ -423,7 +425,7 @@ func (sp *StoragePlugin) initEndpointOwner(
 		uid = iuid
 	}
 
-	if v, ok := gocsi.LookupEnv(ctx, EnvVarEndpointGroup); ok {
+	if v, ok := csictx.LookupEnv(ctx, EnvVarEndpointGroup); ok {
 		m, err := regexp.MatchString(`^\d+$`, v)
 		if err != nil {
 			return err
@@ -476,7 +478,7 @@ func (sp *StoragePlugin) setenv(key, val string) error {
 }
 
 func (sp *StoragePlugin) getEnvBool(ctx context.Context, key string) bool {
-	v, ok := gocsi.LookupEnv(ctx, key)
+	v, ok := csictx.LookupEnv(ctx, key)
 	if !ok {
 		return false
 	}

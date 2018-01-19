@@ -52,8 +52,13 @@ CSI_GOSRC := $(CSI_SPEC)/lib/go/csi/csi.pb.go
 ########################################################################
 ##                               GOCSI                                ##
 ########################################################################
+CONTEXT_A := context.a
+$(CONTEXT_A): context/*.go
+	@go install ./$(basename $(@F))
+	go build -o "$@" ./$(basename $(@F))
+
 GOCSI_A := gocsi.a
-$(GOCSI_A): $(CSI_GOSRC) *.go
+$(GOCSI_A): $(CSI_GOSRC) *.go $(CONTEXT_A)
 	@go install .
 	go build -o "$@" .
 
@@ -170,7 +175,7 @@ build: $(GOCSI_A)
 
 clean:
 	go clean -i -v . ./csp
-	rm -f "$(GOCSI_A)"
+	rm -f "$(GOCSI_A)" "$(CONTEXT_A)"
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@
 

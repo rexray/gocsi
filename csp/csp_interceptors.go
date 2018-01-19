@@ -8,7 +8,9 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+
 	"github.com/thecodeteam/gocsi"
+	csictx "github.com/thecodeteam/gocsi/context"
 )
 
 func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
@@ -158,7 +160,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			gocsi.NewServerSpecValidator(specOpts...))
 	}
 
-	if _, ok := gocsi.LookupEnv(ctx, EnvVarPluginInfo); ok {
+	if _, ok := csictx.LookupEnv(ctx, EnvVarPluginInfo); ok {
 		log.Debug("enabled GetPluginInfo interceptor")
 		sp.Interceptors = append(sp.Interceptors, sp.getPluginInfo)
 	}
@@ -175,7 +177,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		)
 
 		// Get idempotency provider's timeout.
-		if v, _ := gocsi.LookupEnv(ctx, EnvVarIdempTimeout); v != "" {
+		if v, _ := csictx.LookupEnv(ctx, EnvVarIdempTimeout); v != "" {
 			if t, err := time.ParseDuration(v); err == nil {
 				fields["idemp.timeout"] = t
 				opts = append(opts, gocsi.WithIdempTimeout(t))
@@ -202,7 +204,7 @@ func (sp *StoragePlugin) injectContext(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
-	return handler(gocsi.WithLookupEnv(ctx, sp.lookupEnv), req)
+	return handler(csictx.WithLookupEnv(ctx, sp.lookupEnv), req)
 }
 
 func (sp *StoragePlugin) getSupportedVersions(

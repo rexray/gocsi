@@ -7,8 +7,8 @@
 /ginkgo
 
 # The archives built from this package and the package "mount".
+/context.a
 /gocsi.a
-/mount.a
 
 # A temporary build dir
 .build/

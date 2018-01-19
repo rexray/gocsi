@@ -8,9 +8,9 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-)
 
-const requestIDKey = "csi.requestid"
+	csictx "github.com/thecodeteam/gocsi/context"
+)
 
 type requestIDInjector struct {
 	id uint64
@@ -59,13 +59,13 @@ func (s *requestIDInjector) handleServer(
 	}
 
 	// Check the metadata from the request ID.
-	szID, szIDOK := md[requestIDKey]
+	szID, szIDOK := md[csictx.RequestIDKey]
 
 	// If the metadata does not contain a request ID then create a new
 	// request ID and inject it into the metadata.
 	if !szIDOK || len(szID) != 1 {
 		szID = []string{fmt.Sprintf("%d", atomic.AddUint64(&s.id, 1))}
-		md[requestIDKey] = szID
+		md[csictx.RequestIDKey] = szID
 		storeID = false
 	}
 
@@ -99,9 +99,9 @@ func (s *requestIDInjector) handleClient(
 	}
 
 	// Ensure the request ID is set in the metadata.
-	if szID, szIDOK := md[requestIDKey]; !szIDOK || len(szID) != 1 {
+	if szID, szIDOK := md[csictx.RequestIDKey]; !szIDOK || len(szID) != 1 {
 		szID = []string{fmt.Sprintf("%d", atomic.AddUint64(&s.id, 1))}
-		md[requestIDKey] = szID
+		md[csictx.RequestIDKey] = szID
 	}
 
 	return invoker(ctx, method, req, rep, cc, opts...)

@@ -10,6 +10,8 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
+	csictx "github.com/thecodeteam/gocsi/context"
 )
 
 // LoggingOption configures the logging interceptor.
@@ -108,7 +110,7 @@ func (s *loggingInterceptor) handle(
 	}
 
 	w := &bytes.Buffer{}
-	reqID, reqIDOK := GetRequestID(ctx)
+	reqID, reqIDOK := csictx.GetRequestID(ctx)
 
 	// Print the request
 	if s.opts.reqw != nil {

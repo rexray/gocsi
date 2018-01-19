@@ -11,6 +11,8 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/thecodeteam/gosync"
+
+	csictx "github.com/thecodeteam/gocsi/context"
 )
 
 // IdempotencyProvider is the interface that works with a server-side,
@@ -241,7 +243,7 @@ func (i *idempotencyInterceptor) createVolume(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	reqID, _ := GetRequestID(ctx)
+	reqID, _ := csictx.GetRequestID(ctx)
 	fields := map[string]interface{}{
 		"requestID":  reqID,
 		"volumeName": req.Name,
