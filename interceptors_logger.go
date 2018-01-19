@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 
 	csictx "github.com/thecodeteam/gocsi/context"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 // LoggingOption configures the logging interceptor.
@@ -144,7 +145,7 @@ func (s *loggingInterceptor) handle(
 	}
 
 	// Print the response data if it is set.
-	if !isResponseNil(method, rep) {
+	if !utils.IsNilResponse(method, rep) {
 		rprintReqOrRep(w, rep)
 	}
 	fmt.Fprintln(s.opts.repw, w.String())

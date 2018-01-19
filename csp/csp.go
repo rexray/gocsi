@@ -257,7 +257,7 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		// Add the interceptors to the server if any are configured.
 		if i := sp.Interceptors; len(i) > 0 {
 			sp.ServerOpts = append(sp.ServerOpts,
-				grpc.UnaryInterceptor(gocsi.ChainUnaryServer(i...)))
+				grpc.UnaryInterceptor(utils.ChainUnaryServer(i...)))
 		}
 
 		// Initialize the gRPC server.

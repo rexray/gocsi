@@ -241,7 +241,7 @@ func (s *specValidator) handle(
 	// Determine whether or not the response is nil. Otherwise it
 	// will no longer be possible to perform a nil equality check on the
 	// response to the interface{} rules for nil comparison.
-	isNilRep := isResponseNil(method, rep)
+	isNilRep := utils.IsNilResponse(method, rep)
 
 	// Handle possible non-zero successful exit codes.
 	if err := s.handleResponseError(method, err); err != nil {

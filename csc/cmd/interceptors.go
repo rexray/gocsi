@@ -5,6 +5,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 func getClientInterceptorsDialOpt() grpc.DialOption {
@@ -86,7 +87,7 @@ func getClientInterceptorsDialOpt() grpc.DialOption {
 	}
 
 	if len(iceptors) > 0 {
-		return grpc.WithUnaryInterceptor(gocsi.ChainUnaryClient(iceptors...))
+		return grpc.WithUnaryInterceptor(utils.ChainUnaryClient(iceptors...))
 	}
 
 	return nil
