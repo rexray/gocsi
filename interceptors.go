@@ -5,6 +5,8 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 // ChainUnaryClient chains one or more unary, client interceptors
@@ -107,23 +109,25 @@ func ChainUnaryServer(
 	}
 }
 
+// nilResponses exceeds the 80char code limit, but to modify it would render
+// it less readable than if it were left as is.
 var nilResponses = map[string]interface{}{
-	CreateVolume:               (*csi.CreateVolumeResponse)(nil),
-	DeleteVolume:               (*csi.DeleteVolumeResponse)(nil),
-	ControllerPublishVolume:    (*csi.ControllerPublishVolumeResponse)(nil),
-	ControllerUnpublishVolume:  (*csi.ControllerUnpublishVolumeResponse)(nil),
-	ValidateVolumeCapabilities: (*csi.ValidateVolumeCapabilitiesResponse)(nil),
-	ListVolumes:                (*csi.ListVolumesResponse)(nil),
-	GetCapacity:                (*csi.GetCapacityResponse)(nil),
-	ControllerGetCapabilities:  (*csi.ControllerGetCapabilitiesResponse)(nil),
-	ControllerProbe:            (*csi.ControllerProbeResponse)(nil),
-	GetSupportedVersions:       (*csi.GetSupportedVersionsResponse)(nil),
-	GetPluginInfo:              (*csi.GetPluginInfoResponse)(nil),
-	GetNodeID:                  (*csi.GetNodeIDResponse)(nil),
-	NodePublishVolume:          (*csi.NodePublishVolumeResponse)(nil),
-	NodeUnpublishVolume:        (*csi.NodeUnpublishVolumeResponse)(nil),
-	NodeProbe:                  (*csi.NodeProbeResponse)(nil),
-	NodeGetCapabilities:        (*csi.NodeGetCapabilitiesResponse)(nil),
+	utils.CreateVolume:               (*csi.CreateVolumeResponse)(nil),
+	utils.DeleteVolume:               (*csi.DeleteVolumeResponse)(nil),
+	utils.ControllerPublishVolume:    (*csi.ControllerPublishVolumeResponse)(nil),
+	utils.ControllerUnpublishVolume:  (*csi.ControllerUnpublishVolumeResponse)(nil),
+	utils.ValidateVolumeCapabilities: (*csi.ValidateVolumeCapabilitiesResponse)(nil),
+	utils.ListVolumes:                (*csi.ListVolumesResponse)(nil),
+	utils.GetCapacity:                (*csi.GetCapacityResponse)(nil),
+	utils.ControllerGetCapabilities:  (*csi.ControllerGetCapabilitiesResponse)(nil),
+	utils.ControllerProbe:            (*csi.ControllerProbeResponse)(nil),
+	utils.GetSupportedVersions:       (*csi.GetSupportedVersionsResponse)(nil),
+	utils.GetPluginInfo:              (*csi.GetPluginInfoResponse)(nil),
+	utils.GetNodeID:                  (*csi.GetNodeIDResponse)(nil),
+	utils.NodePublishVolume:          (*csi.NodePublishVolumeResponse)(nil),
+	utils.NodeUnpublishVolume:        (*csi.NodeUnpublishVolumeResponse)(nil),
+	utils.NodeProbe:                  (*csi.NodeProbeResponse)(nil),
+	utils.NodeGetCapabilities:        (*csi.NodeGetCapabilitiesResponse)(nil),
 }
 
 func isResponseNil(method string, rep interface{}) bool {

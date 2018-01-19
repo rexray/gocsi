@@ -24,6 +24,7 @@ import (
 
 	"github.com/thecodeteam/gocsi"
 	csictx "github.com/thecodeteam/gocsi/context"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 // Run launches a CSI storage plug-in.
@@ -92,7 +93,7 @@ func Run(
 		os.Exit(1)
 	}
 
-	l, err := gocsi.GetCSIEndpointListener()
+	l, err := utils.GetCSIEndpointListener()
 	if err != nil {
 		log.WithError(err).Fatalln("failed to listen")
 	}

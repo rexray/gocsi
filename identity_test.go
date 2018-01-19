@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/mock/service"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 var _ = Describe("Identity", func() {
@@ -43,7 +43,7 @@ var _ = Describe("Identity", func() {
 		)
 		BeforeEach(func() {
 			var ok bool
-			version, ok = gocsi.ParseVersion(CTest().ComponentTexts[3])
+			version, ok = utils.ParseVersion(CTest().ComponentTexts[3])
 			Ω(ok).ShouldNot(BeFalse())
 			var res *csi.GetPluginInfoResponse
 			res, err = client.GetPluginInfo(ctx, &csi.GetPluginInfoRequest{

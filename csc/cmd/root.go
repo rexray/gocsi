@@ -13,10 +13,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/thecodeteam/gocsi/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
-
-	"github.com/thecodeteam/gocsi"
 )
 
 var debug, _ = strconv.ParseBool(os.Getenv("X_CSI_DEBUG"))
@@ -105,13 +104,13 @@ var RootCmd = &cobra.Command{
 		}
 
 		// Parse the credentials if they exist.
-		root.userCreds = gocsi.ParseMap(os.Getenv("X_CSI_USER_CREDENTIALS"))
+		root.userCreds = utils.ParseMap(os.Getenv("X_CSI_USER_CREDENTIALS"))
 
 		// Create the gRPC client connection.
 		opts := []grpc.DialOption{
 			grpc.WithDialer(
 				func(target string, timeout time.Duration) (net.Conn, error) {
-					proto, addr, err := gocsi.ParseProtoAddr(target)
+					proto, addr, err := utils.ParseProtoAddr(target)
 					if err != nil {
 						return nil, err
 					}

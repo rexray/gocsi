@@ -6,8 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 var listVolumes struct {
@@ -40,7 +41,7 @@ var listVolumesCmd = &cobra.Command{
 		}
 
 		// Paging is enabled.
-		cvol, cerr := gocsi.PageVolumes(ctx, controller.client, req)
+		cvol, cerr := utils.PageVolumes(ctx, controller.client, req)
 		for {
 			select {
 			case v, ok := <-cvol:

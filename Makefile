@@ -57,8 +57,13 @@ $(CONTEXT_A): context/*.go
 	@go install ./$(basename $(@F))
 	go build -o "$@" ./$(basename $(@F))
 
+UTILS_A := utils.a
+$(UTILS_A): utils/*.go
+	@go install ./$(basename $(@F))
+	go build -o "$@" ./$(basename $(@F))
+
 GOCSI_A := gocsi.a
-$(GOCSI_A): $(CSI_GOSRC) *.go $(CONTEXT_A)
+$(GOCSI_A): $(CSI_GOSRC) *.go $(CONTEXT_A) $(UTILS_A)
 	@go install .
 	go build -o "$@" .
 
@@ -152,6 +157,7 @@ export X_CSI_IDEMP_TIMEOUT=1s
 endif
 
 test: | $(GINKGO)
+	$(GINKGO) $(GINKGO_RUN_OPTS) ./utils || test "$$?" -eq "197"
 	$(GINKGO) $(GINKGO_RUN_OPTS) . || test "$$?" -eq "197"
 
 
@@ -175,7 +181,7 @@ build: $(GOCSI_A)
 
 clean:
 	go clean -i -v . ./csp
-	rm -f "$(GOCSI_A)" "$(CONTEXT_A)"
+	rm -f "$(GOCSI_A)" "$(CONTEXT_A)" "$(UTILS_A)"
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@
 

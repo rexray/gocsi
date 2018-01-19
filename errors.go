@@ -147,48 +147,7 @@ var ErrNonNilNodeCapabilities = status.Error(
 // specified provider name is unknown.
 var ErrInvalidProvider = errors.New("invalid service provider")
 
-// IsSuccess returns nil if the provided error is an RPC error with an error
-// code that is OK (0) or matches one of the additional, provided successful
-// error codes. Otherwise the original error is returned.
-func IsSuccess(err error, successCodes ...codes.Code) error {
-
-	// Shortcut the process by first checking to see if the error is nil.
-	if err == nil {
-		return nil
-	}
-
-	// Check to see if the provided error is an RPC error.
-	stat, ok := status.FromError(err)
-	if !ok {
-		return err
-	}
-
-	if stat.Code() == codes.OK {
-		return nil
-	}
-	for _, c := range successCodes {
-		if stat.Code() == c {
-			return nil
-		}
-	}
-
-	return err
-}
-
-// IsSuccessfulResponse uses IsSuccess to determine if the response for
-// a specific CSI method is successful. If successful a nil value is
-// returned; otherwise the original error is returned.
-func IsSuccessfulResponse(method string, err error) error {
-	switch method {
-	case CreateVolume:
-		return IsSuccess(err, codes.AlreadyExists)
-	case DeleteVolume:
-		return IsSuccess(err, codes.NotFound)
-	}
-	return err
-}
-
-func notFound(e error) error {
+/*func notFound(e error) error {
 	if s, k := status.FromError(e); k && s.Code() == codes.NotFound {
 		return nil
 	}
@@ -201,3 +160,4 @@ func alreadyExists(e error) error {
 	}
 	return e
 }
+*/

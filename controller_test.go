@@ -16,6 +16,7 @@ import (
 	csictx "github.com/thecodeteam/gocsi/context"
 	"github.com/thecodeteam/gocsi/csp"
 	"github.com/thecodeteam/gocsi/mock/service"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 var _ = Describe("Controller", func() {
@@ -77,7 +78,7 @@ var _ = Describe("Controller", func() {
 	})
 
 	listVolumes := func() (vols []csi.VolumeInfo, err error) {
-		cvol, cerr := gocsi.PageVolumes(
+		cvol, cerr := utils.PageVolumes(
 			ctx,
 			client,
 			csi.ListVolumesRequest{Version: version})
@@ -106,7 +107,7 @@ var _ = Describe("Controller", func() {
 				LimitBytes:    limBytes,
 			},
 			VolumeCapabilities: []*csi.VolumeCapability{
-				gocsi.NewMountCapability(0, fsType, mntFlags...),
+				utils.NewMountCapability(0, fsType, mntFlags...),
 			},
 			UserCredentials: userCreds,
 			Parameters:      params,
@@ -409,7 +410,7 @@ var _ = Describe("Controller", func() {
 				VolumeId: "1",
 				NodeId:   service.Name,
 				Readonly: true,
-				VolumeCapability: gocsi.NewMountCapability(
+				VolumeCapability: utils.NewMountCapability(
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					"mock"),
 			}

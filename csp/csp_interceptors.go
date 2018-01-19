@@ -11,6 +11,7 @@ import (
 
 	"github.com/thecodeteam/gocsi"
 	csictx "github.com/thecodeteam/gocsi/context"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
@@ -213,7 +214,7 @@ func (sp *StoragePlugin) getSupportedVersions(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
-	if info.FullMethod != gocsi.GetSupportedVersions ||
+	if info.FullMethod != utils.GetSupportedVersions ||
 		len(sp.supportedVersions) == 0 {
 
 		return handler(ctx, req)
@@ -235,7 +236,7 @@ func (sp *StoragePlugin) getPluginInfo(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
-	if info.FullMethod != gocsi.GetPluginInfo || sp.pluginInfo.Name == "" {
+	if info.FullMethod != utils.GetPluginInfo || sp.pluginInfo.Name == "" {
 		return handler(ctx, req)
 	}
 	return &sp.pluginInfo, nil

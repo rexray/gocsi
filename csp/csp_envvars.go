@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thecodeteam/gocsi"
 	csictx "github.com/thecodeteam/gocsi/context"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 const (
@@ -235,7 +235,7 @@ func (sp *StoragePlugin) initSupportedVersions(ctx context.Context) {
 	if !ok {
 		return
 	}
-	sp.supportedVersions = gocsi.ParseVersions(szVersions)
+	sp.supportedVersions = utils.ParseVersions(szVersions)
 }
 
 func (sp *StoragePlugin) initPluginInfo(ctx context.Context) {
@@ -251,6 +251,6 @@ func (sp *StoragePlugin) initPluginInfo(ctx context.Context) {
 		sp.pluginInfo.VendorVersion = info[1]
 	}
 	if len(info) > 2 {
-		sp.pluginInfo.Manifest = gocsi.ParseMap(info[2])
+		sp.pluginInfo.Manifest = utils.ParseMap(info[2])
 	}
 }

@@ -1,7 +1,8 @@
-package gocsi
+package utils
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -11,6 +12,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
@@ -101,7 +108,7 @@ func CompareVersions(a, b *csi.Version) int8 {
 func GetCSIEndpoint() (network, addr string, err error) {
 	protoAddr := os.Getenv(CSIEndpoint)
 	if emptyRX.MatchString(protoAddr) {
-		return "", "", ErrMissingCSIEndpoint
+		return "", "", errors.New("missing CSI_ENDPOINT")
 	}
 	return ParseProtoAddr(protoAddr)
 }
@@ -335,4 +342,187 @@ func ParseMapWS(line string) map[string]string {
 	}
 
 	return data
+}
+
+// NewMountCapability returns a new *csi.VolumeCapability for a
+// volume that is to be mounted.
+func NewMountCapability(
+	mode csi.VolumeCapability_AccessMode_Mode,
+	fsType string,
+	mountFlags ...string) *csi.VolumeCapability {
+
+	return &csi.VolumeCapability{
+		AccessMode: &csi.VolumeCapability_AccessMode{
+			Mode: mode,
+		},
+		AccessType: &csi.VolumeCapability_Mount{
+			Mount: &csi.VolumeCapability_MountVolume{
+				FsType:     fsType,
+				MountFlags: mountFlags,
+			},
+		},
+	}
+}
+
+// NewBlockCapability returns a new *csi.VolumeCapability for a
+// volume that is to be accessed as a raw device.
+func NewBlockCapability(
+	mode csi.VolumeCapability_AccessMode_Mode) *csi.VolumeCapability {
+
+	return &csi.VolumeCapability{
+		AccessMode: &csi.VolumeCapability_AccessMode{
+			Mode: mode,
+		},
+		AccessType: &csi.VolumeCapability_Block{
+			Block: &csi.VolumeCapability_BlockVolume{},
+		},
+	}
+}
+
+// PageVolumes issues one or more ListVolumes requests to retrieve
+// all available volumes, returning them over a Go channel.
+func PageVolumes(
+	ctx context.Context,
+	client csi.ControllerClient,
+	req csi.ListVolumesRequest,
+	opts ...grpc.CallOption) (<-chan csi.VolumeInfo, <-chan error) {
+
+	var (
+		cvol = make(chan csi.VolumeInfo)
+		cerr = make(chan error)
+	)
+
+	// Execute the RPC in a goroutine, looping until there are no
+	// more volumes available.
+	go func() {
+		var (
+			wg     sync.WaitGroup
+			pages  int
+			cancel context.CancelFunc
+		)
+
+		// Get a cancellation context used to control the interaction
+		// between returning volumes and the possibility of an error.
+		ctx, cancel = context.WithCancel(ctx)
+
+		// waitAndClose closes the volume and error channels after all
+		// channel-dependent goroutines have completed their work
+		defer func() {
+			wg.Wait()
+			close(cerr)
+			close(cvol)
+			log.WithField("pages", pages).Debug("PageAllVolumes: exit")
+		}()
+
+		sendVolumes := func(res csi.ListVolumesResponse) {
+			// Loop over the volume entries until they're all gone
+			// or the context is cancelled.
+			var i int
+			for i = 0; i < len(res.Entries) && ctx.Err() == nil; i++ {
+
+				// Send the volume over the channel.
+				cvol <- *res.Entries[i].VolumeInfo
+
+				// Let the wait group know that this worker has completed
+				// its task.
+				wg.Done()
+			}
+			// If not all volumes have been sent over the channel then
+			// deduct the remaining number from the wait group.
+			if i != len(res.Entries) {
+				rem := len(res.Entries) - i
+				log.WithFields(map[string]interface{}{
+					"cancel":    ctx.Err(),
+					"remaining": rem,
+				}).Warn("PageAllVolumes: cancelled w unprocessed results")
+				wg.Add(-rem)
+			}
+		}
+
+		// listVolumes returns true if there are more volumes to list.
+		listVolumes := func() bool {
+
+			// The wait group "wg" is blocked during the execution of
+			// this function.
+			wg.Add(1)
+			defer wg.Done()
+
+			res, err := client.ListVolumes(ctx, &req, opts...)
+			if err != nil {
+				cerr <- err
+
+				// Invoke the cancellation context function to
+				// ensure that work wraps up as quickly as possible.
+				cancel()
+
+				return false
+			}
+
+			// Add to the number of workers
+			wg.Add(len(res.Entries))
+
+			// Process the retrieved volumes.
+			go sendVolumes(*res)
+
+			// Set the request's starting token to the response's
+			// next token.
+			req.StartingToken = res.NextToken
+			return req.StartingToken != ""
+		}
+
+		// List volumes until there are no more volumes or the context
+		// is cancelled.
+		for {
+			if ctx.Err() != nil {
+				break
+			}
+			if !listVolumes() {
+				break
+			}
+			pages++
+		}
+	}()
+
+	return cvol, cerr
+}
+
+// IsSuccess returns nil if the provided error is an RPC error with an error
+// code that is OK (0) or matches one of the additional, provided successful
+// error codes. Otherwise the original error is returned.
+func IsSuccess(err error, successCodes ...codes.Code) error {
+
+	// Shortcut the process by first checking to see if the error is nil.
+	if err == nil {
+		return nil
+	}
+
+	// Check to see if the provided error is an RPC error.
+	stat, ok := status.FromError(err)
+	if !ok {
+		return err
+	}
+
+	if stat.Code() == codes.OK {
+		return nil
+	}
+	for _, c := range successCodes {
+		if stat.Code() == c {
+			return nil
+		}
+	}
+
+	return err
+}
+
+// IsSuccessfulResponse uses IsSuccess to determine if the response for
+// a specific CSI method is successful. If successful a nil value is
+// returned; otherwise the original error is returned.
+func IsSuccessfulResponse(method string, err error) error {
+	switch method {
+	case CreateVolume:
+		return IsSuccess(err, codes.AlreadyExists)
+	case DeleteVolume:
+		return IsSuccess(err, codes.NotFound)
+	}
+	return err
 }
