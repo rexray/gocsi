@@ -158,7 +158,7 @@ endif
 
 test: | $(GINKGO)
 	$(GINKGO) $(GINKGO_RUN_OPTS) ./utils || test "$$?" -eq "197"
-	$(GINKGO) $(GINKGO_RUN_OPTS) . || test "$$?" -eq "197"
+	$(GINKGO) $(GINKGO_RUN_OPTS) ./testing || test "$$?" -eq "197"
 
 
 ########################################################################
