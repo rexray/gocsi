@@ -6,9 +6,9 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/thecodeteam/gocsi"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/thecodeteam/gocsi/mock/service"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 var _ = Describe("Node", func() {
@@ -37,7 +37,7 @@ var _ = Describe("Node", func() {
 	})
 
 	listVolumes := func() (vols []csi.VolumeInfo, err error) {
-		cvol, cerr := gocsi.PageVolumes(
+		cvol, cerr := utils.PageVolumes(
 			ctx,
 			csi.NewControllerClient(gclient),
 			csi.ListVolumesRequest{Version: version})
@@ -85,7 +85,7 @@ var _ = Describe("Node", func() {
 				Version:           version,
 				VolumeId:          "1",
 				PublishVolumeInfo: map[string]string{"device": device},
-				VolumeCapability: gocsi.NewMountCapability(
+				VolumeCapability: utils.NewMountCapability(
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					"mock"),
 				TargetPath: targetPath,

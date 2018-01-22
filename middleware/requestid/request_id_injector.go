@@ -1,4 +1,4 @@
-package gocsi
+package requestid
 
 import (
 	"fmt"
@@ -8,11 +8,11 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	csictx "github.com/thecodeteam/gocsi/context"
 )
 
-const requestIDKey = "csi.requestid"
-
-type requestIDInjector struct {
+type interceptor struct {
 	id uint64
 }
 
@@ -31,11 +31,11 @@ func NewClientRequestIDInjector() grpc.UnaryClientInterceptor {
 	return newRequestIDInjector().handleClient
 }
 
-func newRequestIDInjector() *requestIDInjector {
-	return &requestIDInjector{}
+func newRequestIDInjector() *interceptor {
+	return &interceptor{}
 }
 
-func (s *requestIDInjector) handleServer(
+func (s *interceptor) handleServer(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
@@ -59,13 +59,13 @@ func (s *requestIDInjector) handleServer(
 	}
 
 	// Check the metadata from the request ID.
-	szID, szIDOK := md[requestIDKey]
+	szID, szIDOK := md[csictx.RequestIDKey]
 
 	// If the metadata does not contain a request ID then create a new
 	// request ID and inject it into the metadata.
 	if !szIDOK || len(szID) != 1 {
 		szID = []string{fmt.Sprintf("%d", atomic.AddUint64(&s.id, 1))}
-		md[requestIDKey] = szID
+		md[csictx.RequestIDKey] = szID
 		storeID = false
 	}
 
@@ -83,7 +83,7 @@ func (s *requestIDInjector) handleServer(
 	return handler(ctx, req)
 }
 
-func (s *requestIDInjector) handleClient(
+func (s *interceptor) handleClient(
 	ctx context.Context,
 	method string,
 	req, rep interface{},
@@ -99,9 +99,9 @@ func (s *requestIDInjector) handleClient(
 	}
 
 	// Ensure the request ID is set in the metadata.
-	if szID, szIDOK := md[requestIDKey]; !szIDOK || len(szID) != 1 {
+	if szID, szIDOK := md[csictx.RequestIDKey]; !szIDOK || len(szID) != 1 {
 		szID = []string{fmt.Sprintf("%d", atomic.AddUint64(&s.id, 1))}
-		md[requestIDKey] = szID
+		md[csictx.RequestIDKey] = szID
 	}
 
 	return invoker(ctx, method, req, rep, cc, opts...)

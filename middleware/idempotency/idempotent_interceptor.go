@@ -1,4 +1,4 @@
-package gocsi
+package idempotency
 
 import (
 	"context"
@@ -11,12 +11,15 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/thecodeteam/gosync"
+
+	csictx "github.com/thecodeteam/gocsi/context"
+	csierr "github.com/thecodeteam/gocsi/errors"
 )
 
-// IdempotencyProvider is the interface that works with a server-side,
+// Provider is the interface that works with a server-side,
 // gRPC interceptor to provide serial access and idempotency for CSI's
 // volume resources.
-type IdempotencyProvider interface {
+type Provider interface {
 	// GetVolumeID should return the ID of the volume specified
 	// by the provided volume name. If the volume does not exist then
 	// an empty string should be returned.
@@ -68,7 +71,7 @@ func WithIdempRequireVolumeExists() IdempotentInterceptorOption {
 }
 
 // NewIdempotentInterceptor returns a new server-side, gRPC interceptor
-// that can be used in conjunction with an IdempotencyProvider to
+// that can be used in conjunction with an Provider to
 // provide serialized, idempotent access to the following CSI RPCs:
 //
 //  * CreateVolume
@@ -78,7 +81,7 @@ func WithIdempRequireVolumeExists() IdempotentInterceptorOption {
 //  * NodePublishVolume
 //  * NodeUnpublishVolume
 func NewIdempotentInterceptor(
-	p IdempotencyProvider,
+	p Provider,
 	opts ...IdempotentInterceptorOption) grpc.UnaryServerInterceptor {
 
 	i := &idempotencyInterceptor{
@@ -101,7 +104,7 @@ type volLockInfo struct {
 }
 
 type idempotencyInterceptor struct {
-	p             IdempotencyProvider
+	p             Provider
 	volIDLocksL   sync.Mutex
 	volNameLocksL sync.Mutex
 	volIDLocks    map[string]*volLockInfo
@@ -167,7 +170,7 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 
 	lock := i.lockWithID(req.VolumeId)
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, ErrOpPending
+		return nil, csierr.ErrOpPending
 	}
 	defer lock.Unlock()
 
@@ -179,7 +182,7 @@ func (i *idempotencyInterceptor) controllerPublishVolume(
 			return nil, err
 		}
 		if volInfo == nil {
-			return nil, ErrVolumeNotFound(req.VolumeId)
+			return nil, csierr.ErrVolumeNotFound(req.VolumeId)
 		}
 	}
 
@@ -206,7 +209,7 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 
 	lock := i.lockWithID(req.VolumeId)
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, ErrOpPending
+		return nil, csierr.ErrOpPending
 	}
 	defer lock.Unlock()
 
@@ -218,7 +221,7 @@ func (i *idempotencyInterceptor) controllerUnpublishVolume(
 			return nil, err
 		}
 		if volInfo == nil {
-			return nil, ErrVolumeNotFound(req.VolumeId)
+			return nil, csierr.ErrVolumeNotFound(req.VolumeId)
 		}
 	}
 
@@ -241,7 +244,7 @@ func (i *idempotencyInterceptor) createVolume(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	reqID, _ := GetRequestID(ctx)
+	reqID, _ := csictx.GetRequestID(ctx)
 	fields := map[string]interface{}{
 		"requestID":  reqID,
 		"volumeName": req.Name,
@@ -253,7 +256,7 @@ func (i *idempotencyInterceptor) createVolume(
 	// can be obtained then exit with the appropriate error.
 	nameLock := i.lockWithName(req.Name)
 	if !nameLock.TryLock(i.opts.timeout) {
-		return nil, ErrOpPending
+		return nil, csierr.ErrOpPending
 	}
 	defer nameLock.Unlock()
 
@@ -275,7 +278,7 @@ func (i *idempotencyInterceptor) createVolume(
 	// volume ID-based lock for the volume.
 	idLock := i.lockWithID(volInfo.Id)
 	if !idLock.TryLock(i.opts.timeout) {
-		return nil, ErrOpPending
+		return nil, csierr.ErrOpPending
 	}
 	defer idLock.Unlock()
 
@@ -320,7 +323,7 @@ func (i *idempotencyInterceptor) deleteVolume(
 
 	lock := i.lockWithID(req.VolumeId)
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, ErrOpPending
+		return nil, csierr.ErrOpPending
 	}
 	defer lock.Unlock()
 
@@ -334,7 +337,7 @@ func (i *idempotencyInterceptor) deleteVolume(
 		}
 		if volInfo == nil {
 			log.WithField("volumeID", req.VolumeId).Info("idempotent delete.a")
-			return nil, ErrVolumeNotFound(req.VolumeId)
+			return nil, csierr.ErrVolumeNotFound(req.VolumeId)
 		}
 		volExists = true
 	}
@@ -352,7 +355,7 @@ func (i *idempotencyInterceptor) deleteVolume(
 	// Indicate an idempotent delete operation if the volume does not exist.
 	if !volExists {
 		log.WithField("volumeID", req.VolumeId).Info("idempotent delete.b")
-		return nil, ErrVolumeNotFound(req.VolumeId)
+		return nil, csierr.ErrVolumeNotFound(req.VolumeId)
 	}
 
 	return handler(ctx, req)
@@ -366,7 +369,7 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 
 	lock := i.lockWithID(req.VolumeId)
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, ErrOpPending
+		return nil, csierr.ErrOpPending
 	}
 	defer lock.Unlock()
 
@@ -378,7 +381,7 @@ func (i *idempotencyInterceptor) nodePublishVolume(
 			return nil, err
 		}
 		if volInfo == nil {
-			return nil, ErrVolumeNotFound(req.VolumeId)
+			return nil, csierr.ErrVolumeNotFound(req.VolumeId)
 		}
 	}
 
@@ -403,7 +406,7 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 
 	lock := i.lockWithID(req.VolumeId)
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, ErrOpPending
+		return nil, csierr.ErrOpPending
 	}
 	defer lock.Unlock()
 
@@ -415,7 +418,7 @@ func (i *idempotencyInterceptor) nodeUnpublishVolume(
 			return nil, err
 		}
 		if volInfo == nil {
-			return nil, ErrVolumeNotFound(req.VolumeId)
+			return nil, csierr.ErrVolumeNotFound(req.VolumeId)
 		}
 	}
 

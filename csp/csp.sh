@@ -111,7 +111,7 @@ package service
 
 import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/middleware/idempotency"
 )
 
 const (
@@ -125,12 +125,12 @@ const (
 	SupportedVersions = "0.0.0"
 )
 
-// Service is a CSI SP and gocsi.IdempotencyProvider.
+// Service is a CSI SP and idempotency.Provider.
 type Service interface {
 	csi.ControllerServer
 	csi.IdentityServer
 	csi.NodeServer
-	gocsi.IdempotencyProvider
+	idempotency.Provider
 }
 
 type service struct{}

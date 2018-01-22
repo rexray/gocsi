@@ -1,16 +1,19 @@
-package gocsi_test
+package utils_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/utils"
 )
+
+var errMissingCSIEndpoint = errors.New("missing CSI_ENDPOINT")
 
 var _ = Describe("ParseVersion", func() {
 	shouldParse := func() csi.Version {
-		v, ok := gocsi.ParseVersion(
+		v, ok := utils.ParseVersion(
 			CurrentGinkgoTestDescription().ComponentTexts[1])
 		Ω(ok).Should(BeTrue())
 		return v
@@ -43,7 +46,7 @@ var _ = Describe("ParseVersion", func() {
 
 var _ = Describe("ParseVersions", func() {
 	shouldParse := func() []csi.Version {
-		return gocsi.ParseVersions(
+		return utils.ParseVersions(
 			CurrentGinkgoTestDescription().ComponentTexts[1])
 	}
 	Context("0.1.0 0.2.0 1.0.0 1.1.0", func() {
@@ -80,7 +83,7 @@ var _ = Describe("GetCSIEndpoint", func() {
 	)
 	BeforeEach(func() {
 		expEndpoint = CurrentGinkgoTestDescription().ComponentTexts[2]
-		os.Setenv(gocsi.CSIEndpoint, expEndpoint)
+		os.Setenv(utils.CSIEndpoint, expEndpoint)
 	})
 	AfterEach(func() {
 		proto = ""
@@ -88,15 +91,15 @@ var _ = Describe("GetCSIEndpoint", func() {
 		expEndpoint = ""
 		expProto = ""
 		expAddr = ""
-		os.Unsetenv(gocsi.CSIEndpoint)
+		os.Unsetenv(utils.CSIEndpoint)
 	})
 	JustBeforeEach(func() {
-		proto, addr, err = gocsi.GetCSIEndpoint()
+		proto, addr, err = utils.GetCSIEndpoint()
 	})
 
 	Context("Valid Endpoint", func() {
 		shouldBeValid := func() {
-			Ω(os.Getenv(gocsi.CSIEndpoint)).Should(Equal(expEndpoint))
+			Ω(os.Getenv(utils.CSIEndpoint)).Should(Equal(expEndpoint))
 			Ω(proto).Should(Equal(expProto))
 			Ω(addr).Should(Equal(expAddr))
 		}
@@ -155,13 +158,13 @@ var _ = Describe("GetCSIEndpoint", func() {
 		Context("", func() {
 			It("Should Be Missing", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Equal(gocsi.ErrMissingCSIEndpoint))
+				Ω(err).Should(Equal(errMissingCSIEndpoint))
 			})
 		})
 		Context("    ", func() {
 			It("Should Be Missing", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Equal(gocsi.ErrMissingCSIEndpoint))
+				Ω(err).Should(Equal(errMissingCSIEndpoint))
 			})
 		})
 	})
@@ -200,14 +203,14 @@ var _ = Describe("GetCSIEndpoint", func() {
 var _ = Describe("ParseProtoAddr", func() {
 	Context("Empty Address", func() {
 		It("Should Be An Empty Address", func() {
-			_, _, err := gocsi.ParseProtoAddr("")
+			_, _, err := utils.ParseProtoAddr("")
 			Ω(err).Should(HaveOccurred())
-			Ω(err).Should(Equal(gocsi.ErrParseProtoAddrRequired))
+			Ω(err).Should(Equal(utils.ErrParseProtoAddrRequired))
 		})
 		It("Should Be An Empty Address", func() {
-			_, _, err := gocsi.ParseProtoAddr("   ")
+			_, _, err := utils.ParseProtoAddr("   ")
 			Ω(err).Should(HaveOccurred())
-			Ω(err).Should(Equal(gocsi.ErrParseProtoAddrRequired))
+			Ω(err).Should(Equal(utils.ErrParseProtoAddrRequired))
 		})
 	})
 })
@@ -215,26 +218,26 @@ var _ = Describe("ParseProtoAddr", func() {
 var _ = Describe("ParseMap", func() {
 	Context("One Pair", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap("k1=v1")
+			data := utils.ParseMap("k1=v1")
 			Ω(data).Should(HaveLen(1))
 			Ω(data["k1"]).Should(Equal("v1"))
 		})
 	})
 	Context("Empty Line", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap("")
+			data := utils.ParseMap("")
 			Ω(data).Should(HaveLen(0))
 		})
 	})
 	Context("Key Sans Value", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap("k1")
+			data := utils.ParseMap("k1")
 			Ω(data).Should(HaveLen(1))
 		})
 	})
 	Context("Two Pair", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap("k1=v1, k2=v2")
+			data := utils.ParseMap("k1=v1, k2=v2")
 			Ω(data).Should(HaveLen(2))
 			Ω(data["k1"]).Should(Equal("v1"))
 			Ω(data["k2"]).Should(Equal("v2"))
@@ -242,19 +245,19 @@ var _ = Describe("ParseMap", func() {
 	})
 	Context("Two Pair with Quoting & Escaping", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap(`k1=v1, "k2=v2""s"`)
+			data := utils.ParseMap(`k1=v1, "k2=v2""s"`)
 			Ω(data).Should(HaveLen(2))
 			Ω(data["k1"]).Should(Equal("v1"))
 			Ω(data["k2"]).Should(Equal(`v2"s`))
 		})
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap(`k1=v1, "k2=v2\'s"`)
+			data := utils.ParseMap(`k1=v1, "k2=v2\'s"`)
 			Ω(data).Should(HaveLen(2))
 			Ω(data["k1"]).Should(Equal("v1"))
 			Ω(data["k2"]).Should(Equal(`v2\'s`))
 		})
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap(`k1=v1, k2=v2's`)
+			data := utils.ParseMap(`k1=v1, k2=v2's`)
 			Ω(data).Should(HaveLen(2))
 			Ω(data["k1"]).Should(Equal("v1"))
 			Ω(data["k2"]).Should(Equal(`v2's`))
@@ -262,7 +265,7 @@ var _ = Describe("ParseMap", func() {
 	})
 	Context("Two Pair with Three Spaces Between Them", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap("k1=v1,   k2=v2")
+			data := utils.ParseMap("k1=v1,   k2=v2")
 			Ω(data).Should(HaveLen(2))
 			Ω(data["k1"]).Should(Equal("v1"))
 			Ω(data["k2"]).Should(Equal("v2"))
@@ -270,7 +273,7 @@ var _ = Describe("ParseMap", func() {
 	})
 	Context("Two Pair with One Sans Value", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap("k1=, k2=v2")
+			data := utils.ParseMap("k1=, k2=v2")
 			Ω(data).Should(HaveLen(2))
 			Ω(data["k1"]).Should(Equal(""))
 			Ω(data["k2"]).Should(Equal("v2"))
@@ -278,7 +281,7 @@ var _ = Describe("ParseMap", func() {
 	})
 	Context("Two Pair with One Sans Value & Three Spaces Between Them", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap("k1=,    k2=v2")
+			data := utils.ParseMap("k1=,    k2=v2")
 			Ω(data).Should(HaveLen(2))
 			Ω(data["k1"]).Should(Equal(""))
 			Ω(data["k2"]).Should(Equal("v2"))
@@ -286,14 +289,14 @@ var _ = Describe("ParseMap", func() {
 	})
 	Context("One Pair with Quoted Value", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap("k1=v 1")
+			data := utils.ParseMap("k1=v 1")
 			Ω(data).Should(HaveLen(1))
 			Ω(data["k1"]).Should(Equal("v 1"))
 		})
 	})
 	Context("Three Pair with Mixed Values", func() {
 		It("Should Be Valid", func() {
-			data := gocsi.ParseMap(`"k1=v 1", "k2=v 2 ", "k3 =v3"  `)
+			data := utils.ParseMap(`"k1=v 1", "k2=v 2 ", "k3 =v3"  `)
 			Ω(data).Should(HaveLen(3))
 			Ω(data["k1"]).Should(Equal("v 1"))
 			Ω(data["k2"]).Should(Equal("v 2 "))

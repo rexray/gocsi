@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/mock/provider"
 	"github.com/thecodeteam/gocsi/mock/service"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {
@@ -66,7 +66,7 @@ func newCSIVersion(major, minor, patch uint32) csi.Version {
 	}
 }
 
-var mockSupportedVersions = gocsi.ParseVersions(service.SupportedVersions)
+var mockSupportedVersions = utils.ParseVersions(service.SupportedVersions)
 
 // CTest is an alias to retrieve the current Ginko test description.
 var CTest = ginkgo.CurrentGinkgoTestDescription

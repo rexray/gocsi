@@ -11,9 +11,12 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi"
+
+	csictx "github.com/thecodeteam/gocsi/context"
 	"github.com/thecodeteam/gocsi/csp"
+	csierr "github.com/thecodeteam/gocsi/errors"
 	"github.com/thecodeteam/gocsi/mock/service"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 var _ = Describe("Controller", func() {
@@ -75,7 +78,7 @@ var _ = Describe("Controller", func() {
 	})
 
 	listVolumes := func() (vols []csi.VolumeInfo, err error) {
-		cvol, cerr := gocsi.PageVolumes(
+		cvol, cerr := utils.PageVolumes(
 			ctx,
 			client,
 			csi.ListVolumesRequest{Version: version})
@@ -104,7 +107,7 @@ var _ = Describe("Controller", func() {
 				LimitBytes:    limBytes,
 			},
 			VolumeCapabilities: []*csi.VolumeCapability{
-				gocsi.NewMountCapability(0, fsType, mntFlags...),
+				utils.NewMountCapability(0, fsType, mntFlags...),
 			},
 			UserCredentials: userCreds,
 			Parameters:      params,
@@ -125,7 +128,7 @@ var _ = Describe("Controller", func() {
 		err error) bool {
 
 		if err != nil {
-			Ω(err).Should(Σ(gocsi.ErrOpPending))
+			Ω(err).Should(Σ(csierr.ErrOpPending))
 			return true
 		}
 
@@ -164,7 +167,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Be Invalid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(gocsi.ErrVolumeNameRequired))
+				Ω(err).Should(Σ(csierr.ErrVolumeNameRequired))
 				Ω(vol).Should(BeNil())
 			})
 		})
@@ -313,7 +316,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(gocsi.ErrVolumeIDRequired))
+				Ω(err).Should(Σ(csierr.ErrVolumeIDRequired))
 			})
 		})
 		Context("Not Found", func() {
@@ -332,7 +335,7 @@ var _ = Describe("Controller", func() {
 			})
 			Context("With NotFound Error", func() {
 				BeforeEach(func() {
-					ctx = gocsi.WithEnviron(ctx,
+					ctx = csictx.WithEnviron(ctx,
 						[]string{
 							csp.EnvVarDeleteVolNotFoundSuccess + "=false",
 						})
@@ -407,7 +410,7 @@ var _ = Describe("Controller", func() {
 				VolumeId: "1",
 				NodeId:   service.Name,
 				Readonly: true,
-				VolumeCapability: gocsi.NewMountCapability(
+				VolumeCapability: utils.NewMountCapability(
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					"mock"),
 			}

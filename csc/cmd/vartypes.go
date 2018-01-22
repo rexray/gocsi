@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
 	"github.com/spf13/pflag"
-	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/utils"
+
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
@@ -58,7 +58,7 @@ func (s *csiVersionArg) Type() string {
 
 func (s *csiVersionArg) Set(val string) error {
 	var ok bool
-	if s.Version, ok = gocsi.ParseVersion(val); !ok {
+	if s.Version, ok = utils.ParseVersion(val); !ok {
 		return fmt.Errorf("invalid versions: %s", val)
 	}
 	return nil

@@ -1,4 +1,4 @@
-package gocsi
+package utils
 
 import (
 	"golang.org/x/net/context"
@@ -107,6 +107,8 @@ func ChainUnaryServer(
 	}
 }
 
+// nilResponses exceeds the 80char code limit, but to modify it would render
+// it less readable than leaving it as is
 var nilResponses = map[string]interface{}{
 	CreateVolume:               (*csi.CreateVolumeResponse)(nil),
 	DeleteVolume:               (*csi.DeleteVolumeResponse)(nil),
@@ -126,7 +128,9 @@ var nilResponses = map[string]interface{}{
 	NodeGetCapabilities:        (*csi.NodeGetCapabilitiesResponse)(nil),
 }
 
-func isResponseNil(method string, rep interface{}) bool {
+// IsNilResponse returns a flag indicating whether or not the provided
+// response object is a nil object wrapped inside a non-nil interface.
+func IsNilResponse(method string, rep interface{}) bool {
 	// Determine whether or not the resposne is nil. Otherwise it
 	// will no longer be possible to perform a nil equality check on the
 	// response to the interface{} rules for nil comparison. For more info

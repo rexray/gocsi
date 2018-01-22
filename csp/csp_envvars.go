@@ -5,7 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thecodeteam/gocsi"
+	csictx "github.com/thecodeteam/gocsi/context"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 const (
@@ -210,7 +211,7 @@ func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
 		// context's os.Environ or os.LookupEnv functions. If neither
 		// return a value then use the provided default value.
 		var val string
-		if v, ok := gocsi.LookupEnv(ctx, key); ok {
+		if v, ok := csictx.LookupEnv(ctx, key); ok {
 			val = v
 		} else if len(pair) > 1 {
 			val = pair[1]
@@ -219,10 +220,10 @@ func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
 	}
 
 	// Check for the debug value.
-	if v, ok := gocsi.LookupEnv(ctx, EnvVarDebug); ok {
+	if v, ok := csictx.LookupEnv(ctx, EnvVarDebug); ok {
 		if ok, _ := strconv.ParseBool(v); ok {
-			gocsi.Setenv(ctx, EnvVarReqLogging, "true")
-			gocsi.Setenv(ctx, EnvVarRepLogging, "true")
+			csictx.Setenv(ctx, EnvVarReqLogging, "true")
+			csictx.Setenv(ctx, EnvVarRepLogging, "true")
 		}
 	}
 
@@ -230,15 +231,15 @@ func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
 }
 
 func (sp *StoragePlugin) initSupportedVersions(ctx context.Context) {
-	szVersions, ok := gocsi.LookupEnv(ctx, EnvVarSupportedVersions)
+	szVersions, ok := csictx.LookupEnv(ctx, EnvVarSupportedVersions)
 	if !ok {
 		return
 	}
-	sp.supportedVersions = gocsi.ParseVersions(szVersions)
+	sp.supportedVersions = utils.ParseVersions(szVersions)
 }
 
 func (sp *StoragePlugin) initPluginInfo(ctx context.Context) {
-	szInfo, ok := gocsi.LookupEnv(ctx, EnvVarPluginInfo)
+	szInfo, ok := csictx.LookupEnv(ctx, EnvVarPluginInfo)
 	if !ok {
 		return
 	}
@@ -250,6 +251,6 @@ func (sp *StoragePlugin) initPluginInfo(ctx context.Context) {
 		sp.pluginInfo.VendorVersion = info[1]
 	}
 	if len(info) > 2 {
-		sp.pluginInfo.Manifest = gocsi.ParseMap(info[2])
+		sp.pluginInfo.Manifest = utils.ParseMap(info[2])
 	}
 }

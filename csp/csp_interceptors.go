@@ -8,7 +8,13 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi"
+
+	csictx "github.com/thecodeteam/gocsi/context"
+	"github.com/thecodeteam/gocsi/middleware/idempotency"
+	"github.com/thecodeteam/gocsi/middleware/logging"
+	"github.com/thecodeteam/gocsi/middleware/requestid"
+	"github.com/thecodeteam/gocsi/middleware/specvalidator"
+	"github.com/thecodeteam/gocsi/utils"
 )
 
 func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
@@ -64,101 +70,101 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		// Automatically enable request ID injection if logging
 		// is enabled.
 		sp.Interceptors = append(sp.Interceptors,
-			gocsi.NewServerRequestIDInjector())
+			requestid.NewServerRequestIDInjector())
 		log.Debug("enabled request ID injector")
 
 		var (
-			loggingOpts []gocsi.LoggingOption
+			loggingOpts []logging.Option
 			w           = newLogger(log.Debugf)
 		)
 
 		if withReqLogging {
-			loggingOpts = append(loggingOpts, gocsi.WithRequestLogging(w))
+			loggingOpts = append(loggingOpts, logging.WithRequestLogging(w))
 			log.Debug("enabled request logging")
 		}
 		if withRepLogging {
-			loggingOpts = append(loggingOpts, gocsi.WithResponseLogging(w))
+			loggingOpts = append(loggingOpts, logging.WithResponseLogging(w))
 			log.Debug("enabled response logging")
 		}
 		sp.Interceptors = append(sp.Interceptors,
-			gocsi.NewServerLogger(loggingOpts...))
+			logging.NewServerLogger(loggingOpts...))
 	}
 
 	if withSpec {
-		var specOpts []gocsi.SpecValidatorOption
+		var specOpts []specvalidator.Option
 
 		if len(sp.supportedVersions) > 0 {
 			specOpts = append(
 				specOpts,
-				gocsi.WithSupportedVersions(sp.supportedVersions...))
+				specvalidator.WithSupportedVersions(sp.supportedVersions...))
 		}
 		if withCredsNewVol {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresCreateVolumeCredentials())
+				specvalidator.WithRequiresCreateVolumeCredentials())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"CreateVolume")
 		}
 		if withCredsDelVol {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresDeleteVolumeCredentials())
+				specvalidator.WithRequiresDeleteVolumeCredentials())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"DeleteVolume")
 		}
 		if withCredsCtrlrPubVol {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresControllerPublishVolumeCredentials())
+				specvalidator.WithRequiresControllerPublishVolumeCredentials())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"ControllerPublishVolume")
 		}
 		if withCredsCtrlrUnpubVol {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresControllerUnpublishVolumeCredentials())
+				specvalidator.WithRequiresControllerUnpublishVolumeCredentials())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"ControllerUnpublishVolume")
 		}
 		if withCredsNodePubVol {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresNodePublishVolumeCredentials())
+				specvalidator.WithRequiresNodePublishVolumeCredentials())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"NodePublishVolume")
 		}
 		if withCredsNodeUnpubVol {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresNodeUnpublishVolumeCredentials())
+				specvalidator.WithRequiresNodeUnpublishVolumeCredentials())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"NodeUnpublishVolume")
 		}
 
 		if withNodeID {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresNodeID())
+				specvalidator.WithRequiresNodeID())
 			log.Debug("enabled spec validator opt: requires node ID")
 		}
 		if withPubVolInfo {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresPublishVolumeInfo())
+				specvalidator.WithRequiresPublishVolumeInfo())
 			log.Debug("enabled spec validator opt: requires pub vol info")
 		}
 		if withVolAttribs {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresVolumeAttributes())
+				specvalidator.WithRequiresVolumeAttributes())
 			log.Debug("enabled spec validator opt: requires vol attribs")
 		}
 		if withNewVolExists {
 			specOpts = append(specOpts,
-				gocsi.WithSuccessCreateVolumeAlreadyExists())
+				specvalidator.WithSuccessCreateVolumeAlreadyExists())
 			log.Debug("enabled spec validator opt: create exists success")
 		}
 		if withDelVolNotFound {
 			specOpts = append(specOpts,
-				gocsi.WithSuccessDeleteVolumeNotFound())
+				specvalidator.WithSuccessDeleteVolumeNotFound())
 			log.Debug("enabled spec validator opt: delete !exists success")
 		}
 		sp.Interceptors = append(sp.Interceptors,
-			gocsi.NewServerSpecValidator(specOpts...))
+			specvalidator.NewServerSpecValidator(specOpts...))
 	}
 
-	if _, ok := gocsi.LookupEnv(ctx, EnvVarPluginInfo); ok {
+	if _, ok := csictx.LookupEnv(ctx, EnvVarPluginInfo); ok {
 		log.Debug("enabled GetPluginInfo interceptor")
 		sp.Interceptors = append(sp.Interceptors, sp.getPluginInfo)
 	}
@@ -170,26 +176,26 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 
 	if withIdemp && sp.IdempotencyProvider != nil {
 		var (
-			opts   []gocsi.IdempotentInterceptorOption
+			opts   []idempotency.IdempotentInterceptorOption
 			fields = map[string]interface{}{}
 		)
 
 		// Get idempotency provider's timeout.
-		if v, _ := gocsi.LookupEnv(ctx, EnvVarIdempTimeout); v != "" {
+		if v, _ := csictx.LookupEnv(ctx, EnvVarIdempTimeout); v != "" {
 			if t, err := time.ParseDuration(v); err == nil {
 				fields["idemp.timeout"] = t
-				opts = append(opts, gocsi.WithIdempTimeout(t))
+				opts = append(opts, idempotency.WithIdempTimeout(t))
 			}
 		}
 
 		// Check to see if the idempotency provider requires volumes to exist.
 		if sp.getEnvBool(ctx, EnvVarIdempRequireVolume) {
 			fields["idemp.volRequired"] = true
-			opts = append(opts, gocsi.WithIdempRequireVolumeExists())
+			opts = append(opts, idempotency.WithIdempRequireVolumeExists())
 		}
 
 		sp.Interceptors = append(sp.Interceptors,
-			gocsi.NewIdempotentInterceptor(sp.IdempotencyProvider, opts...))
+			idempotency.NewIdempotentInterceptor(sp.IdempotencyProvider, opts...))
 		log.WithFields(fields).Debug("enabled idempotency provider")
 	}
 
@@ -202,7 +208,7 @@ func (sp *StoragePlugin) injectContext(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
-	return handler(gocsi.WithLookupEnv(ctx, sp.lookupEnv), req)
+	return handler(csictx.WithLookupEnv(ctx, sp.lookupEnv), req)
 }
 
 func (sp *StoragePlugin) getSupportedVersions(
@@ -211,7 +217,7 @@ func (sp *StoragePlugin) getSupportedVersions(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
-	if info.FullMethod != gocsi.GetSupportedVersions ||
+	if info.FullMethod != utils.GetSupportedVersions ||
 		len(sp.supportedVersions) == 0 {
 
 		return handler(ctx, req)
@@ -233,7 +239,7 @@ func (sp *StoragePlugin) getPluginInfo(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
-	if info.FullMethod != gocsi.GetPluginInfo || sp.pluginInfo.Name == "" {
+	if info.FullMethod != utils.GetPluginInfo || sp.pluginInfo.Name == "" {
 		return handler(ctx, req)
 	}
 	return &sp.pluginInfo, nil
