@@ -22,8 +22,8 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	"github.com/thecodeteam/gocsi"
 	csictx "github.com/thecodeteam/gocsi/context"
+	"github.com/thecodeteam/gocsi/middleware/idempotency"
 	"github.com/thecodeteam/gocsi/utils"
 )
 
@@ -182,7 +182,7 @@ type StoragePlugin struct {
 	// IdempotencyProvider is used to provide a simple way of ensuring the
 	// SP is idempotent. If this value nil then the SP is responsible for
 	// ensuring idempotency.
-	IdempotencyProvider gocsi.IdempotencyProvider
+	IdempotencyProvider idempotency.Provider
 
 	// BeforeServe is an optional callback that is invoked after the
 	// StoragePlugin has been initialized, just prior to the creation

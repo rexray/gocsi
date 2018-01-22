@@ -4,7 +4,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/middleware/logging"
+	"github.com/thecodeteam/gocsi/middleware/requestid"
+	"github.com/thecodeteam/gocsi/middleware/specvalidator"
 	"github.com/thecodeteam/gocsi/utils"
 )
 
@@ -17,24 +19,24 @@ func getClientInterceptorsDialOpt() grpc.DialOption {
 		// Automatically enable request ID injection if logging
 		// is enabled.
 		iceptors = append(iceptors,
-			gocsi.NewClientRequestIDInjector())
+			requestid.NewClientRequestIDInjector())
 		log.Debug("enabled request ID injector")
 
 		var (
-			loggingOpts []gocsi.LoggingOption
+			loggingOpts []logging.Option
 			w           = newLogger(log.Infof)
 		)
 
 		if root.withReqLogging {
-			loggingOpts = append(loggingOpts, gocsi.WithRequestLogging(w))
+			loggingOpts = append(loggingOpts, logging.WithRequestLogging(w))
 			log.Debug("enabled request logging")
 		}
 		if root.withRepLogging {
-			loggingOpts = append(loggingOpts, gocsi.WithResponseLogging(w))
+			loggingOpts = append(loggingOpts, logging.WithResponseLogging(w))
 			log.Debug("enabled response logging")
 		}
 		iceptors = append(iceptors,
-			gocsi.NewClientLogger(loggingOpts...))
+			logging.NewClientLogger(loggingOpts...))
 	}
 
 	// Configure the spec validator.
@@ -46,44 +48,44 @@ func getClientInterceptorsDialOpt() grpc.DialOption {
 		root.withRequiresPubVolInfo ||
 		root.withRequiresVolumeAttributes
 	if root.withSpecValidator {
-		var specOpts []gocsi.SpecValidatorOption
+		var specOpts []specvalidator.Option
 		if root.withRequiresCreds {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresCreateVolumeCredentials(),
-				gocsi.WithRequiresDeleteVolumeCredentials(),
-				gocsi.WithRequiresControllerPublishVolumeCredentials(),
-				gocsi.WithRequiresControllerUnpublishVolumeCredentials(),
-				gocsi.WithRequiresNodePublishVolumeCredentials(),
-				gocsi.WithRequiresNodeUnpublishVolumeCredentials())
+				specvalidator.WithRequiresCreateVolumeCredentials(),
+				specvalidator.WithRequiresDeleteVolumeCredentials(),
+				specvalidator.WithRequiresControllerPublishVolumeCredentials(),
+				specvalidator.WithRequiresControllerUnpublishVolumeCredentials(),
+				specvalidator.WithRequiresNodePublishVolumeCredentials(),
+				specvalidator.WithRequiresNodeUnpublishVolumeCredentials())
 			log.Debug("enabled spec validator opt: requires creds")
 		}
 		if root.withRequiresNodeID {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresNodeID())
+				specvalidator.WithRequiresNodeID())
 			log.Debug("enabled spec validator opt: requires node ID")
 		}
 		if root.withRequiresPubVolInfo {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresPublishVolumeInfo())
+				specvalidator.WithRequiresPublishVolumeInfo())
 			log.Debug("enabled spec validator opt: requires pub vol info")
 		}
 		if root.withRequiresVolumeAttributes {
 			specOpts = append(specOpts,
-				gocsi.WithRequiresVolumeAttributes())
+				specvalidator.WithRequiresVolumeAttributes())
 			log.Debug("enabled spec validator opt: requires vol attribs")
 		}
 		if root.withSuccessCreateVolumeAlreadyExists {
 			specOpts = append(specOpts,
-				gocsi.WithSuccessCreateVolumeAlreadyExists())
+				specvalidator.WithSuccessCreateVolumeAlreadyExists())
 			log.Debug("enabled spec validator opt: create exists success")
 		}
 		if root.withSuccessDeleteVolumeNotFound {
 			specOpts = append(specOpts,
-				gocsi.WithSuccessDeleteVolumeNotFound())
+				specvalidator.WithSuccessDeleteVolumeNotFound())
 			log.Debug("enabled spec validator opt: delete !exists success")
 		}
 		iceptors = append(iceptors,
-			gocsi.NewClientSpecValidator(specOpts...))
+			specvalidator.NewClientSpecValidator(specOpts...))
 	}
 
 	if len(iceptors) > 0 {

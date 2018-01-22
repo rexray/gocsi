@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi"
+	"github.com/thecodeteam/gocsi/middleware/idempotency"
 )
 
 const (
@@ -31,7 +31,7 @@ type Service interface {
 	csi.ControllerServer
 	csi.IdentityServer
 	csi.NodeServer
-	gocsi.IdempotencyProvider
+	idempotency.Provider
 }
 
 type service struct {

@@ -1,4 +1,4 @@
-package gocsi
+package logging
 
 import (
 	"bytes"
@@ -15,18 +15,18 @@ import (
 	"github.com/thecodeteam/gocsi/utils"
 )
 
-// LoggingOption configures the logging interceptor.
-type LoggingOption func(*loggingOpts)
+// Option configures the logging interceptor.
+type Option func(*opts)
 
-type loggingOpts struct {
+type opts struct {
 	reqw io.Writer
 	repw io.Writer
 }
 
-// WithRequestLogging is a LoggingOption that enables request logging
+// WithRequestLogging is a Option that enables request logging
 // for the logging interceptor.
-func WithRequestLogging(w io.Writer) LoggingOption {
-	return func(o *loggingOpts) {
+func WithRequestLogging(w io.Writer) Option {
+	return func(o *opts) {
 		if w == nil {
 			w = os.Stdout
 		}
@@ -34,10 +34,10 @@ func WithRequestLogging(w io.Writer) LoggingOption {
 	}
 }
 
-// WithResponseLogging is a LoggingOption that enables response logging
+// WithResponseLogging is a Option that enables response logging
 // for the logging interceptor.
-func WithResponseLogging(w io.Writer) LoggingOption {
-	return func(o *loggingOpts) {
+func WithResponseLogging(w io.Writer) Option {
+	return func(o *opts) {
 		if w == nil {
 			w = os.Stdout
 		}
@@ -45,14 +45,14 @@ func WithResponseLogging(w io.Writer) LoggingOption {
 	}
 }
 
-type loggingInterceptor struct {
-	opts loggingOpts
+type interceptor struct {
+	opts opts
 }
 
 // NewServerLogger returns a new UnaryServerInterceptor that can be
 // configured to log both request and response data.
 func NewServerLogger(
-	opts ...LoggingOption) grpc.UnaryServerInterceptor {
+	opts ...Option) grpc.UnaryServerInterceptor {
 
 	return newLoggingInterceptor(opts...).handleServer
 }
@@ -60,20 +60,20 @@ func NewServerLogger(
 // NewClientLogger provides a UnaryClientInterceptor that can be
 // configured to log both request and response data.
 func NewClientLogger(
-	opts ...LoggingOption) grpc.UnaryClientInterceptor {
+	opts ...Option) grpc.UnaryClientInterceptor {
 
 	return newLoggingInterceptor(opts...).handleClient
 }
 
-func newLoggingInterceptor(opts ...LoggingOption) *loggingInterceptor {
-	i := &loggingInterceptor{}
+func newLoggingInterceptor(opts ...Option) *interceptor {
+	i := &interceptor{}
 	for _, withOpts := range opts {
 		withOpts(&i.opts)
 	}
 	return i
 }
 
-func (s *loggingInterceptor) handleServer(
+func (s *interceptor) handleServer(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
@@ -84,7 +84,7 @@ func (s *loggingInterceptor) handleServer(
 	})
 }
 
-func (s *loggingInterceptor) handleClient(
+func (s *interceptor) handleClient(
 	ctx context.Context,
 	method string,
 	req, rep interface{},
@@ -98,7 +98,7 @@ func (s *loggingInterceptor) handleClient(
 	return err
 }
 
-func (s *loggingInterceptor) handle(
+func (s *interceptor) handle(
 	ctx context.Context,
 	method string,
 	req interface{},

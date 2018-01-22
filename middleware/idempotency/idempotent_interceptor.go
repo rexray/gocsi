@@ -1,4 +1,4 @@
-package gocsi
+package idempotency
 
 import (
 	"context"
@@ -16,10 +16,10 @@ import (
 	csierr "github.com/thecodeteam/gocsi/errors"
 )
 
-// IdempotencyProvider is the interface that works with a server-side,
+// Provider is the interface that works with a server-side,
 // gRPC interceptor to provide serial access and idempotency for CSI's
 // volume resources.
-type IdempotencyProvider interface {
+type Provider interface {
 	// GetVolumeID should return the ID of the volume specified
 	// by the provided volume name. If the volume does not exist then
 	// an empty string should be returned.
@@ -71,7 +71,7 @@ func WithIdempRequireVolumeExists() IdempotentInterceptorOption {
 }
 
 // NewIdempotentInterceptor returns a new server-side, gRPC interceptor
-// that can be used in conjunction with an IdempotencyProvider to
+// that can be used in conjunction with an Provider to
 // provide serialized, idempotent access to the following CSI RPCs:
 //
 //  * CreateVolume
@@ -81,7 +81,7 @@ func WithIdempRequireVolumeExists() IdempotentInterceptorOption {
 //  * NodePublishVolume
 //  * NodeUnpublishVolume
 func NewIdempotentInterceptor(
-	p IdempotencyProvider,
+	p Provider,
 	opts ...IdempotentInterceptorOption) grpc.UnaryServerInterceptor {
 
 	i := &idempotencyInterceptor{
@@ -104,7 +104,7 @@ type volLockInfo struct {
 }
 
 type idempotencyInterceptor struct {
-	p             IdempotencyProvider
+	p             Provider
 	volIDLocksL   sync.Mutex
 	volNameLocksL sync.Mutex
 	volIDLocks    map[string]*volLockInfo

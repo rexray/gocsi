@@ -62,13 +62,22 @@ $(ERRORS_A): errors/*.go
 	@go install ./$(basename $(@F))
 	go build -o "$@" ./$(basename $(@F))
 
+MIDDLEWARE_PKGS := $(addsuffix .a,$(filter-out %.a,$(wildcard middleware/*)))
+$(MIDDLEWARE_PKGS): %.a: $(wildcard %/*.go)
+	@go install ./middleware/$(basename $(@F))
+	go build -o "$@" ./middleware/$(basename $(@F))
+middleware: $(MIDDLEWARE_PKGS)
+.PHONY: middleware
+
 UTILS_A := utils.a
 $(UTILS_A): utils/*.go
 	@go install ./$(basename $(@F))
 	go build -o "$@" ./$(basename $(@F))
 
+GOCSI_A_PKG_DEPS := $(CONTEXT_A) $(ERRORS_A) $(MIDDLEWARE_PKGS) $(UTILS_A)
+
 GOCSI_A := gocsi.a
-$(GOCSI_A): $(CSI_GOSRC) *.go $(CONTEXT_A) $(ERRORS_A) $(UTILS_A)
+$(GOCSI_A): $(CSI_GOSRC) *.go $(GOCSI_A_PKG_DEPS)
 	@go install .
 	go build -o "$@" .
 
@@ -186,7 +195,7 @@ build: $(GOCSI_A)
 
 clean:
 	go clean -i -v . ./csp
-	rm -f "$(GOCSI_A)" "$(CONTEXT_A)" "$(ERRORS_A)" "$(UTILS_A)"
+	rm -f $(GOCSI_A) $(GOCSI_A_PKG_DEPS)
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@
 

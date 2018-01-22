@@ -7,10 +7,8 @@
 /ginkgo
 
 # The archives built from this package.
-/context.a
-/errors.a
-/gocsi.a
-/utils.a
+/*.a
+/middleware/*.a
 
 # A temporary build dir
 .build/

@@ -1,4 +1,4 @@
-package gocsi
+package requestid
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	csictx "github.com/thecodeteam/gocsi/context"
 )
 
-type requestIDInjector struct {
+type interceptor struct {
 	id uint64
 }
 
@@ -31,11 +31,11 @@ func NewClientRequestIDInjector() grpc.UnaryClientInterceptor {
 	return newRequestIDInjector().handleClient
 }
 
-func newRequestIDInjector() *requestIDInjector {
-	return &requestIDInjector{}
+func newRequestIDInjector() *interceptor {
+	return &interceptor{}
 }
 
-func (s *requestIDInjector) handleServer(
+func (s *interceptor) handleServer(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
@@ -83,7 +83,7 @@ func (s *requestIDInjector) handleServer(
 	return handler(ctx, req)
 }
 
-func (s *requestIDInjector) handleClient(
+func (s *interceptor) handleClient(
 	ctx context.Context,
 	method string,
 	req, rep interface{},

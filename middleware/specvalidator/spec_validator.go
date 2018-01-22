@@ -1,4 +1,4 @@
-package gocsi
+package specvalidator
 
 import (
 	"sync"
@@ -15,10 +15,10 @@ import (
 	"github.com/thecodeteam/gocsi/utils"
 )
 
-// SpecValidatorOption configures the spec validator interceptor.
-type SpecValidatorOption func(*specValidatorOpts)
+// Option configures the spec validator interceptor.
+type Option func(*opts)
 
-type specValidatorOpts struct {
+type opts struct {
 	sync.Mutex
 	supportedVersions   []csi.Version
 	requiresNodeID      bool
@@ -28,7 +28,7 @@ type specValidatorOpts struct {
 	successfulExitCodes map[string]map[codes.Code]struct{}
 }
 
-func (o *specValidatorOpts) setSuccessfulExitCode(m string, c codes.Code) {
+func (o *opts) setSuccessfulExitCode(m string, c codes.Code) {
 
 	o.Lock()
 	defer o.Unlock()
@@ -43,7 +43,7 @@ func (o *specValidatorOpts) setSuccessfulExitCode(m string, c codes.Code) {
 	codez[c] = struct{}{}
 }
 
-func (o *specValidatorOpts) requireCredentials(m string) {
+func (o *opts) requireCredentials(m string) {
 	o.Lock()
 	defer o.Unlock()
 	if o.requiresCredentials == nil {
@@ -52,120 +52,120 @@ func (o *specValidatorOpts) requireCredentials(m string) {
 	o.requiresCredentials[m] = struct{}{}
 }
 
-// WithSupportedVersions is a SpecValidatorOption that indicates the
+// WithSupportedVersions is a Option that indicates the
 // list of versions supported by any CSI RPC that participates in
 // version validation.
-func WithSupportedVersions(versions ...csi.Version) SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithSupportedVersions(versions ...csi.Version) Option {
+	return func(o *opts) {
 		o.supportedVersions = versions
 	}
 }
 
-// WithSuccessCreateVolumeAlreadyExists is a SpecValidatorOption that the
+// WithSuccessCreateVolumeAlreadyExists is a Option that the
 // eponymous request should treat the eponymous error code as successful.
-func WithSuccessCreateVolumeAlreadyExists() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithSuccessCreateVolumeAlreadyExists() Option {
+	return func(o *opts) {
 		o.setSuccessfulExitCode(utils.CreateVolume, codes.AlreadyExists)
 	}
 }
 
-// WithSuccessDeleteVolumeNotFound is a SpecValidatorOption that the
+// WithSuccessDeleteVolumeNotFound is a Option that the
 // eponymous request should treat the eponymous error code as successful.
-func WithSuccessDeleteVolumeNotFound() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithSuccessDeleteVolumeNotFound() Option {
+	return func(o *opts) {
 		o.setSuccessfulExitCode(utils.DeleteVolume, codes.NotFound)
 	}
 }
 
-// WithRequiresNodeID is a SpecValidatorOption that indicates
+// WithRequiresNodeID is a Option that indicates
 // ControllerPublishVolume requests and GetNodeID responses must
 // contain non-empty node ID data.
-func WithRequiresNodeID() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresNodeID() Option {
+	return func(o *opts) {
 		o.requiresNodeID = true
 	}
 }
 
-// WithRequiresPublishVolumeInfo is a SpecValidatorOption that indicates
+// WithRequiresPublishVolumeInfo is a Option that indicates
 // ControllerPublishVolume responses and NodePublishVolume requests must
 // contain non-empty publish volume info data.
-func WithRequiresPublishVolumeInfo() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresPublishVolumeInfo() Option {
+	return func(o *opts) {
 		o.requiresPubVolInfo = true
 	}
 }
 
-// WithRequiresVolumeAttributes is a SpecValidatorOption that indicates
+// WithRequiresVolumeAttributes is a Option that indicates
 // ControllerPublishVolume, ValidateVolumeCapabilities, and NodePublishVolume
 // requests must contain non-empty volume attribute data.
-func WithRequiresVolumeAttributes() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresVolumeAttributes() Option {
+	return func(o *opts) {
 		o.requiresVolAttribs = true
 	}
 }
 
-// WithRequiresCreateVolumeCredentials is a SpecValidatorOption
+// WithRequiresCreateVolumeCredentials is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresCreateVolumeCredentials() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresCreateVolumeCredentials() Option {
+	return func(o *opts) {
 		o.requireCredentials(utils.CreateVolume)
 	}
 }
 
-// WithRequiresDeleteVolumeCredentials is a SpecValidatorOption
+// WithRequiresDeleteVolumeCredentials is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresDeleteVolumeCredentials() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresDeleteVolumeCredentials() Option {
+	return func(o *opts) {
 		o.requireCredentials(utils.DeleteVolume)
 	}
 }
 
-// WithRequiresControllerPublishVolumeCredentials is a SpecValidatorOption
+// WithRequiresControllerPublishVolumeCredentials is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresControllerPublishVolumeCredentials() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresControllerPublishVolumeCredentials() Option {
+	return func(o *opts) {
 		o.requireCredentials(utils.ControllerPublishVolume)
 	}
 }
 
-// WithRequiresControllerUnpublishVolumeCredentials is a SpecValidatorOption
+// WithRequiresControllerUnpublishVolumeCredentials is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresControllerUnpublishVolumeCredentials() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresControllerUnpublishVolumeCredentials() Option {
+	return func(o *opts) {
 		o.requireCredentials(utils.ControllerUnpublishVolume)
 	}
 }
 
-// WithRequiresNodePublishVolumeCredentials is a SpecValidatorOption
+// WithRequiresNodePublishVolumeCredentials is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresNodePublishVolumeCredentials() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresNodePublishVolumeCredentials() Option {
+	return func(o *opts) {
 		o.requireCredentials(utils.NodePublishVolume)
 	}
 }
 
-// WithRequiresNodeUnpublishVolumeCredentials is a SpecValidatorOption
+// WithRequiresNodeUnpublishVolumeCredentials is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresNodeUnpublishVolumeCredentials() SpecValidatorOption {
-	return func(o *specValidatorOpts) {
+func WithRequiresNodeUnpublishVolumeCredentials() Option {
+	return func(o *opts) {
 		o.requireCredentials(utils.NodeUnpublishVolume)
 	}
 }
 
-type specValidator struct {
-	opts specValidatorOpts
+type interceptor struct {
+	opts opts
 }
 
 // NewServerSpecValidator returns a new UnaryServerInterceptor that validates
 // server request and response data against the CSI specification.
 func NewServerSpecValidator(
-	opts ...SpecValidatorOption) grpc.UnaryServerInterceptor {
+	opts ...Option) grpc.UnaryServerInterceptor {
 
 	return newSpecValidator(opts...).handleServer
 }
@@ -173,20 +173,20 @@ func NewServerSpecValidator(
 // NewClientSpecValidator provides a UnaryClientInterceptor that validates
 // client request and response data against the CSI specification.
 func NewClientSpecValidator(
-	opts ...SpecValidatorOption) grpc.UnaryClientInterceptor {
+	opts ...Option) grpc.UnaryClientInterceptor {
 
 	return newSpecValidator(opts...).handleClient
 }
 
-func newSpecValidator(opts ...SpecValidatorOption) *specValidator {
-	i := &specValidator{}
+func newSpecValidator(opts ...Option) *interceptor {
+	i := &interceptor{}
 	for _, withOpts := range opts {
 		withOpts(&i.opts)
 	}
 	return i
 }
 
-func (s *specValidator) handleServer(
+func (s *interceptor) handleServer(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
@@ -197,7 +197,7 @@ func (s *specValidator) handleServer(
 	})
 }
 
-func (s *specValidator) handleClient(
+func (s *interceptor) handleClient(
 	ctx context.Context,
 	method string,
 	req, rep interface{},
@@ -211,7 +211,7 @@ func (s *specValidator) handleClient(
 	return err
 }
 
-func (s *specValidator) handle(
+func (s *interceptor) handle(
 	ctx context.Context,
 	method string,
 	req interface{},
@@ -266,7 +266,7 @@ func (s *specValidator) handle(
 	return rep, err
 }
 
-func (s *specValidator) handleResponseError(method string, err error) error {
+func (s *interceptor) handleResponseError(method string, err error) error {
 
 	// If the returned error does not contain a gRPC error code then
 	// return early from this function.
@@ -296,23 +296,23 @@ func (s *specValidator) handleResponseError(method string, err error) error {
 	return err
 }
 
-type specValidatorHasVolumeID interface {
+type interceptorHasVolumeID interface {
 	GetVolumeId() string
 }
-type specValidatorHasNodeID interface {
+type interceptorHasNodeID interface {
 	GetNodeId() string
 }
-type specValidatorHasUserCredentials interface {
+type interceptorHasUserCredentials interface {
 	GetUserCredentials() map[string]string
 }
-type specValidatorHasVolumeAttributes interface {
+type interceptorHasVolumeAttributes interface {
 	GetVolumeAttributes() map[string]string
 }
-type specValidatorHasVersion interface {
+type interceptorHasVersion interface {
 	GetVersion() *csi.Version
 }
 
-func (s *specValidator) validateRequest(
+func (s *interceptor) validateRequest(
 	ctx context.Context,
 	method string,
 	req interface{}) error {
@@ -323,7 +323,7 @@ func (s *specValidator) validateRequest(
 
 	// Check to see if the request has a volume ID and if it is set.
 	// If the volume ID is not set then return an error.
-	if treq, ok := req.(specValidatorHasVolumeID); ok {
+	if treq, ok := req.(interceptorHasVolumeID); ok {
 		if treq.GetVolumeId() == "" {
 			return csierr.ErrVolumeIDRequired
 		}
@@ -332,7 +332,7 @@ func (s *specValidator) validateRequest(
 	// Check to see if the request has a node ID and if it is set.
 	// If the node ID is not set then return an error.
 	if s.opts.requiresNodeID {
-		if treq, ok := req.(specValidatorHasNodeID); ok {
+		if treq, ok := req.(interceptorHasNodeID); ok {
 			if treq.GetNodeId() == "" {
 				return csierr.ErrNodeIDRequired
 			}
@@ -343,7 +343,7 @@ func (s *specValidator) validateRequest(
 	// If the credentials are required but no credentials are specified then
 	// return an error.
 	if _, ok := s.opts.requiresCredentials[method]; ok {
-		if treq, ok := req.(specValidatorHasUserCredentials); ok {
+		if treq, ok := req.(interceptorHasUserCredentials); ok {
 			if len(treq.GetUserCredentials()) == 0 {
 				return csierr.ErrUserCredentialsRequired
 			}
@@ -354,7 +354,7 @@ func (s *specValidator) validateRequest(
 	// required. If the volume attributes are required by no attributes are
 	// specified then return an error.
 	if s.opts.requiresVolAttribs {
-		if treq, ok := req.(specValidatorHasVolumeAttributes); ok {
+		if treq, ok := req.(interceptorHasVolumeAttributes); ok {
 			if len(treq.GetVolumeAttributes()) == 0 {
 				return csierr.ErrVolumeAttributesRequired
 			}
@@ -389,7 +389,7 @@ func (s *specValidator) validateRequest(
 	return nil
 }
 
-func (s *specValidator) validateResponse(
+func (s *interceptor) validateResponse(
 	ctx context.Context,
 	method string,
 	rep interface{}) error {
@@ -429,7 +429,7 @@ func (s *specValidator) validateResponse(
 	return nil
 }
 
-func (s *specValidator) validateRequestVersion(
+func (s *interceptor) validateRequestVersion(
 	ctx context.Context,
 	req interface{}) error {
 
@@ -438,7 +438,7 @@ func (s *specValidator) validateRequestVersion(
 		return nil
 	}
 
-	treq, ok := req.(specValidatorHasVersion)
+	treq, ok := req.(interceptorHasVersion)
 	if !ok {
 		return nil
 	}
@@ -470,7 +470,7 @@ func (s *specValidator) validateRequestVersion(
 	return nil
 }
 
-func (s *specValidator) validateCreateVolumeRequest(
+func (s *interceptor) validateCreateVolumeRequest(
 	ctx context.Context,
 	req csi.CreateVolumeRequest) error {
 
@@ -481,35 +481,35 @@ func (s *specValidator) validateCreateVolumeRequest(
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, true)
 }
 
-// func (s *specValidator) validateDeleteVolumeRequest(
+// func (s *interceptor) validateDeleteVolumeRequest(
 // 	ctx context.Context,
 // 	req csi.DeleteVolumeRequest) error {
 //
 // 	return nil
 // }
 
-func (s *specValidator) validateControllerPublishVolumeRequest(
+func (s *interceptor) validateControllerPublishVolumeRequest(
 	ctx context.Context,
 	req csi.ControllerPublishVolumeRequest) error {
 
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
 }
 
-func (s *specValidator) validateValidateVolumeCapabilitiesRequest(
+func (s *interceptor) validateValidateVolumeCapabilitiesRequest(
 	ctx context.Context,
 	req csi.ValidateVolumeCapabilitiesRequest) error {
 
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, true)
 }
 
-func (s *specValidator) validateGetCapacityRequest(
+func (s *interceptor) validateGetCapacityRequest(
 	ctx context.Context,
 	req csi.GetCapacityRequest) error {
 
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, false)
 }
 
-func (s *specValidator) validateNodePublishVolumeRequest(
+func (s *interceptor) validateNodePublishVolumeRequest(
 	ctx context.Context,
 	req csi.NodePublishVolumeRequest) error {
 
@@ -524,7 +524,7 @@ func (s *specValidator) validateNodePublishVolumeRequest(
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
 }
 
-func (s *specValidator) validateNodeUnpublishVolumeRequest(
+func (s *interceptor) validateNodeUnpublishVolumeRequest(
 	ctx context.Context,
 	req csi.NodeUnpublishVolumeRequest) error {
 
@@ -535,7 +535,7 @@ func (s *specValidator) validateNodeUnpublishVolumeRequest(
 	return nil
 }
 
-func (s *specValidator) validateCreateVolumeResponse(
+func (s *interceptor) validateCreateVolumeResponse(
 	ctx context.Context,
 	rep csi.CreateVolumeResponse) error {
 
@@ -554,7 +554,7 @@ func (s *specValidator) validateCreateVolumeResponse(
 	return nil
 }
 
-func (s *specValidator) validateControllerPublishVolumeResponse(
+func (s *interceptor) validateControllerPublishVolumeResponse(
 	ctx context.Context,
 	rep csi.ControllerPublishVolumeResponse) error {
 
@@ -564,7 +564,7 @@ func (s *specValidator) validateControllerPublishVolumeResponse(
 	return nil
 }
 
-func (s *specValidator) validateListVolumesResponse(
+func (s *interceptor) validateListVolumesResponse(
 	ctx context.Context,
 	rep csi.ListVolumesResponse) error {
 
@@ -590,7 +590,7 @@ func (s *specValidator) validateListVolumesResponse(
 	return nil
 }
 
-func (s *specValidator) validateControllerGetCapabilitiesResponse(
+func (s *interceptor) validateControllerGetCapabilitiesResponse(
 	ctx context.Context,
 	rep csi.ControllerGetCapabilitiesResponse) error {
 
@@ -600,7 +600,7 @@ func (s *specValidator) validateControllerGetCapabilitiesResponse(
 	return nil
 }
 
-func (s *specValidator) validateGetSupportedVersionsResponse(
+func (s *interceptor) validateGetSupportedVersionsResponse(
 	ctx context.Context,
 	rep csi.GetSupportedVersionsResponse) error {
 
@@ -610,7 +610,7 @@ func (s *specValidator) validateGetSupportedVersionsResponse(
 	return nil
 }
 
-func (s *specValidator) validateGetPluginInfoResponse(
+func (s *interceptor) validateGetPluginInfoResponse(
 	ctx context.Context,
 	rep csi.GetPluginInfoResponse) error {
 
@@ -626,7 +626,7 @@ func (s *specValidator) validateGetPluginInfoResponse(
 	return nil
 }
 
-func (s *specValidator) validateGetNodeIDResponse(
+func (s *interceptor) validateGetNodeIDResponse(
 	ctx context.Context,
 	rep csi.GetNodeIDResponse) error {
 
@@ -636,7 +636,7 @@ func (s *specValidator) validateGetNodeIDResponse(
 	return nil
 }
 
-func (s *specValidator) validateNodeGetCapabilitiesResponse(
+func (s *interceptor) validateNodeGetCapabilitiesResponse(
 	ctx context.Context,
 	rep csi.NodeGetCapabilitiesResponse) error {
 
