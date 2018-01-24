@@ -12,8 +12,8 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
+	"github.com/thecodeteam/gocsi"
 	csictx "github.com/thecodeteam/gocsi/context"
-	"github.com/thecodeteam/gocsi/csp"
 	csierr "github.com/thecodeteam/gocsi/errors"
 	"github.com/thecodeteam/gocsi/mock/service"
 	"github.com/thecodeteam/gocsi/utils"
@@ -337,7 +337,7 @@ var _ = Describe("Controller", func() {
 				BeforeEach(func() {
 					ctx = csictx.WithEnviron(ctx,
 						[]string{
-							csp.EnvVarDeleteVolNotFoundSuccess + "=false",
+							gocsi.EnvVarDeleteVolNotFoundSuccess + "=false",
 						})
 				})
 				shouldNotBeFound := func() {

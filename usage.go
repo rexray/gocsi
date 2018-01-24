@@ -1,4 +1,4 @@
-package csp
+package gocsi
 
 const usage = `NAME
     {{.Name}} -- {{.Description}}

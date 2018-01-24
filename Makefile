@@ -91,7 +91,7 @@ CSI_SP := $(CSI_SP_DIR)/csi-sp
 CSI_SP_SOCK := $(notdir $(CSI_SP)).sock
 CSI_SP_LOG := $(notdir $(CSI_SP)).log
 $(CSI_SP):
-	USE_DEP=true csp/csp.sh $(CSI_SP_IMPORT)
+	USE_DEP=true ./gocsi.sh $(CSI_SP_IMPORT)
 
 csi-sp: $(CSI_SP_LOG)
 $(CSI_SP_LOG): $(CSI_SP)
