@@ -375,9 +375,24 @@ dep_init() {
 
 [[constraint]]
   name = "github.com/thecodeteam/gocsi"
-  branch = "master"
 EOF
+
+    if [ "$GOCSI_DEP_BRANCH" != "" ]; then
+      echo "  branch = \"$GOCSI_DEP_BRANCH\"" >> Gopkg.toml
+    elif [ "$GOCSI_DEP_REVISION" != "" ]; then
+      echo "  revision = \"$GOCSI_DEP_REVISION\"" >> Gopkg.toml
+    elif [ "$GOCSI_DEP_VERSION" != "" ]; then
+      echo "  version = \"$GOCSI_DEP_VERSION\"" >> Gopkg.toml
+    else
+      echo "  branch = \"master\"" >> Gopkg.toml
+    fi
+
+    if [ "$GOCSI_DEP_SOURCE" != "" ]; then
+      echo "  source = \"$GOCSI_DEP_SOURCE\"" >> Gopkg.toml
+    fi
+
   fi
+
   echo "  executing dep ensure"
   if ! "$DEP" ensure > "$DEP_LOG" 2>&1; then cat "$DEP_LOG"; fi
   rm -f "$DEP_LOG"
