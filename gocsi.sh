@@ -28,7 +28,7 @@ package main
 import (
 	"context"
 
-	"github.com/thecodeteam/gocsi/csp"
+	"github.com/thecodeteam/gocsi"
 
 	"$SP_PATH/provider"
 	"$SP_PATH/service"
@@ -36,7 +36,7 @@ import (
 
 // main is ignored when this package is built as a go plug-in.
 func main() {
-	csp.Run(
+	gocsi.Run(
 		context.Background(),
 		service.Name,
 		"A description of the SP",
@@ -54,15 +54,15 @@ import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/thecodeteam/gocsi/csp"
+	"github.com/thecodeteam/gocsi"
 
 	"$SP_PATH/service"
 )
 
 // New returns a new CSI Storage Plug-in Provider.
-func New() csp.StoragePluginProvider {
+func New() gocsi.StoragePluginProvider {
 	svc := service.New()
-	return &csp.StoragePlugin{
+	return &gocsi.StoragePlugin{
 		Controller: svc,
 		Identity:   svc,
 		Node:       svc,
@@ -81,7 +81,7 @@ func New() csp.StoragePluginProvider {
 		// server from starting by returning a non-nil error.
 		BeforeServe: func(
 			ctx context.Context,
-			sp *csp.StoragePlugin,
+			sp *gocsi.StoragePlugin,
 			lis net.Listener) error {
 
 			log.WithField("service", service.Name).Debug("BeforeServe")
@@ -93,13 +93,13 @@ func New() csp.StoragePluginProvider {
 			// X_CSI_IDEMP=true does not by itself enable the idempotency
 			// interceptor. An IdempotencyProvider must be provided as
 			// well.
-			csp.EnvVarIdemp + "=true",
+			gocsi.EnvVarIdemp + "=true",
 
 			// Provide the list of versions supported by this SP. The
 			// specified versions will be:
 			//     * Returned by GetSupportedVersions
 			//     * Used to validate the Version field of incoming RPCs
-			csp.EnvVarSupportedVersions + "=" + service.SupportedVersions,
+			gocsi.EnvVarSupportedVersions + "=" + service.SupportedVersions,
 		},
 	}
 }
@@ -375,7 +375,8 @@ dep_init() {
 
 [[constraint]]
   name = "github.com/thecodeteam/gocsi"
-  branch = "master"
+  branch = "feature/csp-to-root"
+  source = "https://github.com/akutz/gocsi"
 EOF
   fi
   echo "  executing dep ensure"

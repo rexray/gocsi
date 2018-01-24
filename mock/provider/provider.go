@@ -6,14 +6,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/thecodeteam/gocsi/csp"
+	"github.com/thecodeteam/gocsi"
 	"github.com/thecodeteam/gocsi/mock/service"
 )
 
 // New returns a new Mock Storage Plug-in Provider.
-func New() csp.StoragePluginProvider {
+func New() gocsi.StoragePluginProvider {
 	svc := service.New()
-	return &csp.StoragePlugin{
+	return &gocsi.StoragePlugin{
 		Controller: svc,
 		Identity:   svc,
 		Node:       svc,
@@ -32,7 +32,7 @@ func New() csp.StoragePluginProvider {
 		// server from starting by returning a non-nil error.
 		BeforeServe: func(
 			ctx context.Context,
-			sp *csp.StoragePlugin,
+			sp *gocsi.StoragePlugin,
 			lis net.Listener) error {
 
 			log.WithField("service", service.Name).Debug("BeforeServe")
@@ -44,35 +44,35 @@ func New() csp.StoragePluginProvider {
 			// X_CSI_IDEMP=true does not by itself enable the idempotency
 			// interceptor. An IdempotencyProvider must be provided as
 			// well.
-			csp.EnvVarIdemp + "=true",
+			gocsi.EnvVarIdemp + "=true",
 
 			// Tell the idempotency interceptor to validate whether or
 			// not a volume exists before proceeding with the operation
-			csp.EnvVarIdempRequireVolume + "=true",
+			gocsi.EnvVarIdempRequireVolume + "=true",
 
 			// Treat the following fields as required:
 			//    * ControllerPublishVolumeRequest.NodeId
 			//    * GetNodeIDResponse.NodeId
-			csp.EnvVarRequireNodeID + "=true",
+			gocsi.EnvVarRequireNodeID + "=true",
 
 			// Treat the following fields as required:
 			//    * ControllerPublishVolumeResponse.PublishVolumeInfo
 			//    * NodePublishVolumeRequest.PublishVolumeInfo
-			csp.EnvVarRequirePubVolInfo + "=true",
+			gocsi.EnvVarRequirePubVolInfo + "=true",
 
 			// Treat CreateVolume responses as successful
 			// when they have an associated error code of AlreadyExists.
-			csp.EnvVarCreateVolAlreadyExistsSuccess + "=true",
+			gocsi.EnvVarCreateVolAlreadyExistsSuccess + "=true",
 
 			// Treat DeleteVolume responses as successful
 			// when they have an associated error code of NotFound.
-			csp.EnvVarDeleteVolNotFoundSuccess + "=true",
+			gocsi.EnvVarDeleteVolNotFoundSuccess + "=true",
 
 			// Provide the list of versions supported by this SP. The
 			// specified versions will be:
 			//     * Returned by GetSupportedVersions
 			//     * Used to validate the Version field of incoming RPCs
-			csp.EnvVarSupportedVersions + "=" + service.SupportedVersions,
+			gocsi.EnvVarSupportedVersions + "=" + service.SupportedVersions,
 		},
 	}
 }
