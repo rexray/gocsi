@@ -375,8 +375,7 @@ dep_init() {
 
 [[constraint]]
   name = "github.com/thecodeteam/gocsi"
-  branch = "feature/csp-to-root"
-  source = "https://github.com/akutz/gocsi"
+  branch = "master"
 EOF
   fi
   echo "  executing dep ensure"
