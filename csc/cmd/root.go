@@ -38,13 +38,11 @@ var root struct {
 	withReqLogging bool
 	withRepLogging bool
 
-	withSpecValidator                    bool
-	withRequiresCreds                    bool
-	withSuccessCreateVolumeAlreadyExists bool
-	withSuccessDeleteVolumeNotFound      bool
-	withRequiresNodeID                   bool
-	withRequiresPubVolInfo               bool
-	withRequiresVolumeAttributes         bool
+	withSpecValidator            bool
+	withRequiresCreds            bool
+	withRequiresNodeID           bool
+	withRequiresPubVolInfo       bool
+	withRequiresVolumeAttributes bool
 }
 
 var (
