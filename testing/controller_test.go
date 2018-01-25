@@ -8,12 +8,9 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	"github.com/thecodeteam/gocsi"
-	csictx "github.com/thecodeteam/gocsi/context"
 	csierr "github.com/thecodeteam/gocsi/errors"
 	"github.com/thecodeteam/gocsi/mock/service"
 	"github.com/thecodeteam/gocsi/utils"
@@ -332,30 +329,6 @@ var _ = Describe("Controller", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 				deleteVolume()
 				Ω(err).ShouldNot(HaveOccurred())
-			})
-			Context("With NotFound Error", func() {
-				BeforeEach(func() {
-					ctx = csictx.WithEnviron(ctx,
-						[]string{
-							gocsi.EnvVarDeleteVolNotFoundSuccess + "=false",
-						})
-				})
-				shouldNotBeFound := func() {
-					Ω(err).Should(HaveOccurred())
-					stat, ok := status.FromError(err)
-					Ω(ok).Should(BeTrue())
-					Ω(stat).ShouldNot(BeNil())
-					Ω(stat.Code()).Should(Equal(codes.NotFound))
-				}
-				It("Should Be Valid", func() {
-					shouldNotBeFound()
-					deleteVolume()
-					shouldNotBeFound()
-					deleteVolume()
-					shouldNotBeFound()
-					deleteVolume()
-					shouldNotBeFound()
-				})
 			})
 		})
 		Context("Missing Version", func() {

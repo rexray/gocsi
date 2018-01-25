@@ -187,20 +187,14 @@ GLOBAL OPTIONS
 
         Enabling this option sets X_CSI_SPEC_VALIDATION=true.
 
-    X_CSI_IDEMP
-        A flag that enables the idempotency interceptor. Even when true,
-        the StoragePlugin must still provide a valid IdempotencyProvider
-        in order to enable the idempotency interceptor.
+    X_CSI_SERIAL_VOL_ACCESS
+        A flag that enables the serial volume access middleware.
 
-    X_CSI_IDEMP_TIMEOUT
-        A time.Duration string that determines how long the idempotency
-        interceptor waits to obtain a lock for the request's volume before
+    X_CSI_SERIAL_VOL_ACCESS_TIMEOUT
+        A time.Duration string that determines how long the serial volume
+        access middleware waits to obtain a lock for the request's volume before
         returning a the gRPC error code FailedPrecondition (5) to indicate
         an operation is already pending for the specified volume.
-
-    X_CSI_IDEMP_REQUIRE_VOL
-        A flag that indicates whether the idempotency interceptor validates
-        the existence of a volume before allowing an operation to proceed.
 
     X_CSI_PRIVATE_MOUNT_DIR
         Specifies the path of the private mount directory. During a

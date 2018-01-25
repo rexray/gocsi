@@ -12,14 +12,17 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-
-	csierr "github.com/thecodeteam/gocsi/errors"
 )
 
 func (s *service) CreateVolume(
 	ctx context.Context,
 	req *csi.CreateVolumeRequest) (
 	*csi.CreateVolumeResponse, error) {
+
+	// Check to see if the volume already exists.
+	if i, v := s.findVolByName(ctx, req.Name); i >= 0 {
+		return &csi.CreateVolumeResponse{VolumeInfo: &v}, nil
+	}
 
 	// If no capacity is specified then use 100GiB
 	capacity := gib100
@@ -49,20 +52,20 @@ func (s *service) DeleteVolume(
 	s.volsRWL.Lock()
 	defer s.volsRWL.Unlock()
 
-	if i, _ := s.findVolNoLock("id", req.VolumeId); i >= 0 {
-		// This delete logic preserves order and prevents potential memory
-		// leaks. The slice's elements may not be pointers, but the structs
-		// themselves have fields that are.
-		copy(s.vols[i:], s.vols[i+1:])
-		s.vols[len(s.vols)-1] = csi.VolumeInfo{}
-		s.vols = s.vols[:len(s.vols)-1]
-		log.WithField("volumeID", req.VolumeId).Debug("mock delete volume")
+	// If the volume does not exist then return an idempotent response.
+	i, _ := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
 		return &csi.DeleteVolumeResponse{}, nil
 	}
 
-	log.WithField("volumeID", req.VolumeId).Debug(
-		"mock delete volume not found")
-	return nil, csierr.ErrVolumeNotFound(req.VolumeId)
+	// This delete logic preserves order and prevents potential memory
+	// leaks. The slice's elements may not be pointers, but the structs
+	// themselves have fields that are.
+	copy(s.vols[i:], s.vols[i+1:])
+	s.vols[len(s.vols)-1] = csi.VolumeInfo{}
+	s.vols = s.vols[:len(s.vols)-1]
+	log.WithField("volumeID", req.VolumeId).Debug("mock delete volume")
+	return &csi.DeleteVolumeResponse{}, nil
 }
 
 func (s *service) ControllerPublishVolume(
@@ -70,22 +73,36 @@ func (s *service) ControllerPublishVolume(
 	req *csi.ControllerPublishVolumeRequest) (
 	*csi.ControllerPublishVolumeResponse, error) {
 
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
 	// devPathKey is the key in the volume's attributes that is set to a
 	// mock device path if the volume has been published by the controller
 	// to the specified node.
 	devPathKey := path.Join(req.NodeId, "dev")
 
-	s.volsRWL.Lock()
-	defer s.volsRWL.Unlock()
-	i, v := s.findVolNoLock("id", req.VolumeId)
+	// Check to see if the volume is already published.
+	if device := v.Attributes[devPathKey]; device != "" {
+		return &csi.ControllerPublishVolumeResponse{
+			PublishVolumeInfo: map[string]string{
+				"device": device,
+			},
+		}, nil
+	}
 
 	// Publish the volume.
-	v.Attributes[devPathKey] = "/dev/mock"
+	device := "/dev/mock"
+	v.Attributes[devPathKey] = device
 	s.vols[i] = v
 
 	return &csi.ControllerPublishVolumeResponse{
 		PublishVolumeInfo: map[string]string{
-			"device": v.Attributes[devPathKey],
+			"device": device,
 		},
 	}, nil
 }
@@ -95,14 +112,23 @@ func (s *service) ControllerUnpublishVolume(
 	req *csi.ControllerUnpublishVolumeRequest) (
 	*csi.ControllerUnpublishVolumeResponse, error) {
 
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
 	// devPathKey is the key in the volume's attributes that is set to a
 	// mock device path if the volume has been published by the controller
 	// to the specified node.
 	devPathKey := path.Join(req.NodeId, "dev")
 
-	s.volsRWL.Lock()
-	defer s.volsRWL.Unlock()
-	i, v := s.findVolNoLock("id", req.VolumeId)
+	// Check to see if the volume is already unpublished.
+	if v.Attributes[devPathKey] == "" {
+		return &csi.ControllerUnpublishVolumeResponse{}, nil
+	}
 
 	// Unpublish the volume.
 	delete(v.Attributes, devPathKey)

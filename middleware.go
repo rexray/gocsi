@@ -10,9 +10,9 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	csictx "github.com/thecodeteam/gocsi/context"
-	"github.com/thecodeteam/gocsi/middleware/idempotency"
 	"github.com/thecodeteam/gocsi/middleware/logging"
 	"github.com/thecodeteam/gocsi/middleware/requestid"
+	"github.com/thecodeteam/gocsi/middleware/serialvolume"
 	"github.com/thecodeteam/gocsi/middleware/specvalidator"
 	"github.com/thecodeteam/gocsi/utils"
 )
@@ -30,7 +30,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 	var (
 		withReqLogging         = sp.getEnvBool(ctx, EnvVarReqLogging)
 		withRepLogging         = sp.getEnvBool(ctx, EnvVarRepLogging)
-		withIdemp              = sp.getEnvBool(ctx, EnvVarIdemp)
+		withSerialVol          = sp.getEnvBool(ctx, EnvVarSerialVolAccess)
 		withSpec               = sp.getEnvBool(ctx, EnvVarSpecValidation)
 		withNewVolExists       = sp.getEnvBool(ctx, envVarNewVolExists)
 		withDelVolNotFound     = sp.getEnvBool(ctx, envVarDelVolNotFound)
@@ -174,29 +174,23 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		sp.Interceptors = append(sp.Interceptors, sp.getSupportedVersions)
 	}
 
-	if withIdemp && sp.IdempotencyProvider != nil {
+	if withSerialVol {
 		var (
-			opts   []idempotency.IdempotentInterceptorOption
+			opts   []serialvolume.Option
 			fields = map[string]interface{}{}
 		)
 
 		// Get idempotency provider's timeout.
-		if v, _ := csictx.LookupEnv(ctx, EnvVarIdempTimeout); v != "" {
+		if v, _ := csictx.LookupEnv(
+			ctx, EnvVarSerialVolAccessTimeout); v != "" {
 			if t, err := time.ParseDuration(v); err == nil {
-				fields["idemp.timeout"] = t
-				opts = append(opts, idempotency.WithIdempTimeout(t))
+				fields["serialVol.timeout"] = t
+				opts = append(opts, serialvolume.WithTimeout(t))
 			}
 		}
 
-		// Check to see if the idempotency provider requires volumes to exist.
-		if sp.getEnvBool(ctx, EnvVarIdempRequireVolume) {
-			fields["idemp.volRequired"] = true
-			opts = append(opts, idempotency.WithIdempRequireVolumeExists())
-		}
-
-		sp.Interceptors = append(sp.Interceptors,
-			idempotency.NewIdempotentInterceptor(sp.IdempotencyProvider, opts...))
-		log.WithFields(fields).Debug("enabled idempotency provider")
+		sp.Interceptors = append(sp.Interceptors, serialvolume.New(opts...))
+		log.WithFields(fields).Debug("enabled serial volume access")
 	}
 
 	return

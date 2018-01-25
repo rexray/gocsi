@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi/middleware/idempotency"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -31,7 +31,6 @@ type Service interface {
 	csi.ControllerServer
 	csi.IdentityServer
 	csi.NodeServer
-	idempotency.Provider
 }
 
 type service struct {
@@ -95,4 +94,10 @@ func (s *service) findVolNoLock(k, v string) (volIdx int, volInfo csi.VolumeInfo
 	}
 
 	return
+}
+
+func (s *service) findVolByName(
+	ctx context.Context, name string) (int, csi.VolumeInfo) {
+
+	return s.findVol("name", name)
 }

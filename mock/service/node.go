@@ -23,15 +23,31 @@ func (s *service) NodePublishVolume(
 			"publish volume info 'device' key required")
 	}
 
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
 	// nodeMntPathKey is the key in the volume's attributes that is set to a
 	// mock mount path if the volume has been published by the node
 	nodeMntPathKey := path.Join(s.nodeID, req.TargetPath)
 
-	s.volsRWL.Lock()
-	defer s.volsRWL.Unlock()
+	// Check to see if the volume has already been published.
+	if v.Attributes[nodeMntPathKey] != "" {
+
+		// Requests marked Readonly fail due to volumes published by
+		// the Mock driver supporting only RW mode.
+		if req.Readonly {
+			return nil, status.Error(codes.AlreadyExists, req.VolumeId)
+		}
+
+		return &csi.NodePublishVolumeResponse{}, nil
+	}
 
 	// Publish the volume.
-	i, v := s.findVolNoLock("id", req.VolumeId)
 	v.Attributes[nodeMntPathKey] = device
 	s.vols[i] = v
 
@@ -43,15 +59,24 @@ func (s *service) NodeUnpublishVolume(
 	req *csi.NodeUnpublishVolumeRequest) (
 	*csi.NodeUnpublishVolumeResponse, error) {
 
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
 	// nodeMntPathKey is the key in the volume's attributes that is set to a
 	// mock mount path if the volume has been published by the node
 	nodeMntPathKey := path.Join(s.nodeID, req.TargetPath)
 
-	s.volsRWL.Lock()
-	defer s.volsRWL.Unlock()
+	// Check to see if the volume has already been unpublished.
+	if v.Attributes[nodeMntPathKey] == "" {
+		return &csi.NodeUnpublishVolumeResponse{}, nil
+	}
 
 	// Unpublish the volume.
-	i, v := s.findVolNoLock("id", req.VolumeId)
 	delete(v.Attributes, nodeMntPathKey)
 	s.vols[i] = v
 
