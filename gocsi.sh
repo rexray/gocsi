@@ -67,13 +67,6 @@ func New() gocsi.StoragePluginProvider {
 		Identity:   svc,
 		Node:       svc,
 
-		// IdempotencyProvider allows an SP to implement idempotency
-		// with the most minimal of effort. Please note that providing
-		// an IdempotencyProvider does not by itself enable idempotency.
-		// The environment variable X_CSI_IDEMP must be set to true as
-		// well.
-		IdempotencyProvider: svc,
-
 		// BeforeServe allows the SP to participate in the startup
 		// sequence. This function is invoked directly before the
 		// gRPC server is created, giving the callback the ability to
@@ -89,11 +82,8 @@ func New() gocsi.StoragePluginProvider {
 		},
 
 		EnvVars: []string{
-			// Enable idempotency. Please note that setting
-			// X_CSI_IDEMP=true does not by itself enable the idempotency
-			// interceptor. An IdempotencyProvider must be provided as
-			// well.
-			gocsi.EnvVarIdemp + "=true",
+			// Enable serial volume access.
+			gocsi.EnvVarSerialVolAccess + "=true",
 
 			// Provide the list of versions supported by this SP. The
 			// specified versions will be:
@@ -111,7 +101,6 @@ package service
 
 import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi/middleware/idempotency"
 )
 
 const (
@@ -130,7 +119,6 @@ type Service interface {
 	csi.ControllerServer
 	csi.IdentityServer
 	csi.NodeServer
-	idempotency.Provider
 }
 
 type service struct{}
@@ -221,47 +209,6 @@ func (s *service) ControllerProbe(
 	*csi.ControllerProbeResponse, error) {
 
 	return nil, nil
-}
-EOF
-
-echo "  $SP_DIR/service/idemp.go"
-cat << EOF > "service/idemp.go"
-package service
-
-import (
-	"context"
-
-	"github.com/container-storage-interface/spec/lib/go/csi"
-)
-
-func (s *service) GetVolumeID(
-	ctx context.Context,
-	name string) (string, error) {
-
-	return "", nil
-}
-
-func (s *service) GetVolumeInfo(
-	ctx context.Context,
-	id, name string) (*csi.VolumeInfo, error) {
-
-	return nil, nil
-}
-
-func (s *service) IsControllerPublished(
-	ctx context.Context,
-	id, nodeID string) (map[string]string, error) {
-
-	return nil, nil
-}
-
-func (s *service) IsNodePublished(
-	ctx context.Context,
-	id string,
-	pubInfo map[string]string,
-	targetPath string) (bool, error) {
-
-	return false, nil
 }
 EOF
 

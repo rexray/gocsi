@@ -33,10 +33,7 @@ func New() gocsi.StoragePluginProvider {
 		},
 
 		EnvVars: []string{
-			// Enable serial volume access. Please note that setting
-			// X_CSI_SERIAL_VOL_ACCESS=true does not by itself enable the
-			// serial volume access middleware. The storage plug-in's
-			// GetVolumeID function must be provided as well.
+			// Enable serial volume access.
 			gocsi.EnvVarSerialVolAccess + "=true",
 
 			// Treat the following fields as required:
@@ -48,14 +45,6 @@ func New() gocsi.StoragePluginProvider {
 			//    * ControllerPublishVolumeResponse.PublishVolumeInfo
 			//    * NodePublishVolumeRequest.PublishVolumeInfo
 			gocsi.EnvVarRequirePubVolInfo + "=true",
-
-			// Treat CreateVolume responses as successful
-			// when they have an associated error code of AlreadyExists.
-			gocsi.EnvVarCreateVolAlreadyExistsSuccess + "=true",
-
-			// Treat DeleteVolume responses as successful
-			// when they have an associated error code of NotFound.
-			gocsi.EnvVarDeleteVolNotFoundSuccess + "=true",
 
 			// Provide the list of versions supported by this SP. The
 			// specified versions will be:

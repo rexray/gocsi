@@ -49,7 +49,6 @@ creating project files:
   /home/akutz/go/src/github.com/thecodeteam/csi-sp/provider/provider.go
   /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/service.go
   /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/controller.go
-  /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/idemp.go
   /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/identity.go
   /home/akutz/go/src/github.com/thecodeteam/csi-sp/service/node.go
 use golang/dep? Enter yes (default) or no and press [ENTER]:
@@ -71,7 +70,6 @@ The new SP adheres to the following structure:
 |-- service
 |   |
 |   |-- controller.go
-|   |-- idemp.go
 |   |-- identity.go
 |   |-- node.go
 |   |-- service.go
@@ -84,14 +82,12 @@ The `provider` package leverages GoCSI to construct an SP from the CSI
 services defined in `services` package. The file `provider.go` may be
 modified to:
 
-* Add an idempotency provider
 * Supply default values for the SP's environment variable configuration properties
 
 The generated file configures the following options and their default values:
 
 | Option | Value | Description |
 |--------|-------|-------------|
-| `X_CSI_IDEMP` | `true` | In concert with the file `service/idemp.go`, this option enables idempotency for the SP |
 | `X_CSI_SUPPORTED_VERSIONS` | `0.0.0` | The CSI versions supported by the SP. Settings this option also relieves the SP of its responsibility to provide an implementation of the RPC `GetSupportedVersions` |
 
 Please see the Mock SP's [`provider.go`](./mock/provider/provider.go) file
@@ -103,11 +99,6 @@ The `service` package is where the business logic occurs. The files `controller.
 developer creating a new CSI SP with GoCSI will work mostly in these files. Each
 of the files have a complete skeleton implementation for their respective service's
 remote procedure calls (RPC).
-
-The file `idemp.go` contains a skeleton implementation of the interface
-[`IdemptotencyProvider`](./middlware/idempotency/idempotent_interceptor.go). An SP
-is able to achieve idempotency simply by implementing the functions contained in this
-file.
 
 ### Main
 The root, or `main`, package leverages GoCSI to launch the SP as a stand-alone
@@ -343,23 +334,16 @@ environment variables:
       </td>
     </tr>
     <tr>
-      <td><code>X_CSI_IDEMP</code></td>
-      <td>A flag that enables the idempotency interceptor. Even when true,
-      the StoragePlugin must still provide a valid IdempotencyProvider
-      in order to enable the idempotency interceptor.</td>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS</code></td>
+      <td>A flag that enables the serial volume access middleware.</td>
     </tr>
     <tr>
-      <td><code>X_CSI_IDEMP_TIMEOUT</code></td>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_TIMEOUT</code></td>
       <td>A <a href="https://golang.org/pkg/time/#ParseDuration"><code>
       time.Duration</code></a> string that determines how long the
-      idempotency interceptor waits to obtain a lock for the request's volume
-      before returning the gRPC error code <code>FailedPrecondition</code> to
+      serial volume access middleware waits to obtain a lock for the request's
+      volume before returning the gRPC error code <code>FailedPrecondition</code> to
       indicate an operation is already pending for the specified volume.</td>
-    </tr>
-    <tr>
-      <td><code>X_CSI_IDEMP_REQUIRE_VOL</code></td>
-      <td>A flag that indicates whether the idempotency interceptor validates
-      the existence of a volume before allowing an operation to proceed.</td>
     </tr>
   </tbody>
 </table>
