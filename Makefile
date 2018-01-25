@@ -85,8 +85,13 @@ CSI_SP_DIR := $(GOPATH)/src/$(CSI_SP_IMPORT)
 CSI_SP := $(CSI_SP_DIR)/csi-sp
 CSI_SP_SOCK := $(notdir $(CSI_SP)).sock
 CSI_SP_LOG := $(notdir $(CSI_SP)).log
+GOCSI_SH_ENV := USE_DEP=true
+ifeq (true,$(TRAVIS))
+GOCSI_SH_ENV += GOCSI_DEP_SOURCE=https://github.com/$(TRAVIS_REPO_SLUG)
+GOCSI_SH_ENV += GOCSI_DEP_REVISION=$(TRAVIS_COMMIT)
+endif
 $(CSI_SP):
-	USE_DEP=true ./gocsi.sh $(CSI_SP_IMPORT)
+	$(GOCSI_SH_ENV) ./gocsi.sh $(CSI_SP_IMPORT)
 
 csi-sp: $(CSI_SP_LOG)
 $(CSI_SP_LOG): $(CSI_SP)
