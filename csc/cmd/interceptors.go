@@ -42,8 +42,6 @@ func getClientInterceptorsDialOpt() grpc.DialOption {
 	// Configure the spec validator.
 	root.withSpecValidator = root.withSpecValidator ||
 		root.withRequiresCreds ||
-		root.withSuccessCreateVolumeAlreadyExists ||
-		root.withSuccessDeleteVolumeNotFound ||
 		root.withRequiresNodeID ||
 		root.withRequiresPubVolInfo ||
 		root.withRequiresVolumeAttributes
@@ -73,16 +71,6 @@ func getClientInterceptorsDialOpt() grpc.DialOption {
 			specOpts = append(specOpts,
 				specvalidator.WithRequiresVolumeAttributes())
 			log.Debug("enabled spec validator opt: requires vol attribs")
-		}
-		if root.withSuccessCreateVolumeAlreadyExists {
-			specOpts = append(specOpts,
-				specvalidator.WithSuccessCreateVolumeAlreadyExists())
-			log.Debug("enabled spec validator opt: create exists success")
-		}
-		if root.withSuccessDeleteVolumeNotFound {
-			specOpts = append(specOpts,
-				specvalidator.WithSuccessDeleteVolumeNotFound())
-			log.Debug("enabled spec validator opt: delete !exists success")
 		}
 		iceptors = append(iceptors,
 			specvalidator.NewClientSpecValidator(specOpts...))

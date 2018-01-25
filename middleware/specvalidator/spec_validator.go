@@ -3,7 +3,6 @@ package specvalidator
 import (
 	"sync"
 
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -25,22 +24,6 @@ type opts struct {
 	requiresPubVolInfo  bool
 	requiresVolAttribs  bool
 	requiresCredentials map[string]struct{}
-	successfulExitCodes map[string]map[codes.Code]struct{}
-}
-
-func (o *opts) setSuccessfulExitCode(m string, c codes.Code) {
-
-	o.Lock()
-	defer o.Unlock()
-	if o.successfulExitCodes == nil {
-		o.successfulExitCodes = map[string]map[codes.Code]struct{}{}
-	}
-	codez, ok := o.successfulExitCodes[m]
-	if !ok {
-		codez = map[codes.Code]struct{}{}
-		o.successfulExitCodes[m] = codez
-	}
-	codez[c] = struct{}{}
 }
 
 func (o *opts) requireCredentials(m string) {
@@ -58,22 +41,6 @@ func (o *opts) requireCredentials(m string) {
 func WithSupportedVersions(versions ...csi.Version) Option {
 	return func(o *opts) {
 		o.supportedVersions = versions
-	}
-}
-
-// WithSuccessCreateVolumeAlreadyExists is a Option that the
-// eponymous request should treat the eponymous error code as successful.
-func WithSuccessCreateVolumeAlreadyExists() Option {
-	return func(o *opts) {
-		o.setSuccessfulExitCode(utils.CreateVolume, codes.AlreadyExists)
-	}
-}
-
-// WithSuccessDeleteVolumeNotFound is a Option that the
-// eponymous request should treat the eponymous error code as successful.
-func WithSuccessDeleteVolumeNotFound() Option {
-	return func(o *opts) {
-		o.setSuccessfulExitCode(utils.DeleteVolume, codes.NotFound)
 	}
 }
 
@@ -238,23 +205,18 @@ func (s *interceptor) handle(
 	// the RPC. On the client side this invokes the RPC.
 	rep, err := next()
 
+	if err != nil {
+		return nil, err
+	}
+
 	// Determine whether or not the response is nil. Otherwise it
 	// will no longer be possible to perform a nil equality check on the
 	// response to the interface{} rules for nil comparison.
-	isNilRep := utils.IsNilResponse(method, rep)
-
-	// Handle possible non-zero successful exit codes.
-	if err := s.handleResponseError(method, err); err != nil {
-		if isNilRep {
-			return nil, err
-		}
-	}
-
+	//
 	// If the response is nil then go ahead and return a nil value
 	// directly in order to fulfill Go's rules about nil values and
-	// interface{} types. For more information please see the links
-	// in the previous comment.
-	if isNilRep {
+	// interface{} types.
+	if utils.IsNilResponse(method, rep) {
 		return nil, nil
 	}
 
@@ -264,36 +226,6 @@ func (s *interceptor) handle(
 	}
 
 	return rep, err
-}
-
-func (s *interceptor) handleResponseError(method string, err error) error {
-
-	// If the returned error does not contain a gRPC error code then
-	// return early from this function.
-	stat, ok := status.FromError(err)
-	if !ok {
-		return err
-	}
-
-	// csierr.Error code OK always equals success, so clear the error.
-	if stat.Code() == codes.OK {
-		return nil
-	}
-
-	// Check to see if the current method is configured to treat
-	// any non-zero exit codes as successful. If so, and the current
-	// exit code matches any of them, then clear the error.
-	for exitCode := range s.opts.successfulExitCodes[method] {
-		if stat.Code() == exitCode {
-			log.WithFields(log.Fields{
-				"code": stat.Code(),
-				"msg":  stat.Message(),
-			}).Debug("dropping error")
-			return nil
-		}
-	}
-
-	return err
 }
 
 type interceptorHasVolumeID interface {

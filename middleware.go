@@ -32,8 +32,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withRepLogging         = sp.getEnvBool(ctx, EnvVarRepLogging)
 		withSerialVol          = sp.getEnvBool(ctx, EnvVarSerialVolAccess)
 		withSpec               = sp.getEnvBool(ctx, EnvVarSpecValidation)
-		withNewVolExists       = sp.getEnvBool(ctx, envVarNewVolExists)
-		withDelVolNotFound     = sp.getEnvBool(ctx, envVarDelVolNotFound)
 		withNodeID             = sp.getEnvBool(ctx, EnvVarRequireNodeID)
 		withPubVolInfo         = sp.getEnvBool(ctx, EnvVarRequirePubVolInfo)
 		withVolAttribs         = sp.getEnvBool(ctx, EnvVarRequireVolAttribs)
@@ -59,8 +57,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 	// Enable spec validation if any of the spec-related options are enabled.
 	withSpec = withSpec ||
 		withCreds ||
-		withNewVolExists ||
-		withDelVolNotFound ||
 		withNodeID ||
 		withPubVolInfo ||
 		withVolAttribs
@@ -149,16 +145,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			specOpts = append(specOpts,
 				specvalidator.WithRequiresVolumeAttributes())
 			log.Debug("enabled spec validator opt: requires vol attribs")
-		}
-		if withNewVolExists {
-			specOpts = append(specOpts,
-				specvalidator.WithSuccessCreateVolumeAlreadyExists())
-			log.Debug("enabled spec validator opt: create exists success")
-		}
-		if withDelVolNotFound {
-			specOpts = append(specOpts,
-				specvalidator.WithSuccessDeleteVolumeNotFound())
-			log.Debug("enabled spec validator opt: delete !exists success")
 		}
 		sp.Interceptors = append(sp.Interceptors,
 			specvalidator.NewServerSpecValidator(specOpts...))

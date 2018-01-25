@@ -106,18 +106,6 @@ GLOBAL OPTIONS
         A flag that enables validation of incoming requests and outgoing
         responses against the CSI specification.
 
-    X_CSI_CREATE_VOL_ALREADY_EXISTS
-        A flag that enables treating CreateVolume responses as successful
-        when they have an associated error code of AlreadyExists.
-
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
-
-    X_CSI_DELETE_VOL_NOT_FOUND
-        A flag that enables treating DeleteVolume responses as successful
-        when they have an associated error code of NotFound.
-
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
-
     X_CSI_REQUIRE_NODE_ID
         A flag that enables treating the following fields as required:
             * ControllerPublishVolumeRequest.NodeId

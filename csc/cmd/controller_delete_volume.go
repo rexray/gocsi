@@ -53,9 +53,4 @@ func init() {
 		deleteVolumeCmd.Flags(),
 		&root.withRequiresCreds,
 		"")
-
-	flagWithSuccessNotFound(
-		deleteVolumeCmd.Flags(),
-		&root.withSuccessDeleteVolumeNotFound,
-		"")
 }

@@ -100,11 +100,6 @@ func init() {
 
 	flagVolumeCapabilities(createVolumeCmd.Flags(), &createVolume.caps)
 
-	flagWithSuccessAlreadyExists(
-		createVolumeCmd.Flags(),
-		&root.withSuccessCreateVolumeAlreadyExists,
-		"")
-
 	flagWithRequiresCreds(
 		createVolumeCmd.Flags(),
 		&root.withRequiresCreds,
