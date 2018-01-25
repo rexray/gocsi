@@ -18,13 +18,6 @@ func New() gocsi.StoragePluginProvider {
 		Identity:   svc,
 		Node:       svc,
 
-		// IdempotencyProvider allows an SP to implement idempotency
-		// with the most minimal of effort. Please note that providing
-		// an IdempotencyProvider does not by itself enable idempotency.
-		// The environment variable X_CSI_IDEMP must be set to true as
-		// well.
-		IdempotencyProvider: svc,
-
 		// BeforeServe allows the SP to participate in the startup
 		// sequence. This function is invoked directly before the
 		// gRPC server is created, giving the callback the ability to
@@ -40,15 +33,11 @@ func New() gocsi.StoragePluginProvider {
 		},
 
 		EnvVars: []string{
-			// Enable idempotency. Please note that setting
-			// X_CSI_IDEMP=true does not by itself enable the idempotency
-			// interceptor. An IdempotencyProvider must be provided as
-			// well.
-			gocsi.EnvVarIdemp + "=true",
-
-			// Tell the idempotency interceptor to validate whether or
-			// not a volume exists before proceeding with the operation
-			gocsi.EnvVarIdempRequireVolume + "=true",
+			// Enable serial volume access. Please note that setting
+			// X_CSI_SERIAL_VOL_ACCESS=true does not by itself enable the
+			// serial volume access middleware. The storage plug-in's
+			// GetVolumeID function must be provided as well.
+			gocsi.EnvVarSerialVolAccess + "=true",
 
 			// Treat the following fields as required:
 			//    * ControllerPublishVolumeRequest.NodeId

@@ -166,18 +166,13 @@ const (
 	// for the eponymous RPC.
 	EnvVarCredsNodeUnpubVol = "X_CSI_REQUIRE_CREDS_NODE_UNPUB_VOL"
 
-	// EnvVarIdemp is the name of the environment variable
-	// used to determine whether or not to enable idempotency.
-	EnvVarIdemp = "X_CSI_IDEMP"
+	// EnvVarSerialVolAccess is the name of the environment variable
+	// used to determine whether or not to enable serial volume access.
+	EnvVarSerialVolAccess = "X_CSI_SERIAL_VOL_ACCESS"
 
-	// EnvVarIdempTimeout is the name of the environment variable
-	// used to specify the timeout for gRPC operations.
-	EnvVarIdempTimeout = "X_CSI_IDEMP_TIMEOUT"
-
-	// EnvVarIdempRequireVolume is the name of the environment variable
-	// used to determine whether or not the idempotency interceptor
-	// checks to see if a volume exists before allowing an operation.
-	EnvVarIdempRequireVolume = "X_CSI_IDEMP_REQUIRE_VOL"
+	// EnvVarSerialVolAccessTimeout is the name of the environment variable
+	// used to specify the timeout for obtaining a volume lock.
+	EnvVarSerialVolAccessTimeout = "X_CSI_SERIAL_VOL_ACCESS_TIMEOUT"
 
 	// EnvVarPrivateMountDir is the name of the environment variable
 	// that specifies the path of the private mount directory used by
