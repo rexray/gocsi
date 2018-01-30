@@ -110,6 +110,12 @@ func LookupEnv(ctx context.Context, key string) (string, bool) {
 	return os.LookupEnv(key)
 }
 
+// Getenv is an alias for LookupEnv and drops the boolean return value.
+func Getenv(ctx context.Context, key string) string {
+	val, _ := LookupEnv(ctx, key)
+	return val
+}
+
 // Setenv sets the value of the provided environment variable to the
 // specified value by first inspecting the context for a key "os.Setenv"
 // with a value of func(string, string) error. If the context does not

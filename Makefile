@@ -148,8 +148,13 @@ ifeq (true,$(TRAVIS))
 GINKGO_SECS := 30
 endif
 GINKGO_RUN_OPTS := --slowSpecThreshold=$(GINKGO_SECS) -randomizeAllSpecs -p
-$(GINKGO):
-	go build -o "$@" $(GINKGO_PKG)
+$(GINKGO): | $(GINKGO_PKG)
+	go build -o "$@" "./$|"
+
+ETCD := ./etcd
+$(ETCD):
+	go get -u -d github.com/coreos/etcd
+	go build -o $@ github.com/coreos/etcd
 
 # The test recipe executes the Go tests with the Ginkgo test
 # runner. This is the reason for the boolean OR condition
@@ -162,17 +167,24 @@ test:  build
 endif
 
 # Because Travis-CI's containers have limited resources, the Mock SP's
-# idempotency provider's timeout needs to be increased from the default
-# value of 0 to 1s. This ensures that lack of system resources will not
-# prevent a single, non-concurrent RPC from failing due to an OpPending
-# error.
+# serial volume access provider's timeout needs to be increased from the
+# default value of 0 to 1s. This ensures that lack of system resources
+# will not prevent a single, non-concurrent RPC from failing due to an
+# OpPending error.
 ifeq (true,$(TRAVIS))
-export X_CSI_IDEMP_TIMEOUT=1s
+export X_CSI_SERIAL_VOL_ACCESS_TIMEOUT=1s
 endif
 
-test: | $(GINKGO)
+test: | $(GINKGO) $(ETCD)
 	$(GINKGO) $(GINKGO_RUN_OPTS) ./utils || test "$$?" -eq "197"
-	$(GINKGO) $(GINKGO_RUN_OPTS) ./testing || test "$$?" -eq "197"
+	@rm -fr default.etcd etcd.log
+	./etcd > etcd.log 2>&1 &
+	X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS=127.0.0.1:2379 \
+	  $(GINKGO) $(GINKGO_RUN_OPTS) -skip "Idempotent Create" \
+	  ./testing || test "$$?" -eq "197"
+	pkill etcd
+	$(GINKGO) $(GINKGO_RUN_OPTS) -focus "Idempotent Create" \
+	  ./testing || test "$$?" -eq "197"
 
 
 ########################################################################

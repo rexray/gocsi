@@ -41,6 +41,7 @@ jobs:
       # Test GoCSI using the Mock CSI plug-in.
       - stage:   test
         env:     JOB=test
+        go:      1.9.3
         install: make ginkgo
         script:  make test
 

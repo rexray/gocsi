@@ -13,6 +13,7 @@ import (
 	"github.com/thecodeteam/gocsi/middleware/logging"
 	"github.com/thecodeteam/gocsi/middleware/requestid"
 	"github.com/thecodeteam/gocsi/middleware/serialvolume"
+	"github.com/thecodeteam/gocsi/middleware/serialvolume/etcd"
 	"github.com/thecodeteam/gocsi/middleware/specvalidator"
 	"github.com/thecodeteam/gocsi/utils"
 )
@@ -166,13 +167,31 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			fields = map[string]interface{}{}
 		)
 
-		// Get idempotency provider's timeout.
+		// Get serial provider's timeout.
 		if v, _ := csictx.LookupEnv(
 			ctx, EnvVarSerialVolAccessTimeout); v != "" {
 			if t, err := time.ParseDuration(v); err == nil {
 				fields["serialVol.timeout"] = t
 				opts = append(opts, serialvolume.WithTimeout(t))
 			}
+		}
+
+		// Check for etcd
+		if v, _ := csictx.LookupEnv(
+			ctx, EnvVarSerialVolAccessEtcdEndpoints); v != "" {
+
+			fields["serialVol.etcd.endpoints"] = v
+
+			if v, _ := csictx.LookupEnv(
+				ctx, EnvVarSerialVolAccessEtcdDomain); v != "" {
+				fields["serialVol.etcd.domain"] = v
+			}
+
+			p, err := etcd.New(ctx, "", etcd.NewConfig())
+			if err != nil {
+				log.Fatal(err)
+			}
+			opts = append(opts, serialvolume.WithLockProvider(p))
 		}
 
 		sp.Interceptors = append(sp.Interceptors, serialvolume.New(opts...))

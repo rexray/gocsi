@@ -174,6 +174,14 @@ const (
 	// used to specify the timeout for obtaining a volume lock.
 	EnvVarSerialVolAccessTimeout = "X_CSI_SERIAL_VOL_ACCESS_TIMEOUT"
 
+	// EnvVarSerialVolAccessEtcdDomain is the name of the environment
+	// variable that defines the lock provider's concurrency domain.
+	EnvVarSerialVolAccessEtcdDomain = "X_CSI_SERIAL_VOL_ACCESS_ETCD_DOMAIN"
+
+	// EnvVarSerialVolAccessEtcdEndpoints is the name of the environment
+	// variable that defines the lock provider's etcd endoints.
+	EnvVarSerialVolAccessEtcdEndpoints = "X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS"
+
 	// EnvVarPrivateMountDir is the name of the environment variable
 	// that specifies the path of the private mount directory used by
 	// SPs to mount a device during a NodePublishVolume RPC before
