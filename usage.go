@@ -184,6 +184,15 @@ GLOBAL OPTIONS
         returning a the gRPC error code FailedPrecondition (5) to indicate
         an operation is already pending for the specified volume.
 
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_DOMAIN
+        The name of the environment variable that defines the etcd lock
+        provider's concurrency domain.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS
+        A comma-separated list of etcd endpoints. If specified then the
+        SP's serial volume access middleware will leverage etcd to enable
+        distributed locking.
+
     X_CSI_PRIVATE_MOUNT_DIR
         Specifies the path of the private mount directory. During a
         NodePublishVolume RPC, the SP will mount a device into the
