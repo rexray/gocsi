@@ -345,5 +345,21 @@ environment variables:
       volume before returning the gRPC error code <code>FailedPrecondition</code> to
       indicate an operation is already pending for the specified volume.</td>
     </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS</code></td>
+      <td>A list comma-separated etcd endpoint values. If this environment
+      variable is defined then the serial volume access middleware will
+      automatically use etcd for locking, providing distributed serial
+      volume access.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_DOMAIN</code></td>
+      <td>The etcd key prefix to use with the locks that provide
+      distributed, serial volume access. The key paths are:
+      <ul>
+        <li><code>/DOMAIN/volumesByID/VOLUME_ID</code></li>
+        <li><code>/DOMAIN/volumesByName/VOLUME_NAME</code></li>
+      </ul></td>
+    </tr>
   </tbody>
 </table>
