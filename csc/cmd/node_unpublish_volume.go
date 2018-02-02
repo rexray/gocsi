@@ -30,7 +30,7 @@ USAGE
 		req := csi.NodeUnpublishVolumeRequest{
 			Version:         &root.version.Version,
 			TargetPath:      nodeUnpublishVolume.targetPath,
-			UserCredentials: root.userCreds,
+			NodeUnpublishCredentials: root.userCreds,
 		}
 
 		for i := range args {

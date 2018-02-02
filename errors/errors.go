@@ -77,10 +77,10 @@ var ErrUserCredentialsRequired = status.Error(
 var ErrVolumeAttributesRequired = status.Error(
 	codes.InvalidArgument, "volume attributes required")
 
-// ErrPublishVolumeInfoRequired occurs when an RPC is made with
+// ErrPublishInfoRequired occurs when an RPC is made with
 // an empty publish volume info argument.
-var ErrPublishVolumeInfoRequired = status.Error(
-	codes.InvalidArgument, "publish volume info required")
+var ErrPublishInfoRequired = status.Error(
+	codes.InvalidArgument, "publish info required")
 
 // ErrTargetPathRequired occurs when an RPC is made with an empty
 // target path argument.
@@ -91,24 +91,24 @@ var ErrTargetPathRequired = status.Error(
 // an invalid targetPath argument.
 var ErrInvalidTargetPath = errors.New("invalid targetPath")
 
-// ErrNilVolumeInfo occurs when an RPC returns a nil VolumeInfo.
-var ErrNilVolumeInfo = status.Error(
-	codes.Internal, "nil volumeInfo")
+// ErrNilVolume occurs when an RPC returns a nil Volume.
+var ErrNilVolume = status.Error(
+	codes.Internal, "nil volume")
 
-// ErrEmptyVolumeID occurs when an RPC returns a VolumeInfo with
+// ErrEmptyVolumeID occurs when an RPC returns a Volume with
 // an zero-length Id field.
 var ErrEmptyVolumeID = status.Error(
-	codes.Internal, "empty volumeInfo.Id")
+	codes.Internal, "empty volume.Id")
 
-// ErrNonNilEmptyAttribs occurs when an RPC returns a VolumeInfo
+// ErrNonNilEmptyAttribs occurs when an RPC returns a Volume
 // with a non-nil Attributes field that has no elements.
 var ErrNonNilEmptyAttribs = status.Error(
-	codes.Internal, "non-nil, empty volumeInfo.Attributes")
+	codes.Internal, "non-nil, empty volume.Attributes")
 
-// ErrEmptyPublishVolumeInfo occurs when an RPC returns
-// empty publish volume info.
-var ErrEmptyPublishVolumeInfo = status.Error(
-	codes.Internal, "empty publish volume info")
+// ErrEmptyPublishInfo occurs when an RPC returns
+// empty publish info.
+var ErrEmptyPublishInfo = status.Error(
+	codes.Internal, "empty publish info")
 
 // ErrEmptyNodeID occurs when an RPC returns an empty NodeID.
 var ErrEmptyNodeID = status.Error(codes.Internal, "empty node ID")

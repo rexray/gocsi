@@ -24,7 +24,7 @@ USAGE
 
 		req := csi.DeleteVolumeRequest{
 			Version:         &root.version.Version,
-			UserCredentials: root.userCreds,
+			ControllerDeleteCredentials: root.userCreds,
 		}
 
 		for i := range args {

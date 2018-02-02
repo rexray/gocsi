@@ -35,7 +35,7 @@ var _ = Describe("Controller", func() {
 		mntFlags   []string
 		params     map[string]string
 		userCreds  map[string]string
-		pubVolInfo map[string]string
+		pubInfo map[string]string
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -71,7 +71,7 @@ var _ = Describe("Controller", func() {
 		fsType = ""
 		mntFlags = nil
 		params = nil
-		pubVolInfo = nil
+		pubInfo = nil
 	})
 
 	listVolumes := func() (vols []csi.VolumeInfo, err error) {
@@ -389,13 +389,13 @@ var _ = Describe("Controller", func() {
 			}
 			res, err := client.ControllerPublishVolume(ctx, req)
 			Ω(err).ShouldNot(HaveOccurred())
-			pubVolInfo = res.PublishVolumeInfo
+			pubInfo = res.PublishVolumeInfo
 		}
 
 		shouldBePublished := func() {
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(pubVolInfo).ShouldNot(BeNil())
-			Ω(pubVolInfo["device"]).Should(Equal("/dev/mock"))
+			Ω(pubInfo).ShouldNot(BeNil())
+			Ω(pubInfo["device"]).Should(Equal("/dev/mock"))
 		}
 
 		JustBeforeEach(func() {

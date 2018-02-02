@@ -57,12 +57,12 @@ var _ = Describe("Node", func() {
 		}
 	}
 
-	Describe("GetNodeID", func() {
+	Describe("NodeGetId", func() {
 		var nodeID string
 		BeforeEach(func() {
-			res, err := client.GetNodeID(
+			res, err := client.NodeGetId(
 				ctx,
-				&csi.GetNodeIDRequest{
+				&csi.NodeGetIdRequest{
 					Version: &mockSupportedVersions[0],
 				})
 			Ω(err).ShouldNot(HaveOccurred())

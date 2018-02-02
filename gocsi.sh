@@ -265,10 +265,10 @@ func (s *service) NodeUnpublishVolume(
 	return nil, nil
 }
 
-func (s *service) GetNodeID(
+func (s *service) NodeGetId(
 	ctx context.Context,
-	req *csi.GetNodeIDRequest) (
-	*csi.GetNodeIDResponse, error) {
+	req *csi.NodeGetIdRequest) (
+	*csi.NodeGetIdResponse, error) {
 
 	return nil, nil
 }
