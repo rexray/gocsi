@@ -35,6 +35,7 @@ jobs:
       # then using csc to invoke GetSupportedVersions and GetPluginInfo
       - stage:   test
         env:     JOB=csi-sp
+        go:      1.9.3
         install: make -C csc
         script:  make csi-sp
 

@@ -361,5 +361,69 @@ environment variables:
         <li><code>/DOMAIN/volumesByName/VOLUME_NAME</code></li>
       </ul></td>
     </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_TTL</code></td>
+      <td>The length of time etcd will wait before  releasing ownership of
+      a distributed lock if the lock's session has not been renewed.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_AUTO_SYNC_INTERVAL</code></td>
+      <td>A time.Duration string that specifies the interval to update
+      endpoints with its latest members. A value of 0 disables
+      auto-sync. By default auto-sync is disabled.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_TIMEOUT</code></td>
+      <td>A time.Duration string that specifies the timeout for failing to
+      establish a connection.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_KEEP_ALIVE_TIME</code></td>
+      <td>A time.Duration string that defines the time after which the client
+      pings the server to see if the transport is alive.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_KEEP_ALIVE_TIMEOUT</code></td>
+      <td>A time.Duration string that defines the time that the client waits for
+      a response for the keep-alive probe. If the response is not received
+      in this time, the connection is closed.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_MAX_CALL_SEND_MSG_SZ</code></td>
+      <td>Defines the client-side request send limit in bytes. If 0, it defaults
+      to 2.0 MiB (2 * 1024 * 1024). Make sure that "MaxCallSendMsgSize" <
+      server-side default send/recv limit. ("--max-request-bytes" flag to
+      etcd or "embed.Config.MaxRequestBytes").</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_MAX_CALL_RECV_MSG_SZ</code></td>
+      <td>Defines the client-side response receive limit. If 0, it defaults to
+      "math.MaxInt32", because range response can easily exceed request send
+      limits. Make sure that "MaxCallRecvMsgSize" >= server-side default
+      send/recv limit. ("--max-request-bytes" flag to etcd or
+      "embed.Config.MaxRequestBytes").</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_USERNAME</code></td>
+      <td>The user name used for authentication.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_PASSWORD</code></td>
+      <td>The password used for authentication.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_REJECT_OLD_CLUSTER</code></td>
+      <td>A flag that indicates refusal to create a client against an outdated
+      cluster.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS</code></td>
+      <td>A flag that indicates the client should use TLS.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS_INSECURE</code></td>
+      <td>A flag that indicates the TLS connection should not verify peer
+      certificates.</td>
+    </tr>
   </tbody>
 </table>

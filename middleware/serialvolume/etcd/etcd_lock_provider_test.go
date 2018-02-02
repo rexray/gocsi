@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	etcd "github.com/coreos/etcd/clientv3"
 	log "github.com/sirupsen/logrus"
 
 	csietcd "github.com/thecodeteam/gocsi/middleware/serialvolume/etcd"
@@ -19,17 +18,14 @@ import (
 var p mwtypes.VolumeLockerProvider
 
 func TestMain(m *testing.M) {
+	log.SetLevel(log.InfoLevel)
+	if os.Getenv(csietcd.EnvVarEndpoints) == "" {
+		os.Exit(0)
+	}
+	os.Setenv(csietcd.EnvVarDialTimeout, "1s")
 	var err error
-	p, err = csietcd.New(
-		context.TODO(),
-		"/gocsi/etcd",
-		etcd.Config{
-			DialTimeout: 1 * time.Second,
-		})
+	p, err = csietcd.New(context.TODO(), "/gocsi/etcd", 0, nil)
 	if err != nil {
-		if err == csietcd.ErrNoEndpoints {
-			os.Exit(0)
-		}
 		log.Fatalln(err)
 	}
 	exitCode := m.Run()

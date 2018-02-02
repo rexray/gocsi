@@ -168,11 +168,11 @@ endif
 
 # Because Travis-CI's containers have limited resources, the Mock SP's
 # serial volume access provider's timeout needs to be increased from the
-# default value of 0 to 1s. This ensures that lack of system resources
+# default value of 0 to 3s. This ensures that lack of system resources
 # will not prevent a single, non-concurrent RPC from failing due to an
 # OpPending error.
 ifeq (true,$(TRAVIS))
-export X_CSI_SERIAL_VOL_ACCESS_TIMEOUT=1s
+export X_CSI_SERIAL_VOL_ACCESS_TIMEOUT=3s
 endif
 
 test: | $(GINKGO) $(ETCD)

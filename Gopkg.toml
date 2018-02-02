@@ -23,6 +23,10 @@
   name = "github.com/sirupsen/logrus"
   branch = "master"
 
+[[constraint]]
+  name = "github.com/coreos/etcd"
+  version = "v3.2.15"
+
 
 ################################################################################
 ##                                 Testing                                    ##

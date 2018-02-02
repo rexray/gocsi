@@ -188,10 +188,62 @@ GLOBAL OPTIONS
         The name of the environment variable that defines the etcd lock
         provider's concurrency domain.
 
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_TTL
+        The length of time etcd will wait before  releasing ownership of a
+        distributed lock if the lock's session has not been renewed.
+
     X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS
         A comma-separated list of etcd endpoints. If specified then the
         SP's serial volume access middleware will leverage etcd to enable
         distributed locking.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_AUTO_SYNC_INTERVAL
+        A time.Duration string that specifies the interval to update
+        endpoints with its latest members. A value of 0 disables
+        auto-sync. By default auto-sync is disabled.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_TIMEOUT
+        A time.Duration string that specifies the timeout for failing to
+        establish a connection.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_KEEP_ALIVE_TIME
+        A time.Duration string that defines the time after which the client
+        pings the server to see if the transport is alive.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_KEEP_ALIVE_TIMEOUT
+        A time.Duration string that defines the time that the client waits for
+        a response for the keep-alive probe. If the response is not received
+        in this time, the connection is closed.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_MAX_CALL_SEND_MSG_SZ
+        Defines the client-side request send limit in bytes. If 0, it defaults
+        to 2.0 MiB (2 * 1024 * 1024). Make sure that "MaxCallSendMsgSize" <
+        server-side default send/recv limit. ("--max-request-bytes" flag to
+        etcd or "embed.Config.MaxRequestBytes").
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_MAX_CALL_RECV_MSG_SZ
+        Defines the client-side response receive limit. If 0, it defaults to
+        "math.MaxInt32", because range response can easily exceed request send
+        limits. Make sure that "MaxCallRecvMsgSize" >= server-side default
+        send/recv limit. ("--max-request-bytes" flag to etcd or
+        "embed.Config.MaxRequestBytes").
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_USERNAME
+        The user name used for authentication.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_PASSWORD
+        The password used for authentication.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_REJECT_OLD_CLUSTER
+        A flag that indicates refusal to create a client against an outdated
+        cluster.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS
+        A flag that indicates the client should attempt a TLS connection.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS_INSECURE
+        A flag that indicates the TLS connection should not verify peer
+        certificates.
 
     X_CSI_PRIVATE_MOUNT_DIR
         Specifies the path of the private mount directory. During a

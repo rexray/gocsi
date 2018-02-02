@@ -177,17 +177,8 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		}
 
 		// Check for etcd
-		if v, _ := csictx.LookupEnv(
-			ctx, EnvVarSerialVolAccessEtcdEndpoints); v != "" {
-
-			fields["serialVol.etcd.endpoints"] = v
-
-			if v, _ := csictx.LookupEnv(
-				ctx, EnvVarSerialVolAccessEtcdDomain); v != "" {
-				fields["serialVol.etcd.domain"] = v
-			}
-
-			p, err := etcd.New(ctx, "", etcd.NewConfig())
+		if csictx.Getenv(ctx, EnvVarSerialVolAccessEtcdEndpoints) != "" {
+			p, err := etcd.New(ctx, "", 0, nil)
 			if err != nil {
 				log.Fatal(err)
 			}
