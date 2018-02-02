@@ -67,9 +67,9 @@ const (
 	//
 	nodeSvc = "/" + Namespace + ".Node/"
 
-	// GetNodeID is the full method name for the
+	// NodeGetId is the full method name for the
 	// eponymous RPC message.
-	GetNodeID = nodeSvc + "GetNodeID"
+	NodeGetId = nodeSvc + "NodeGetId"
 
 	// NodePublishVolume is the full method name for the
 	// eponymous RPC message.

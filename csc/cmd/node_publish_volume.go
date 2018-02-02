@@ -13,7 +13,7 @@ import (
 var nodePublishVolume struct {
 	nodeID     string
 	targetPath string
-	pubVolInfo mapOfStringArg
+	pubInfo mapOfStringArg
 	attribs    mapOfStringArg
 	readOnly   bool
 	caps       volumeCapabilitySliceArg
@@ -34,9 +34,9 @@ USAGE
 		req := csi.NodePublishVolumeRequest{
 			Version:           &root.version.Version,
 			TargetPath:        nodePublishVolume.targetPath,
-			PublishVolumeInfo: nodePublishVolume.pubVolInfo.data,
+			PublishInfo: nodePublishVolume.pubInfo.data,
 			Readonly:          nodePublishVolume.readOnly,
-			UserCredentials:   root.userCreds,
+			NodePublishCredentials:   root.userCreds,
 			VolumeAttributes:  nodePublishVolume.attribs.data,
 		}
 
@@ -74,7 +74,7 @@ func init() {
 		"The path to which to mount the volume")
 
 	nodePublishVolumeCmd.Flags().Var(
-		&nodePublishVolume.pubVolInfo,
+		&nodePublishVolume.pubInfo,
 		"pub-info",
 		`One or more key/value pairs may be specified to send with
         the request as its PublishVolumeInfo field:

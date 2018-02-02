@@ -121,7 +121,7 @@ var nilResponses = map[string]interface{}{
 	ControllerProbe:            (*csi.ControllerProbeResponse)(nil),
 	GetSupportedVersions:       (*csi.GetSupportedVersionsResponse)(nil),
 	GetPluginInfo:              (*csi.GetPluginInfoResponse)(nil),
-	GetNodeID:                  (*csi.GetNodeIDResponse)(nil),
+	NodeGetId:                  (*csi.NodeGetIdResponse)(nil),
 	NodePublishVolume:          (*csi.NodePublishVolumeResponse)(nil),
 	NodeUnpublishVolume:        (*csi.NodeUnpublishVolumeResponse)(nil),
 	NodeProbe:                  (*csi.NodeProbeResponse)(nil),

@@ -29,7 +29,7 @@ USAGE
 		req := csi.ControllerUnpublishVolumeRequest{
 			Version:         &root.version.Version,
 			NodeId:          controllerUnpublishVolume.nodeID,
-			UserCredentials: root.userCreds,
+			ControllerUnpublishCredentials: root.userCreds,
 		}
 
 		for i := range args {

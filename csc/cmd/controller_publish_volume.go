@@ -31,7 +31,7 @@ USAGE
 		req := csi.ControllerPublishVolumeRequest{
 			Version:          &root.version.Version,
 			NodeId:           controllerPublishVolume.nodeID,
-			UserCredentials:  root.userCreds,
+			ControllerPublishCredentials:  root.userCreds,
 			VolumeAttributes: controllerPublishVolume.attribs.data,
 		}
 
@@ -53,7 +53,7 @@ USAGE
 			}
 
 			fmt.Printf("%q", args[i])
-			for k, v := range rep.PublishVolumeInfo {
+			for k, v := range rep.PublishInfo {
 				fmt.Printf("\t%q=%q", k, v)
 			}
 			fmt.Println()
