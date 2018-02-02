@@ -2,6 +2,7 @@ package gocsi_test
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"path"
 	"sync"
@@ -146,6 +147,55 @@ var _ = Describe("Controller", func() {
 		})
 		Context("Normal Create Volume Call", func() {
 			It("Should Be Valid", validateNewVolume)
+		})
+		Context("Field Size Error", func() {
+			Context("Invalid Name", func() {
+				BeforeEach(func() {
+					volName = string129
+				})
+				It("Should Be Invalid", func() {
+					Ω(err).Should(HaveOccurred())
+					Ω(vol).Should(BeNil())
+					Ω(err.Error()).Should(ContainSubstring(
+						"field size > 128: field=Name, size=129"))
+				})
+			})
+			Context("Invalid Params Field Key", func() {
+				BeforeEach(func() {
+					params[string129] = "class"
+				})
+				It("Should Be Invalid", func() {
+					Ω(err).Should(HaveOccurred())
+					Ω(vol).Should(BeNil())
+					Ω(err.Error()).Should(ContainSubstring(
+						"field key size > 128: field=Parameters, key=%s, size=129",
+						string129))
+				})
+			})
+			Context("Invalid Params Field Val", func() {
+				BeforeEach(func() {
+					params["class"] = string129
+				})
+				It("Should Be Invalid", func() {
+					Ω(err).Should(HaveOccurred())
+					Ω(vol).Should(BeNil())
+					Ω(err.Error()).Should(ContainSubstring(
+						"field val size > 128: field=Parameters, key=class, size=129"))
+				})
+			})
+			Context("Invalid Params Map", func() {
+				BeforeEach(func() {
+					for i := 0; i < 48; i++ {
+						params[fmt.Sprintf("%d", i)] = string128
+					}
+				})
+				It("Should Be Invalid", func() {
+					Ω(err).Should(HaveOccurred())
+					Ω(vol).Should(BeNil())
+					Ω(err.Error()).Should(ContainSubstring(
+						"field map size > 4096: field=Parameters, size=6237"))
+				})
+			})
 		})
 		Context("No LimitBytes", func() {
 			BeforeEach(func() {

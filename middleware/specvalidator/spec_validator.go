@@ -1,6 +1,7 @@
 package specvalidator
 
 import (
+	"reflect"
 	"sync"
 
 	"golang.org/x/net/context"
@@ -253,6 +254,11 @@ func (s *interceptor) validateRequest(
 		return nil
 	}
 
+	// Validate field sizes.
+	if err := validateFieldSizes(req); err != nil {
+		return err
+	}
+
 	// Check to see if the request has a volume ID and if it is set.
 	// If the volume ID is not set then return an error.
 	if treq, ok := req.(interceptorHasVolumeID); ok {
@@ -326,8 +332,13 @@ func (s *interceptor) validateResponse(
 	method string,
 	rep interface{}) error {
 
-	if rep == nil {
+	if utils.IsNilResponse(method, rep) {
 		return nil
+	}
+
+	// Validate the field sizes.
+	if err := validateFieldSizes(rep); err != nil {
+		return err
 	}
 
 	switch tobj := rep.(type) {
@@ -656,5 +667,62 @@ func validateVolumeCapabilitiesArg(
 		}
 	}
 
+	return nil
+}
+
+const (
+	maxFieldString = 128
+	maxFieldMap    = 4096
+)
+
+func validateFieldSizes(msg interface{}) error {
+	rv := reflect.ValueOf(msg).Elem()
+	tv := rv.Type()
+	nf := tv.NumField()
+	for i := 0; i < nf; i++ {
+		f := rv.Field(i)
+		switch f.Kind() {
+		case reflect.String:
+			if l := f.Len(); l > maxFieldString {
+				return status.Errorf(
+					codes.InvalidArgument,
+					"field size > %d: field=%s, size=%d",
+					maxFieldString, tv.Field(i).Name, l)
+			}
+		case reflect.Map:
+			if f.Len() == 0 {
+				continue
+			}
+			size := 0
+			for _, k := range f.MapKeys() {
+				if k.Kind() == reflect.String {
+					kl := k.Len()
+					if kl > maxFieldString {
+						return status.Errorf(
+							codes.InvalidArgument,
+							"field key size > %d: field=%s, key=%s, size=%d",
+							maxFieldString, tv.Field(i).Name, k.String(), kl)
+					}
+					size = size + kl
+				}
+				if v := f.MapIndex(k); v.Kind() == reflect.String {
+					vl := v.Len()
+					if vl > maxFieldString {
+						return status.Errorf(
+							codes.InvalidArgument,
+							"field val size > %d: field=%s, key=%s, size=%d",
+							maxFieldString, tv.Field(i).Name, k.String(), vl)
+					}
+					size = size + vl
+				}
+			}
+			if size > maxFieldMap {
+				return status.Errorf(
+					codes.InvalidArgument,
+					"field map size > %d: field=%s, size=%d",
+					maxFieldMap, tv.Field(i).Name, size)
+			}
+		}
+	}
 	return nil
 }
