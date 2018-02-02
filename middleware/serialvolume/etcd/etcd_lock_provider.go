@@ -2,8 +2,9 @@ package etcd
 
 import (
 	"context"
-	"errors"
+	"crypto/tls"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,60 +17,159 @@ import (
 	mwtypes "github.com/thecodeteam/gocsi/middleware/serialvolume/types"
 )
 
-const (
-	// EnvVarDomain is the name of the environment variable that defines
-	// the lock provider's concurrency domain.
-	EnvVarDomain = "X_CSI_SERIAL_VOL_ACCESS_ETCD_DOMAIN"
-
-	// EnvVarEndpoints is the name of the environment variable that defines
-	// the lock provider's etcd endoints.
-	EnvVarEndpoints = "X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS"
-)
-
-var (
-	// ErrNoEndpoints is returns from New when no endpoints are defined.
-	ErrNoEndpoints = errors.New("no endpoints")
-)
-
-// NewConfig returns a new etcd config object.
-func NewConfig() etcd.Config {
-	return etcd.Config{}
-}
-
 // New returns a new etcd volume lock provider.
 func New(
 	ctx context.Context,
 	domain string,
-	config etcd.Config) (mwtypes.VolumeLockerProvider, error) {
+	ttl time.Duration,
+	config *etcd.Config) (mwtypes.VolumeLockerProvider, error) {
+
+	fields := map[string]interface{}{}
 
 	if domain == "" {
 		domain = csictx.Getenv(ctx, EnvVarDomain)
 	}
 	domain = path.Join("/", domain)
+	fields["serialvol.etcd.domain"] = domain
 
-	if len(config.Endpoints) == 0 {
-		if val, ok := csictx.LookupEnv(ctx, EnvVarEndpoints); ok {
-			if endpoints := strings.Split(val, ","); len(endpoints) > 0 {
-				config.Endpoints = endpoints
-			}
+	if ttl == 0 {
+		ttl, _ = time.ParseDuration(csictx.Getenv(ctx, EnvVarTTL))
+		if ttl > 0 {
+			fields["serialvol.etcd.ttl"] = ttl
 		}
 	}
 
-	if len(config.Endpoints) == 0 {
-		return nil, ErrNoEndpoints
+	if config == nil {
+		cfg, err := initConfig(ctx, fields)
+		if err != nil {
+			return nil, err
+		}
+		config = &cfg
 	}
 
-	client, err := etcd.New(config)
+	log.WithFields(fields).Info("creating serial vol etcd lock provider")
+
+	client, err := etcd.New(*config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &provider{client: client, domain: domain}, nil
+	return &provider{
+		client: client,
+		domain: domain,
+		ttl:    int(ttl.Seconds()),
+	}, nil
+}
+
+func initConfig(
+	ctx context.Context,
+	fields map[string]interface{}) (etcd.Config, error) {
+
+	config := etcd.Config{}
+
+	if v := csictx.Getenv(ctx, EnvVarEndpoints); v != "" {
+		config.Endpoints = strings.Split(v, ",")
+		fields["serialvol.etcd.Endpoints"] = v
+	}
+
+	if v := csictx.Getenv(ctx, EnvVarAutoSyncInterval); v != "" {
+		v, err := time.ParseDuration(v)
+		if err != nil {
+			return config, err
+		}
+		config.AutoSyncInterval = v
+		fields["serialvol.etcd.AutoSyncInterval"] = v
+	}
+
+	if v := csictx.Getenv(ctx, EnvVarDialKeepAliveTime); v != "" {
+		v, err := time.ParseDuration(v)
+		if err != nil {
+			return config, err
+		}
+		config.DialKeepAliveTime = v
+		fields["serialvol.etcd.DialKeepAliveTime"] = v
+	}
+
+	if v := csictx.Getenv(ctx, EnvVarDialKeepAliveTimeout); v != "" {
+		v, err := time.ParseDuration(v)
+		if err != nil {
+			return config, err
+		}
+		config.DialKeepAliveTimeout = v
+		fields["serialvol.etcd.DialKeepAliveTimeout"] = v
+	}
+
+	if v := csictx.Getenv(ctx, EnvVarDialTimeout); v != "" {
+		v, err := time.ParseDuration(v)
+		if err != nil {
+			return config, err
+		}
+		config.DialTimeout = v
+		fields["serialvol.etcd.DialTimeout"] = v
+	}
+
+	if v := csictx.Getenv(ctx, EnvVarMaxCallRecvMsgSz); v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return config, err
+		}
+		config.MaxCallRecvMsgSize = i
+		fields["serialvol.etcd.MaxCallRecvMsgSize"] = i
+	}
+
+	if v := csictx.Getenv(ctx, EnvVarMaxCallSendMsgSz); v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return config, err
+		}
+		config.MaxCallSendMsgSize = i
+		fields["serialvol.etcd.MaxCallSendMsgSize"] = i
+	}
+
+	if v := csictx.Getenv(ctx, EnvVarUsername); v != "" {
+		config.Username = v
+		fields["serialvol.etcd.Username"] = v
+	}
+	if v := csictx.Getenv(ctx, EnvVarPassword); v != "" {
+		config.Password = v
+		fields["serialvol.etcd.Password"] = "********"
+	}
+
+	if v, ok := csictx.LookupEnv(ctx, EnvVarRejectOldCluster); ok {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return config, err
+		}
+		config.RejectOldCluster = b
+		fields["serialvol.etcd.RejectOldCluster"] = b
+	}
+
+	if v, ok := csictx.LookupEnv(ctx, EnvVarTLS); ok {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return config, err
+		}
+		if b {
+			config.TLS = &tls.Config{}
+			fields["serialvol.etcd.tls"] = b
+			if v, ok := csictx.LookupEnv(ctx, EnvVarTLSInsecure); ok {
+				b, err := strconv.ParseBool(v)
+				if err != nil {
+					return config, err
+				}
+				config.TLS.InsecureSkipVerify = b
+				fields["serialvol.etcd.tls.insecure"] = b
+			}
+		}
+	}
+
+	return config, nil
 }
 
 type provider struct {
 	client *etcd.Client
 	domain string
+	ttl    int
 }
 
 func (p *provider) Close() error {
@@ -92,7 +192,13 @@ func (p *provider) getLock(
 	ctx context.Context, pfx string) (gosync.TryLocker, error) {
 
 	log.Debugf("EtcdVolumeLockProvider: getLock: pfx=%v", pfx)
-	sess, err := etcdsync.NewSession(p.client, etcdsync.WithContext(ctx))
+
+	opts := []etcdsync.SessionOption{etcdsync.WithContext(ctx)}
+	if p.ttl > 0 {
+		opts = append(opts, etcdsync.WithTTL(p.ttl))
+	}
+
+	sess, err := etcdsync.NewSession(p.client, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +235,7 @@ func (m *TryMutex) Lock() {
 		ctx = m.ctx
 	}
 	if err := m.mtx.Lock(ctx); err != nil {
-		log.Errorf("TryMutex: lock err: %v", err)
+		log.Debugf("TryMutex: lock err: %v", err)
 		if err != context.Canceled && err != context.DeadlineExceeded {
 			log.Panicf("TryMutex: lock panic: %v", err)
 		}
@@ -149,7 +255,7 @@ func (m *TryMutex) Unlock() {
 		ctx = m.ctx
 	}
 	if err := m.mtx.Unlock(ctx); err != nil {
-		log.Errorf("TryMutex: unlock err: %v", err)
+		log.Debugf("TryMutex: unlock err: %v", err)
 		if err != context.Canceled && err != context.DeadlineExceeded {
 			log.Panicf("TryMutex: unlock panic: %v", err)
 		}
@@ -183,7 +289,7 @@ func (m *TryMutex) TryLock(timeout time.Duration) bool {
 	}
 
 	if err := m.mtx.Lock(ctx); err != nil {
-		log.Errorf("TryMutex: TryLock err: %v", err)
+		log.Debugf("TryMutex: TryLock err: %v", err)
 		if err != context.Canceled && err != context.DeadlineExceeded {
 			log.Panicf("TryMutex: TryLock panic: %v", err)
 		}

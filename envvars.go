@@ -178,9 +178,75 @@ const (
 	// variable that defines the lock provider's concurrency domain.
 	EnvVarSerialVolAccessEtcdDomain = "X_CSI_SERIAL_VOL_ACCESS_ETCD_DOMAIN"
 
+	// EnvVarSerialVolAccessEtcdTTL is the name of the environment
+	// variable that defines the length of time etcd will wait before
+	// releasing ownership of a distributed lock if the lock's session
+	// has not been renewed.
+	EnvVarSerialVolAccessEtcdTTL = "X_CSI_SERIAL_VOL_ACCESS_ETCD_TTL"
+
 	// EnvVarSerialVolAccessEtcdEndpoints is the name of the environment
 	// variable that defines the lock provider's etcd endoints.
 	EnvVarSerialVolAccessEtcdEndpoints = "X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS"
+
+	// EnvVarSerialVolAccessEtcdAutoSyncInterval is the name of the environment
+	// variable that defines the interval to update endpoints with its latest
+	//  members. 0 disables auto-sync. By default auto-sync is disabled.
+	EnvVarSerialVolAccessEtcdAutoSyncInterval = "X_CSI_SERIAL_VOL_ACCESS_ETCD_AUTO_SYNC_INTERVAL"
+
+	// EnvVarSerialVolAccessEtcdDialTimeout is the name of the environment
+	// variable that defines the timeout for failing to establish a connection.
+	EnvVarSerialVolAccessEtcdDialTimeout = "X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_TIMEOUT"
+
+	// EnvVarSerialVolAccessEtcdDialKeepAliveTime is the name of the environment
+	// variable that defines the time after which client pings the server to see
+	// if transport is alive.
+	EnvVarSerialVolAccessEtcdDialKeepAliveTime = "X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_KEEP_ALIVE_TIME"
+
+	// EnvVarSerialVolAccessEtcdDialKeepAliveTimeout is the name of the
+	// environment variable that defines the time that the client waits for a
+	// response for the keep-alive probe. If the response is not received in
+	// this time, the connection is closed.
+	EnvVarSerialVolAccessEtcdDialKeepAliveTimeout = "X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_KEEP_ALIVE_TIMEOUT"
+
+	// EnvVarSerialVolAccessEtcdMaxCallSendMsgSz is the name of the environment
+	// variable that defines the client-side request send limit in bytes.
+	// If 0, it defaults to 2.0 MiB (2 * 1024 * 1024).
+	// Make sure that "MaxCallSendMsgSize" < server-side default send/recv
+	// limit. ("--max-request-bytes" flag to etcd or
+	// "embed.Config.MaxRequestBytes").
+	EnvVarSerialVolAccessEtcdMaxCallSendMsgSz = "X_CSI_SERIAL_VOL_ACCESS_ETCD_MAX_CALL_SEND_MSG_SZ"
+
+	// EnvVarSerialVolAccessEtcdMaxCallRecvMsgSz is the name of the environment
+	// variable that defines the client-side response receive limit.
+	// If 0, it defaults to "math.MaxInt32", because range response can
+	// easily exceed request send limits.
+	// Make sure that "MaxCallRecvMsgSize" >= server-side default send/recv
+	// limit. ("--max-request-bytes" flag to etcd or
+	// "embed.Config.MaxRequestBytes").
+	EnvVarSerialVolAccessEtcdMaxCallRecvMsgSz = "X_CSI_SERIAL_VOL_ACCESS_ETCD_MAX_CALL_RECV_MSG_SZ"
+
+	// EnvVarSerialVolAccessEtcdUsername is the name of the environment
+	// variable that defines the user name used for authentication.
+	EnvVarSerialVolAccessEtcdUsername = "X_CSI_SERIAL_VOL_ACCESS_ETCD_USERNAME"
+
+	// EnvVarSerialVolAccessEtcdPassword is the name of the environment
+	// variable that defines the password used for authentication.
+	EnvVarSerialVolAccessEtcdPassword = "X_CSI_SERIAL_VOL_ACCESS_ETCD_PASSWORD"
+
+	// EnvVarSerialVolAccessEtcdRejectOldCluster is the name of the environment
+	// variable that defines when set will refuse to create a client against
+	// an outdated cluster.
+	EnvVarSerialVolAccessEtcdRejectOldCluster = "X_CSI_SERIAL_VOL_ACCESS_ETCD_REJECT_OLD_CLUSTER"
+
+	// EnvVarSerialVolAccessEtcdTLS is the name of the environment
+	// variable that defines whether or not the client should attempt
+	// to use TLS when connecting to the server.
+	EnvVarSerialVolAccessEtcdTLS = "X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS"
+
+	// EnvVarSerialVolAccessEtcdTLSInsecure is the name of the environment
+	// variable that defines whether or not the TLS connection should
+	// verify certificates.
+	EnvVarSerialVolAccessEtcdTLSInsecure = "X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS_INSECURE"
 
 	// EnvVarPrivateMountDir is the name of the environment variable
 	// that specifies the path of the private mount directory used by
