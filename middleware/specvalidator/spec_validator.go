@@ -2,6 +2,7 @@ package specvalidator
 
 import (
 	"reflect"
+	"regexp"
 	"sync"
 
 	"golang.org/x/net/context"
@@ -553,6 +554,12 @@ func (s *interceptor) validateGetSupportedVersionsResponse(
 	return nil
 }
 
+const (
+	pluginNameMax           = 63
+	pluginNamePatt          = `^[\w\d]+\.[\w\d\.\-_]*[\w\d]$`
+	pluginVendorVersionPatt = `^(\d+\.){2}(\d+)(-.+)?$`
+)
+
 func (s *interceptor) validateGetPluginInfoResponse(
 	ctx context.Context,
 	rep csi.GetPluginInfoResponse) error {
@@ -560,8 +567,30 @@ func (s *interceptor) validateGetPluginInfoResponse(
 	if rep.Name == "" {
 		return csierr.ErrEmptyPluginName
 	}
+	if l := len(rep.Name); l > pluginNameMax {
+		return status.Errorf(codes.InvalidArgument,
+			"Name: exceeds max len: len=%d, max=%d", l, pluginNameMax)
+	}
+	nok, err := regexp.MatchString(pluginNamePatt, rep.Name)
+	if err != nil {
+		return err
+	}
+	if !nok {
+		return status.Errorf(codes.InvalidArgument,
+			"Name: invalid: val=%s patt=%s",
+			rep.Name, pluginNamePatt)
+	}
 	if rep.VendorVersion == "" {
 		return csierr.ErrEmptyVendorVersion
+	}
+	vok, err := regexp.MatchString(pluginVendorVersionPatt, rep.VendorVersion)
+	if err != nil {
+		return err
+	}
+	if !vok {
+		return status.Errorf(codes.InvalidArgument,
+			"VendorVersion: invalid: val=%s patt=%s",
+			rep.VendorVersion, pluginVendorVersionPatt)
 	}
 	if rep.Manifest != nil && len(rep.Manifest) == 0 {
 		return csierr.ErrNonNilEmptyPluginManifest
