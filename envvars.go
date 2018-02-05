@@ -103,16 +103,6 @@ const (
 	// requests and outgoing responses against the CSI specification.
 	EnvVarSpecValidation = "X_CSI_SPEC_VALIDATION"
 
-	// EnvVarCreateVolAlreadyExistsSuccess is the name of the environment
-	// variable used to determine whether or not to treat CreateVolume
-	// responses with an error code of AlreadyExists as a successful.
-	EnvVarCreateVolAlreadyExistsSuccess = "X_CSI_CREATE_VOL_ALREADY_EXISTS"
-
-	// EnvVarDeleteVolNotFoundSuccess is the name of the environment
-	// variable used to determine whether or not to treat DeleteVolume
-	// responses with an error code of NotFound as a successful.
-	EnvVarDeleteVolNotFoundSuccess = "X_CSI_DELETE_VOL_NOT_FOUND"
-
 	// EnvVarRequireNodeID is the name of the environment variable used
 	// to determine whether or not the node ID value is required for
 	// requests that accept it and responses that return it such as
