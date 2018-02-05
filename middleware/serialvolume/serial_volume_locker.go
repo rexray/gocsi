@@ -9,10 +9,13 @@ import (
 	"github.com/thecodeteam/gosync"
 	xctx "golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
-	csierr "github.com/thecodeteam/gocsi/errors"
 	mwtypes "github.com/thecodeteam/gocsi/middleware/serialvolume/types"
 )
+
+const pending = "pending"
 
 // Option configures the interceptor.
 type Option func(*opts)
@@ -110,7 +113,7 @@ func (i *interceptor) controllerPublishVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, csierr.ErrOpPending
+		return nil, status.Error(codes.FailedPrecondition, pending)
 	}
 	defer lock.Unlock()
 
@@ -131,7 +134,7 @@ func (i *interceptor) controllerUnpublishVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, csierr.ErrOpPending
+		return nil, status.Error(codes.FailedPrecondition, pending)
 	}
 	defer lock.Unlock()
 
@@ -152,7 +155,7 @@ func (i *interceptor) createVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, csierr.ErrOpPending
+		return nil, status.Error(codes.FailedPrecondition, pending)
 	}
 	defer lock.Unlock()
 
@@ -173,7 +176,7 @@ func (i *interceptor) deleteVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, csierr.ErrOpPending
+		return nil, status.Error(codes.FailedPrecondition, pending)
 	}
 	defer lock.Unlock()
 
@@ -194,7 +197,7 @@ func (i *interceptor) nodePublishVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, csierr.ErrOpPending
+		return nil, status.Error(codes.FailedPrecondition, pending)
 	}
 	defer lock.Unlock()
 
@@ -215,7 +218,7 @@ func (i *interceptor) nodeUnpublishVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, csierr.ErrOpPending
+		return nil, status.Error(codes.FailedPrecondition, pending)
 	}
 	defer lock.Unlock()
 
