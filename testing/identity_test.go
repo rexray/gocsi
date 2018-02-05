@@ -74,8 +74,7 @@ var _ = Describe("Identity", func() {
 		shouldNotBeValid := func() {
 			Ω(err).Should(ΣCM(
 				codes.InvalidArgument,
-				fmt.Sprintf("invalid request version: %s",
-					CTest().ComponentTexts[3])))
+				fmt.Sprintf("invalid: Version=%s", CTest().ComponentTexts[3])))
 
 		}
 		Context("With Request Version", func() {

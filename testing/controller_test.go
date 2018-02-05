@@ -12,7 +12,6 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	csierr "github.com/thecodeteam/gocsi/errors"
 	"github.com/thecodeteam/gocsi/mock/service"
 	"github.com/thecodeteam/gocsi/utils"
 )
@@ -126,7 +125,7 @@ var _ = Describe("Controller", func() {
 		err error) bool {
 
 		if err != nil {
-			Ω(err).Should(Σ(csierr.ErrOpPending))
+			Ω(err).Should(ΣCM(codes.FailedPrecondition, "pending"))
 			return true
 		}
 
@@ -156,8 +155,9 @@ var _ = Describe("Controller", func() {
 				It("Should Be Invalid", func() {
 					Ω(err).Should(HaveOccurred())
 					Ω(vol).Should(BeNil())
-					Ω(err.Error()).Should(ContainSubstring(
-						"field size > 128: field=Name, size=129"))
+					Ω(err).Should(ΣCM(
+						codes.InvalidArgument,
+						"exceeds size limit: Name: max=128, size=129"))
 				})
 			})
 			Context("Invalid Params Field Key", func() {
@@ -167,9 +167,11 @@ var _ = Describe("Controller", func() {
 				It("Should Be Invalid", func() {
 					Ω(err).Should(HaveOccurred())
 					Ω(vol).Should(BeNil())
-					Ω(err.Error()).Should(ContainSubstring(
-						"field key size > 128: field=Parameters, key=%s, size=129",
-						string129))
+					Ω(err).Should(ΣCM(
+						codes.InvalidArgument,
+						fmt.Sprintf(
+							"exceeds size limit: Parameters[%s]: max=128, size=129",
+							string129)))
 				})
 			})
 			Context("Invalid Params Field Val", func() {
@@ -179,8 +181,9 @@ var _ = Describe("Controller", func() {
 				It("Should Be Invalid", func() {
 					Ω(err).Should(HaveOccurred())
 					Ω(vol).Should(BeNil())
-					Ω(err.Error()).Should(ContainSubstring(
-						"field val size > 128: field=Parameters, key=class, size=129"))
+					Ω(err).Should(ΣCM(
+						codes.InvalidArgument,
+						"exceeds size limit: Parameters[class]=: max=128, size=129"))
 				})
 			})
 			Context("Invalid Params Map", func() {
@@ -192,8 +195,9 @@ var _ = Describe("Controller", func() {
 				It("Should Be Invalid", func() {
 					Ω(err).Should(HaveOccurred())
 					Ω(vol).Should(BeNil())
-					Ω(err.Error()).Should(ContainSubstring(
-						"field map size > 4096: field=Parameters, size=6237"))
+					Ω(err).Should(ΣCM(
+						codes.InvalidArgument,
+						"exceeds size limit: Parameters: max=4096, size=6237"))
 				})
 			})
 		})
@@ -214,7 +218,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Be Invalid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(csierr.ErrVolumeNameRequired))
+				Ω(err).Should(ΣCM(codes.InvalidArgument, "required: Name"))
 				Ω(vol).Should(BeNil())
 			})
 		})
@@ -363,7 +367,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(Σ(csierr.ErrVolumeIDRequired))
+				Ω(err).Should(ΣCM(codes.InvalidArgument, "required: VolumeID"))
 			})
 		})
 		Context("Not Found", func() {
@@ -387,9 +391,7 @@ var _ = Describe("Controller", func() {
 			})
 			It("Should Not Be Valid", func() {
 				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(ΣCM(
-					codes.InvalidArgument,
-					"invalid request version: nil"))
+				Ω(err).Should(ΣCM(codes.InvalidArgument, "nil: Version"))
 			})
 		})
 	})
