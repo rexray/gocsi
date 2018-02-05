@@ -23,11 +23,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 	sp.Interceptors = append(sp.Interceptors, sp.injectContext)
 	log.Debug("enabled context injector")
 
-	const (
-		envVarNewVolExists   = EnvVarCreateVolAlreadyExistsSuccess
-		envVarDelVolNotFound = EnvVarDeleteVolNotFoundSuccess
-	)
-
 	var (
 		withReqLogging         = sp.getEnvBool(ctx, EnvVarReqLogging)
 		withRepLogging         = sp.getEnvBool(ctx, EnvVarRepLogging)

@@ -222,22 +222,6 @@ environment variables:
       responses against the CSI specification.</td>
     </tr>
     <tr>
-      <td><code>X_CSI_CREATE_VOL_ALREADY_EXISTS</code></td>
-      <td><p>A flag that enables treating <code>CreateVolume</code> responses
-      as successful when they have an associated error code of
-      <code>AlreadyExists</code>.</p>
-      <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
-      </td>
-    </tr>
-    <tr>
-      <td><code>X_CSI_DELETE_VOL_NOT_FOUND</code></td>
-      <td><p>A flag that enables treating <code>DeleteVolume</code> responses
-      as successful when they have an associated error code of
-      <code>NotFound</code>.</p>
-      <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
-      </td>
-    </tr>
-    <tr>
       <td><code>X_CSI_REQUIRE_NODE_ID</code></td>
       <td>
         <p>A flag that enables treating the following fields as required:</p>
