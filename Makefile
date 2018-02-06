@@ -115,7 +115,7 @@ $(CSI_SP_LOG): $(CSI_SP)
 	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
 	  printf "%-74s" "invoking GetPluginInfo" && printf ' ==\n' && \
 	  printf '=%.0s' $$(seq 1 80) && echo
-	csc/csc -e $(CSI_SP_SOCK) i info
+	csc/csc -e $(CSI_SP_SOCK) i info -v 0.1.0
 	@echo && \
 	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
 	  printf "%-74s" "killing $(<F) with SIGINT" && printf ' ==\n' && \
