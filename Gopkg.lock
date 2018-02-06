@@ -8,10 +8,10 @@
   revision = "6d806d44b3dd61d5ae90c1b5a4fb4c81b4d8d68b"
 
 [[projects]]
-  branch = "master"
   name = "github.com/container-storage-interface/spec"
   packages = ["lib/go/csi"]
-  revision = "4ac2d13f89360f2da40d188473d77f2ec56b9d0d"
+  revision = "9e88e4bfabeca1b8e4810555815f112159292ada"
+  version = "v0.1.0"
 
 [[projects]]
   name = "github.com/coreos/etcd"
@@ -111,6 +111,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1b23a37fb5ff25c50e5c2a70920dd73261f6cbe417d53691dbef874d13d88a36"
+  inputs-digest = "50cd955f24c81ec613bcfa3f713cf9f2de00e24243816a0d29d849872ab7d821"
   solver-name = "gps-cdcl"
   solver-version = 1

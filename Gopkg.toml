@@ -5,7 +5,7 @@
 
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
-  branch = "master"
+  version = "0.1.0"
 
 [[constraint]]
   name = "github.com/golang/protobuf"
