@@ -125,7 +125,7 @@ var _ = Describe("Controller", func() {
 		err error) bool {
 
 		if err != nil {
-			Ω(err).Should(ΣCM(codes.FailedPrecondition, "pending"))
+			Ω(err).Should(ΣCM(codes.Aborted, "pending"))
 			return true
 		}
 
