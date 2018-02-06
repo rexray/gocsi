@@ -113,7 +113,7 @@ func (i *interceptor) controllerPublishVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, status.Error(codes.FailedPrecondition, pending)
+		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
 
@@ -134,7 +134,7 @@ func (i *interceptor) controllerUnpublishVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, status.Error(codes.FailedPrecondition, pending)
+		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
 
@@ -155,7 +155,7 @@ func (i *interceptor) createVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, status.Error(codes.FailedPrecondition, pending)
+		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
 
@@ -176,7 +176,7 @@ func (i *interceptor) deleteVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, status.Error(codes.FailedPrecondition, pending)
+		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
 
@@ -197,7 +197,7 @@ func (i *interceptor) nodePublishVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, status.Error(codes.FailedPrecondition, pending)
+		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
 
@@ -218,7 +218,7 @@ func (i *interceptor) nodeUnpublishVolume(
 		defer closer.Close()
 	}
 	if !lock.TryLock(i.opts.timeout) {
-		return nil, status.Error(codes.FailedPrecondition, pending)
+		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
 
