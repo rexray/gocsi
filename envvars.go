@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	csictx "github.com/thecodeteam/gocsi/context"
 	"github.com/thecodeteam/gocsi/utils"
 )
@@ -99,9 +101,22 @@ const (
 	EnvVarReqIDInjection = "X_CSI_REQ_ID_INJECTION"
 
 	// EnvVarSpecValidation is the name of the environment variable
-	// used to determine whether or not to enable validation of incoming
-	// requests and outgoing responses against the CSI specification.
+	// used to determine whether or not to enable validation of CSI
+	// request and response messages. Setting X_CSI_SPEC_VALIDATION=true
+	// is the equivalent to setting X_CSI_SPEC_REQ_VALIDATION=true and
+	// X_CSI_SPEC_REP_VALIDATION=true.
 	EnvVarSpecValidation = "X_CSI_SPEC_VALIDATION"
+
+	// EnvVarSpecReqValidation is the name of the environment variable
+	// used to determine whether or not to enable validation of CSI request
+	// messages.
+	EnvVarSpecReqValidation = "X_CSI_SPEC_REQ_VALIDATION"
+
+	// EnvVarSpecRepValidation is the name of the environment variable
+	// used to determine whether or not to enable validation of CSI response
+	// messages. Invalid responses are marshalled into a gRPC error with
+	// a code of "Internal."
+	EnvVarSpecRepValidation = "X_CSI_SPEC_REP_VALIDATION"
 
 	// EnvVarRequireNodeID is the name of the environment variable used
 	// to determine whether or not the node ID value is required for
@@ -303,13 +318,21 @@ func (sp *StoragePlugin) initPluginInfo(ctx context.Context) {
 		return
 	}
 	info := strings.SplitN(szInfo, ",", 3)
+	fields := map[string]interface{}{}
 	if len(info) > 0 {
-		sp.pluginInfo.Name = info[0]
+		sp.pluginInfo.Name = strings.TrimSpace(info[0])
+		fields["name"] = sp.pluginInfo.Name
 	}
 	if len(info) > 1 {
-		sp.pluginInfo.VendorVersion = info[1]
+		sp.pluginInfo.VendorVersion = strings.TrimSpace(info[1])
+		fields["vendorVersion"] = sp.pluginInfo.VendorVersion
 	}
 	if len(info) > 2 {
-		sp.pluginInfo.Manifest = utils.ParseMap(info[2])
+		sp.pluginInfo.Manifest = utils.ParseMap(strings.TrimSpace(info[2]))
+		fields["manifest"] = sp.pluginInfo.Manifest
+	}
+
+	if len(fields) > 0 {
+		log.WithFields(fields).Debug("init plug-in info")
 	}
 }

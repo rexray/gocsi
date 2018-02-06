@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/golang/protobuf/proto"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -21,6 +23,8 @@ type Option func(*opts)
 type opts struct {
 	sync.Mutex
 	supportedVersions   []csi.Version
+	reqValidation       bool
+	repValidation       bool
 	requiresNodeID      bool
 	requiresPubVolInfo  bool
 	requiresVolAttribs  bool
@@ -42,6 +46,20 @@ func (o *opts) requireCredentials(m string) {
 func WithSupportedVersions(versions ...csi.Version) Option {
 	return func(o *opts) {
 		o.supportedVersions = versions
+	}
+}
+
+// WithRequestValidation is a Option that enables request validation.
+func WithRequestValidation() Option {
+	return func(o *opts) {
+		o.reqValidation = true
+	}
+}
+
+// WithResponseValidation is a Option that enables response validation.
+func WithResponseValidation() Option {
+	return func(o *opts) {
+		o.repValidation = true
 	}
 }
 
@@ -191,14 +209,16 @@ func (s *interceptor) handle(
 		return next()
 	}
 
-	// Validate the request version.
-	if err := s.validateRequestVersion(ctx, req); err != nil {
-		return nil, err
-	}
+	if s.opts.reqValidation {
+		// Validate the request version.
+		if err := s.validateRequestVersion(ctx, req); err != nil {
+			return nil, err
+		}
 
-	// Validate the request against the CSI specification.
-	if err := s.validateRequest(ctx, method, req); err != nil {
-		return nil, err
+		// Validate the request against the CSI specification.
+		if err := s.validateRequest(ctx, method, req); err != nil {
+			return nil, err
+		}
 	}
 
 	// Use the function passed into this one to get the response. On the
@@ -221,9 +241,41 @@ func (s *interceptor) handle(
 		return nil, nil
 	}
 
-	// Validate the response against the CSI specification.
-	if err := s.validateResponse(ctx, method, rep); err != nil {
-		return rep, err
+	log.WithField(
+		"repValidation", s.opts.repValidation).Debug("do rep validtion?")
+	if s.opts.repValidation {
+		// Validate the response against the CSI specification.
+		if err := s.validateResponse(ctx, method, rep); err != nil {
+
+			// If an error occurred while validating the response, it is
+			// imperative the response not be discarded as it could be
+			// important to the client.
+			st, ok := status.FromError(err)
+			if !ok {
+				st = status.New(codes.Internal, err.Error())
+			}
+
+			// Add the response to the error details.
+			st, err2 := st.WithDetails(rep.(proto.Message))
+
+			// If there is a problem encoding the response into the
+			// protobuf details then err on the side of caution, log
+			// the encoding error, validation error, and return the
+			// original response.
+			if err2 != nil {
+				log.WithFields(map[string]interface{}{
+					"encErr": err2,
+					"valErr": err,
+				}).Error("failed to encode error details; " +
+					"returning invalid response")
+
+				return rep, nil
+			}
+
+			// There was no issue encoding the response, so return
+			// the gRPC status error with the error message and payload.
+			return nil, st.Err()
+		}
 	}
 
 	return rep, err
@@ -274,7 +326,7 @@ func (s *interceptor) validateRequest(
 		if treq, ok := req.(interceptorHasNodeID); ok {
 			if treq.GetNodeId() == "" {
 				return status.Error(
-					codes.InvalidArgument, "required: NodeId")
+					codes.InvalidArgument, "required: NodeID")
 			}
 		}
 	}
@@ -564,20 +616,22 @@ func (s *interceptor) validateGetSupportedVersionsResponse(
 const (
 	pluginNameMax           = 63
 	pluginNamePatt          = `^[\w\d]+\.[\w\d\.\-_]*[\w\d]$`
-	pluginVendorVersionPatt = `^(\d+\.){2}(\d+)(-.+)?$`
+	pluginVendorVersionPatt = `^v?(\d+\.){2}(\d+)(-.+)?$`
 )
 
 func (s *interceptor) validateGetPluginInfoResponse(
 	ctx context.Context,
 	rep csi.GetPluginInfoResponse) error {
 
+	log.Debug("validateGetPluginInfoResponse: enter")
+
 	if rep.Name == "" {
 		return status.Error(codes.Internal, "empty: Name")
 	}
 	if l := len(rep.Name); l > pluginNameMax {
 		return status.Errorf(codes.Internal,
-			"exceeds max len: Name=%s, len=%d, max=%d",
-			rep.Name, l, pluginNameMax)
+			"exceeds size limit: Name=%s: max=%d, size=%d",
+			rep.Name, pluginNameMax, l)
 	}
 	nok, err := regexp.MatchString(pluginNamePatt, rep.Name)
 	if err != nil {
@@ -585,7 +639,7 @@ func (s *interceptor) validateGetPluginInfoResponse(
 	}
 	if !nok {
 		return status.Errorf(codes.Internal,
-			"invalid: Name=%s, patt=%s",
+			"invalid: Name=%s: patt=%s",
 			rep.Name, pluginNamePatt)
 	}
 	if rep.VendorVersion == "" {
@@ -597,7 +651,7 @@ func (s *interceptor) validateGetPluginInfoResponse(
 	}
 	if !vok {
 		return status.Errorf(codes.Internal,
-			"invalid: VendorVersion=%s, patt=%s",
+			"invalid: VendorVersion=%s: patt=%s",
 			rep.VendorVersion, pluginVendorVersionPatt)
 	}
 	if rep.Manifest != nil && len(rep.Manifest) == 0 {
@@ -612,7 +666,7 @@ func (s *interceptor) validateGetNodeIDResponse(
 	rep csi.GetNodeIDResponse) error {
 
 	if s.opts.requiresNodeID && rep.NodeId == "" {
-		return status.Error(codes.Internal, "empty: NodeId")
+		return status.Error(codes.Internal, "empty: NodeID")
 	}
 	return nil
 }

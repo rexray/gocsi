@@ -36,6 +36,9 @@ func New() gocsi.StoragePluginProvider {
 			// Enable serial volume access.
 			gocsi.EnvVarSerialVolAccess + "=true",
 
+			// Enable request and response validation.
+			gocsi.EnvVarSpecValidation + "=true",
+
 			// Treat the following fields as required:
 			//    * ControllerPublishVolumeRequest.NodeId
 			//    * GetNodeIDResponse.NodeId

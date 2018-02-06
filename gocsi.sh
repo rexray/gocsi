@@ -82,6 +82,9 @@ func New() gocsi.StoragePluginProvider {
 		},
 
 		EnvVars: []string{
+			// Enable request validation.
+			gocsi.EnvVarSpecReqValidation + "=true",
+
 			// Enable serial volume access.
 			gocsi.EnvVarSerialVolAccess + "=true",
 

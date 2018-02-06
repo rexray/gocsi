@@ -218,8 +218,22 @@ environment variables:
     </tr>
     <tr>
       <td><code>X_CSI_SPEC_VALIDATION</code></td>
-      <td>A flag that enables validation of incoming requests and outgoing
-      responses against the CSI specification.</td>
+      <td>Setting <code>X_CSI_SPEC_VALIDATION=true</code> is the same as:
+        <ul>
+          <li><code>X_CSI_SPEC_REQ_VALIDATION=true</code></li>
+          <li><code>X_CSI_SPEC_REP_VALIDATION=true</code></li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SPEC_REQ_VALIDATION</code></td>
+      <td>A flag that enables the validation of CSI request messages.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_SPEC_REP_VALIDATION</code></td>
+      <td>A flag that enables the validation of CSI response messages.
+      Invalid responses are marshalled into a gRPC error with a code
+      of <code>Internal</code>.</td>
     </tr>
     <tr>
       <td><code>X_CSI_REQUIRE_NODE_ID</code></td>
@@ -229,7 +243,7 @@ environment variables:
           <li><code>ControllerPublishVolumeRequest.NodeId</code></li>
           <li><code>GetNodeIDResponse.NodeId</code></li>
       </ul>
-      <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+      <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -240,7 +254,7 @@ environment variables:
           <li><code>ControllerPublishVolumeResponse.PublishVolumeInfo</code></li>
           <li><code>NodePublishVolumeRequest.PublishVolumeInfo</code></li>
         </ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -252,7 +266,7 @@ environment variables:
           <li><code>ValidateVolumeCapabilitiesRequest.VolumeAttributes</code></li>
           <li><code>NodePublishVolumeRequest.VolumeAttributes</code></li>
         </ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -266,7 +280,7 @@ environment variables:
           <li><code>X_CSI_REQUIRE_CREDS_NODE_PUB_VOL=true</code></li>
           <li><code>X_CSI_REQUIRE_CREDS_NODE_UNPUB_VOL=true</code></li>
         </ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -274,7 +288,7 @@ environment variables:
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul><li><code>CreateVolumeRequest.UserCredentials</code></li></ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -282,7 +296,7 @@ environment variables:
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul><li><code>DeleteVolumeRequest.UserCredentials</code></li></ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -290,7 +304,7 @@ environment variables:
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul><li><code>ControllerPublishVolumeRequest.UserCredentials</code></li></ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -298,7 +312,7 @@ environment variables:
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul><li><code>ControllerUnpublishVolumeRequest.UserCredentials</code></li></ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -306,7 +320,7 @@ environment variables:
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul><li><code>NodePublishVolumeRequest.UserCredentials</code></li></ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
@@ -314,7 +328,7 @@ environment variables:
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul><li><code>NodeUnpublishVolumeRequest.UserCredentials</code></li></ul>
-        <p>Enabling this option sets <code>X_CSI_SPEC_VALIDATION=true</code></p>
+        <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
