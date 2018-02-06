@@ -1,6 +1,7 @@
 package gocsi
 
 import (
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -50,12 +51,33 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withCredsNodeUnpubVol = true
 	}
 
-	// Enable spec validation if any of the spec-related options are enabled.
-	withSpec = withSpec ||
-		withCreds ||
-		withNodeID ||
-		withPubVolInfo ||
-		withVolAttribs
+	// Initialize request & response validation to the global validaiton value.
+	var (
+		withSpecReq = withSpec
+		withSpecRep = withSpec
+	)
+	log.WithField("withSpec", withSpec).Debug("init req & rep validation")
+
+	// If request validation is not enabled explicitly, check to see if it
+	// should be enabled implicitly.
+	if !withSpecReq {
+		withSpecReq = withCreds ||
+			withNodeID ||
+			withPubVolInfo ||
+			withVolAttribs
+		log.WithField("withSpecRep", withSpecRep).Debug(
+			"init implicit rep validation")
+	}
+
+	// Check to see if spec request or response validation are overridden.
+	if v, ok := csictx.LookupEnv(ctx, EnvVarSpecReqValidation); ok {
+		withSpecReq, _ = strconv.ParseBool(v)
+		log.WithField("withSpecReq", withSpecReq).Debug("init req validation")
+	}
+	if v, ok := csictx.LookupEnv(ctx, EnvVarSpecRepValidation); ok {
+		withSpecRep, _ = strconv.ParseBool(v)
+		log.WithField("withSpecRep", withSpecRep).Debug("init rep validation")
+	}
 
 	// Configure logging.
 	if withReqLogging || withRepLogging {
@@ -82,9 +104,21 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			logging.NewServerLogger(loggingOpts...))
 	}
 
-	if withSpec {
+	if withSpecReq || withSpecRep {
 		var specOpts []specvalidator.Option
 
+		if withSpecReq {
+			specOpts = append(
+				specOpts,
+				specvalidator.WithRequestValidation())
+			log.Debug("enabled spec validator opt: request validation")
+		}
+		if withSpecRep {
+			specOpts = append(
+				specOpts,
+				specvalidator.WithResponseValidation())
+			log.Debug("enabled spec validator opt: response validation")
+		}
 		if len(sp.supportedVersions) > 0 {
 			specOpts = append(
 				specOpts,

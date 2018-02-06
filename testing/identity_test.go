@@ -6,8 +6,11 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/thecodeteam/gocsi"
+	csictx "github.com/thecodeteam/gocsi/context"
 	"github.com/thecodeteam/gocsi/mock/service"
 	"github.com/thecodeteam/gocsi/utils"
 )
@@ -22,6 +25,8 @@ var _ = Describe("Identity", func() {
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
+	})
+	JustBeforeEach(func() {
 		gclient, stopMock, err = startMockServer(ctx)
 		Ω(err).ShouldNot(HaveOccurred())
 		client = csi.NewIdentityClient(gclient)
@@ -40,10 +45,11 @@ var _ = Describe("Identity", func() {
 			vendorVersion string
 			manifest      map[string]string
 			version       csi.Version
+			reqVersion    string
 		)
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			var ok bool
-			version, ok = utils.ParseVersion(CTest().ComponentTexts[3])
+			version, ok = utils.ParseVersion(reqVersion)
 			Ω(ok).ShouldNot(BeFalse())
 			var res *csi.GetPluginInfoResponse
 			res, err = client.GetPluginInfo(ctx, &csi.GetPluginInfoRequest{
@@ -75,9 +81,12 @@ var _ = Describe("Identity", func() {
 			Ω(err).Should(ΣCM(
 				codes.InvalidArgument,
 				fmt.Sprintf("invalid: Version=%s", CTest().ComponentTexts[3])))
-
 		}
+
 		Context("With Request Version", func() {
+			BeforeEach(func() {
+				reqVersion = CTest().ComponentTexts[3]
+			})
 			Context("0.0.0", func() {
 				It("Should Not Be Valid", shouldNotBeValid)
 			})
@@ -95,6 +104,29 @@ var _ = Describe("Identity", func() {
 			})
 			Context("1.2.0", func() {
 				It("Should Not Be Valid", shouldNotBeValid)
+			})
+		})
+
+		Context("With Invalid Plug-in Name Error", func() {
+			BeforeEach(func() {
+				reqVersion = "0.1.0"
+				ctx = csictx.WithEnviron(ctx,
+					[]string{
+						gocsi.EnvVarPluginInfo + "=Mock,v1.0.0",
+					})
+			})
+			It("Should Not Be Valid", func() {
+				Ω(err).Should(ΣCM(
+					codes.Internal,
+					"invalid: Name=Mock: patt=%s",
+					`^[\w\d]+\.[\w\d\.\-_]*[\w\d]$`))
+				st, ok := status.FromError(err)
+				Ω(ok).Should(BeTrue())
+				Ω(st.Details()).Should(HaveLen(1))
+				rep, ok := st.Details()[0].(*csi.GetPluginInfoResponse)
+				Ω(ok).Should(BeTrue())
+				Ω(rep.Name).Should(Equal("Mock"))
+				Ω(rep.VendorVersion).Should(Equal("v1.0.0"))
 			})
 		})
 	})

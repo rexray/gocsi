@@ -119,8 +119,8 @@ func Σ(a error) gomegaTypes.GomegaMatcher {
 }
 
 // ΣCM is a custom Ginkgo matcher that compares two gRPC errors.
-func ΣCM(c codes.Code, m string) gomegaTypes.GomegaMatcher {
-	return &grpcErrorMatcher{exp: status.Error(c, m)}
+func ΣCM(c codes.Code, m string, args ...interface{}) gomegaTypes.GomegaMatcher {
+	return &grpcErrorMatcher{exp: status.Errorf(c, m, args...)}
 }
 
 const string128 = "0000000000000000000000000000000000000000000000000000000000" +

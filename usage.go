@@ -103,22 +103,31 @@ GLOBAL OPTIONS
         generated using an atomic sequence counter.
 
     X_CSI_SPEC_VALIDATION
-        A flag that enables validation of incoming requests and outgoing
-        responses against the CSI specification.
+        Setting X_CSI_SPEC_VALIDATION=true is the same as:
+            X_CSI_SPEC_REQ_VALIDATION=true
+            X_CSI_SPEC_REP_VALIDATION=true
+
+    X_CSI_SPEC_REQ_VALIDATION
+        A flag that enables the validation of CSI request messages.
+
+    X_CSI_SPEC_REP_VALIDATION
+        A flag that enables the validation of CSI response messages.
+        Invalid responses are marshalled into a gRPC error with a code
+        of "Internal."
 
     X_CSI_REQUIRE_NODE_ID
         A flag that enables treating the following fields as required:
             * ControllerPublishVolumeRequest.NodeId
             * GetNodeIDResponse.NodeId
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_PUB_VOL_INFO
         A flag that enables treating the following fields as required:
             * ControllerPublishVolumeResponse.PublishVolumeInfo
             * NodePublishVolumeRequest.PublishVolumeInfo
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_VOL_ATTRIBS
         A flag that enables treating the following fields as required:
@@ -126,7 +135,7 @@ GLOBAL OPTIONS
             * ValidateVolumeCapabilitiesRequest.VolumeAttributes
             * NodePublishVolumeRequest.VolumeAttributes
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_CREDS
         Setting X_CSI_REQUIRE_CREDS=true is the same as:
@@ -137,43 +146,43 @@ GLOBAL OPTIONS
             X_CSI_REQUIRE_CREDS_NODE_PUB_VOL=true
             X_CSI_REQUIRE_CREDS_NODE_UNPUB_VOL=true
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_CREDS_CREATE_VOL
         A flag that enables treating the following fields as required:
             * CreateVolumeRequest.UserCredentials
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_CREDS_DELETE_VOL
         A flag that enables treating the following fields as required:
             * DeleteVolumeRequest.UserCredentials
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_CREDS_CTRLR_PUB_VOL
         A flag that enables treating the following fields as required:
             * ControllerPublishVolumeRequest.UserCredentials
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_CREDS_CTRLR_UNPUB_VOL
         A flag that enables treating the following fields as required:
             * ControllerUnpublishVolumeRequest.UserCredentials
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_CREDS_NODE_PUB_VOL
         A flag that enables treating the following fields as required:
             * NodePublishVolumeRequest.UserCredentials
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_REQUIRE_CREDS_NODE_UNPUB_VOL
         A flag that enables treating the following fields as required:
             * NodeUnpublishVolumeRequest.UserCredentials
 
-        Enabling this option sets X_CSI_SPEC_VALIDATION=true.
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
     X_CSI_SERIAL_VOL_ACCESS
         A flag that enables the serial volume access middleware.
