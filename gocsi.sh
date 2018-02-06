@@ -320,10 +320,6 @@ dep_init() {
 # Refer to https://github.com/toml-lang/toml for detailed TOML docs.
 
 [[constraint]]
-  name = "github.com/container-storage-interface/spec"
-  branch = "master"
-
-[[constraint]]
   name = "github.com/thecodeteam/gocsi"
 EOF
 
