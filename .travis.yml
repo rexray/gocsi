@@ -45,3 +45,8 @@ jobs:
         go:      1.9.3
         install: make ginkgo
         script:  make test
+
+  # Allow the csi-sp job to fail since it is only currently able to
+  # use GoCSI's master branch due to golang/dep#1583.
+  allow_failures:
+    - env: JOB=csi-sp
