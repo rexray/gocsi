@@ -13,7 +13,7 @@ import (
 var nodePublishVolume struct {
 	nodeID     string
 	targetPath string
-	pubVolInfo mapOfStringArg
+	pubInfo    mapOfStringArg
 	attribs    mapOfStringArg
 	readOnly   bool
 	caps       volumeCapabilitySliceArg
@@ -32,12 +32,12 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.NodePublishVolumeRequest{
-			Version:           &root.version.Version,
-			TargetPath:        nodePublishVolume.targetPath,
-			PublishVolumeInfo: nodePublishVolume.pubVolInfo.data,
-			Readonly:          nodePublishVolume.readOnly,
-			UserCredentials:   root.userCreds,
-			VolumeAttributes:  nodePublishVolume.attribs.data,
+			Version:                &root.version.Version,
+			TargetPath:             nodePublishVolume.targetPath,
+			PublishInfo:            nodePublishVolume.pubInfo.data,
+			Readonly:               nodePublishVolume.readOnly,
+			NodePublishCredentials: root.userCreds,
+			VolumeAttributes:       nodePublishVolume.attribs.data,
 		}
 
 		if len(nodePublishVolume.caps.data) > 0 {
@@ -74,7 +74,7 @@ func init() {
 		"The path to which to mount the volume")
 
 	nodePublishVolumeCmd.Flags().Var(
-		&nodePublishVolume.pubVolInfo,
+		&nodePublishVolume.pubInfo,
 		"pub-info",
 		`One or more key/value pairs may be specified to send with
         the request as its PublishVolumeInfo field:

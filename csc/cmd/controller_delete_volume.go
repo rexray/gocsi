@@ -23,8 +23,8 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.DeleteVolumeRequest{
-			Version:         &root.version.Version,
-			UserCredentials: root.userCreds,
+			Version:                     &root.version.Version,
+			ControllerDeleteCredentials: root.userCreds,
 		}
 
 		for i := range args {

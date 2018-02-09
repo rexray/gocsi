@@ -241,7 +241,7 @@ environment variables:
         <p>A flag that enables treating the following fields as required:</p>
         <ul>
           <li><code>ControllerPublishVolumeRequest.NodeId</code></li>
-          <li><code>GetNodeIDResponse.NodeId</code></li>
+          <li><code>NodeGetIdResponse.NodeId</code></li>
       </ul>
       <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>

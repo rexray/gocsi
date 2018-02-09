@@ -91,7 +91,7 @@ var _ = Describe("Identity", func() {
 				It("Should Not Be Valid", shouldNotBeValid)
 			})
 			Context("0.1.0", func() {
-				It("Should Be Valid", shouldBeValid)
+				It("Should Be Valid", shouldNotBeValid)
 			})
 			Context("0.2.0", func() {
 				It("Should Be Valid", shouldBeValid)
@@ -109,7 +109,7 @@ var _ = Describe("Identity", func() {
 
 		Context("With Invalid Plug-in Name Error", func() {
 			BeforeEach(func() {
-				reqVersion = "0.1.0"
+				reqVersion = "0.2.0"
 				ctx = csictx.WithEnviron(ctx,
 					[]string{
 						gocsi.EnvVarPluginInfo + "=Mock,v1.0.0",
