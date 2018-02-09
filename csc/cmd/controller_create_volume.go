@@ -11,8 +11,8 @@ import (
 )
 
 var createVolume struct {
-	reqBytes uint64
-	limBytes uint64
+	reqBytes int64
+	limBytes int64
 	caps     volumeCapabilitySliceArg
 	params   mapOfStringArg
 	reqCreds bool
@@ -38,10 +38,10 @@ CREATING MULTIPLE VOLUMES
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.CreateVolumeRequest{
-			Version:            &root.version.Version,
-			VolumeCapabilities: createVolume.caps.data,
-			Parameters:         createVolume.params.data,
-			UserCredentials:    root.userCreds,
+			Version:                     &root.version.Version,
+			VolumeCapabilities:          createVolume.caps.data,
+			Parameters:                  createVolume.params.data,
+			ControllerCreateCredentials: root.userCreds,
 		}
 
 		if createVolume.reqBytes > 0 || createVolume.limBytes > 0 {
@@ -66,7 +66,7 @@ CREATING MULTIPLE VOLUMES
 			if err != nil {
 				return err
 			}
-			if err := root.tpl.Execute(os.Stdout, rep.VolumeInfo); err != nil {
+			if err := root.tpl.Execute(os.Stdout, rep.Volume); err != nil {
 				return err
 			}
 		}
@@ -78,13 +78,13 @@ CREATING MULTIPLE VOLUMES
 func init() {
 	controllerCmd.AddCommand(createVolumeCmd)
 
-	createVolumeCmd.Flags().Uint64Var(
+	createVolumeCmd.Flags().Int64Var(
 		&createVolume.reqBytes,
 		"req-bytes",
 		0,
 		"The required size of the volume in bytes")
 
-	createVolumeCmd.Flags().Uint64Var(
+	createVolumeCmd.Flags().Int64Var(
 		&createVolume.limBytes,
 		"lim-bytes",
 		0,

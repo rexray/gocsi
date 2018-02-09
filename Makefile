@@ -99,7 +99,7 @@ $(CSI_SP_LOG): $(CSI_SP)
 	  X_CSI_LOG_LEVEL=debug \
 	  X_CSI_REQ_LOGGING=true \
 	  X_CSI_REP_LOGGING=true \
-	  X_CSI_SUPPORTED_VERSIONS="0.1.0 0.1.1 0.2.0" \
+	  X_CSI_SUPPORTED_VERSIONS="0.2.0 1.0.0 1.1.0" \
 	  X_CSI_PLUGIN_INFO="My CSI Plug-in,0.1.0,status=online" \
 	  $< > $(CSI_SP_LOG) 2>&1 &
 	@for i in 1 2 3 4 5 6 7 8 9 10; do \
@@ -191,7 +191,7 @@ build: $(GOCSI_A)
 	$(MAKE) -C mock $@
 
 clean:
-	go clean -i -v . ./csp
+	go clean -i -v . ./csc
 	rm -f $(GOCSI_A) $(GOCSI_A_PKG_DEPS)
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@

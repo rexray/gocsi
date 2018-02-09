@@ -36,7 +36,7 @@ var _ = Describe("Node", func() {
 		stopMock()
 	})
 
-	listVolumes := func() (vols []csi.VolumeInfo, err error) {
+	listVolumes := func() (vols []csi.Volume, err error) {
 		cvol, cerr := utils.PageVolumes(
 			ctx,
 			csi.NewControllerClient(gclient),
@@ -57,12 +57,12 @@ var _ = Describe("Node", func() {
 		}
 	}
 
-	Describe("GetNodeID", func() {
+	Describe("NodeGetId", func() {
 		var nodeID string
 		BeforeEach(func() {
-			res, err := client.GetNodeID(
+			res, err := client.NodeGetId(
 				ctx,
-				&csi.GetNodeIDRequest{
+				&csi.NodeGetIdRequest{
 					Version: &mockSupportedVersions[0],
 				})
 			Ω(err).ShouldNot(HaveOccurred())
@@ -82,9 +82,9 @@ var _ = Describe("Node", func() {
 
 		publishVolume := func() {
 			req := &csi.NodePublishVolumeRequest{
-				Version:           version,
-				VolumeId:          "1",
-				PublishVolumeInfo: map[string]string{"device": device},
+				Version:     version,
+				VolumeId:    "1",
+				PublishInfo: map[string]string{"device": device},
 				VolumeCapability: utils.NewMountCapability(
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					"mock"),
