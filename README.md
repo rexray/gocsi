@@ -79,7 +79,7 @@ The new SP adheres to the following structure:
 
 ### Provider
 The `provider` package leverages GoCSI to construct an SP from the CSI
-services defined in `services` package. The file `provider.go` may be
+services defined in `service` package. The file `provider.go` may be
 modified to:
 
 * Supply default values for the SP's environment variable configuration properties
