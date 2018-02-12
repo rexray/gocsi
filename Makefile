@@ -20,19 +20,29 @@ export GOPATH
 ##                                   DEP                                      ##
 ################################################################################
 DEP ?= ./dep
-DEP_VER ?= 0.3.2
-DEP_BIN := dep-$$GOHOSTOS-$$GOHOSTARCH
-DEP_URL := https://github.com/golang/dep/releases/download/v$(DEP_VER)/$$DEP_BIN
+DEP_DIR := $(GOPATH)/src/github.com/golang/dep
+DEP_GIT := $(DEP_DIR)/.git
+DEP_SAK := https://github.com/akutz/dep
+DEP_REF := akutz/feature/fetch-gh-pulls
+DEP_PKG := github.com/golang/dep/cmd/dep
 
 $(DEP):
-	GOVERSION=$$(go version | awk '{print $$4}') && \
-	GOHOSTOS=$$(echo $$GOVERSION | awk -F/ '{print $$1}') && \
-	GOHOSTARCH=$$(echo $$GOVERSION | awk -F/ '{print $$2}') && \
-	DEP_BIN="$(DEP_BIN)" && \
-	DEP_URL="$(DEP_URL)" && \
-	curl -sSLO $$DEP_URL && \
-	chmod 0755 "$$DEP_BIN" && \
-	mv -f "$$DEP_BIN" "$@"
+	if [ -e $(DEP_GIT) ]; then \
+	  if ! git -C $(DEP_DIR) remote -v | grep akutz; then \
+	    git -C $(DEP_DIR) remote add akutz $(DEP_SAK); \
+	  fi && \
+	  git -C $(DEP_DIR) fetch $$(git -C $(DEP_DIR) remote -v | \
+	    grep "akutz.*fetch" | awk '{print $$1}'); \
+	else \
+	  git clone -o akutz $(DEP_SAK) $(DEP_DIR); \
+	fi && \
+	git -C $(DEP_DIR) stash -u && \
+	git -C $(DEP_DIR) checkout -B custom-dep $(DEP_REF) && \
+	if [ "$(TRAVIS)" = "true" ]; then \
+	  go install $(DEP_PKG) && cp $(GOPATH)/bin/dep $@; \
+	else \
+	  go build -o $@ $(DEP_PKG); \
+	fi
 
 ifneq (./dep,$(DEP))
 dep: $(DEP)
@@ -86,6 +96,7 @@ CSI_SP := $(CSI_SP_DIR)/csi-sp
 CSI_SP_SOCK := $(notdir $(CSI_SP)).sock
 CSI_SP_LOG := $(notdir $(CSI_SP)).log
 GOCSI_SH_ENV := USE_DEP=true
+GOCSI_SH_ENV += DEP_GIT_REFSPECS=+refs/pull/*:refs/pull/origin/*
 ifeq (true,$(TRAVIS))
 GOCSI_SH_ENV += GOCSI_DEP_SOURCE=https://github.com/$(TRAVIS_REPO_SLUG)
 GOCSI_SH_ENV += GOCSI_DEP_REVISION=$(TRAVIS_COMMIT)

@@ -36,8 +36,9 @@ jobs:
       - stage:   test
         env:     JOB=csi-sp
         go:      1.9.3
-        install: make -C csc
-        script:  make csi-sp
+        before_install: make dep
+        install:        make -C csc
+        script:         make csi-sp
 
       # Test GoCSI using the Mock CSI plug-in.
       - stage:   test
