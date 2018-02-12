@@ -304,7 +304,7 @@ dep_init() {
       GOHOSTARCH=${GOHOSTARCH:-$(echo "$GOVERSION" | awk -F/ '{print $2}')}
     fi
     DEP=./dep
-    DEP_VER=${DEP_VER:-0.3.2}
+    DEP_VER=${DEP_VER:-0.4.1}
     DEP_BIN=${DEP_BIN:-dep-$GOHOSTOS-$GOHOSTARCH}
     DEP_URL=https://github.com/golang/dep/releases/download/v$DEP_VER/$DEP_BIN
     echo "  downloading golang/dep@v$DEP_VER"
