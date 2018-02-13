@@ -26,16 +26,16 @@ var _ = Describe("Controller", func() {
 
 		version *csi.Version
 
-		vol        *csi.VolumeInfo
-		volID      string
-		volName    string
-		reqBytes   uint64
-		limBytes   uint64
-		fsType     string
-		mntFlags   []string
-		params     map[string]string
-		userCreds  map[string]string
-		pubVolInfo map[string]string
+		vol       *csi.Volume
+		volID     string
+		volName   string
+		reqBytes  int64
+		limBytes  int64
+		fsType    string
+		mntFlags  []string
+		params    map[string]string
+		userCreds map[string]string
+		pubInfo   map[string]string
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -71,10 +71,10 @@ var _ = Describe("Controller", func() {
 		fsType = ""
 		mntFlags = nil
 		params = nil
-		pubVolInfo = nil
+		pubInfo = nil
 	})
 
-	listVolumes := func() (vols []csi.VolumeInfo, err error) {
+	listVolumes := func() (vols []csi.Volume, err error) {
 		cvol, cerr := utils.PageVolumes(
 			ctx,
 			client,
@@ -95,7 +95,7 @@ var _ = Describe("Controller", func() {
 		}
 	}
 
-	createNewVolumeWithResult := func() (*csi.VolumeInfo, error) {
+	createNewVolumeWithResult := func() (*csi.Volume, error) {
 		req := &csi.CreateVolumeRequest{
 			Name:    volName,
 			Version: version,
@@ -106,14 +106,14 @@ var _ = Describe("Controller", func() {
 			VolumeCapabilities: []*csi.VolumeCapability{
 				utils.NewMountCapability(0, fsType, mntFlags...),
 			},
-			UserCredentials: userCreds,
-			Parameters:      params,
+			ControllerCreateCredentials: userCreds,
+			Parameters:                  params,
 		}
 		res, err := client.CreateVolume(ctx, req)
 		if res == nil {
 			return nil, err
 		}
-		return res.VolumeInfo, err
+		return res.Volume, err
 	}
 
 	createNewVolume := func() {
@@ -121,7 +121,7 @@ var _ = Describe("Controller", func() {
 	}
 
 	validateNewVolumeResult := func(
-		vol *csi.VolumeInfo,
+		vol *csi.Volume,
 		err error) bool {
 
 		if err != nil {
@@ -397,7 +397,7 @@ var _ = Describe("Controller", func() {
 	})
 
 	Describe("ListVolumes", func() {
-		var vols []csi.VolumeInfo
+		var vols []csi.Volume
 		AfterEach(func() {
 			vols = nil
 		})
@@ -441,13 +441,13 @@ var _ = Describe("Controller", func() {
 			}
 			res, err := client.ControllerPublishVolume(ctx, req)
 			Ω(err).ShouldNot(HaveOccurred())
-			pubVolInfo = res.PublishVolumeInfo
+			pubInfo = res.PublishInfo
 		}
 
 		shouldBePublished := func() {
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(pubVolInfo).ShouldNot(BeNil())
-			Ω(pubVolInfo["device"]).Should(Equal("/dev/mock"))
+			Ω(pubInfo).ShouldNot(BeNil())
+			Ω(pubInfo["device"]).Should(Equal("/dev/mock"))
 		}
 
 		JustBeforeEach(func() {

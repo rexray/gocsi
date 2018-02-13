@@ -58,7 +58,7 @@ func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {
 	return client, func() { sp.GracefulStop(ctx) }, nil
 }
 
-func newCSIVersion(major, minor, patch uint32) csi.Version {
+func newCSIVersion(major, minor, patch int32) csi.Version {
 	return csi.Version{
 		Major: major,
 		Minor: minor,

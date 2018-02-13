@@ -21,7 +21,7 @@ func (s *service) CreateVolume(
 
 	// Check to see if the volume already exists.
 	if i, v := s.findVolByName(ctx, req.Name); i >= 0 {
-		return &csi.CreateVolumeResponse{VolumeInfo: &v}, nil
+		return &csi.CreateVolumeResponse{Volume: &v}, nil
 	}
 
 	// If no capacity is specified then use 100GiB
@@ -41,7 +41,7 @@ func (s *service) CreateVolume(
 	defer s.volsRWL.Unlock()
 	s.vols = append(s.vols, v)
 
-	return &csi.CreateVolumeResponse{VolumeInfo: &v}, nil
+	return &csi.CreateVolumeResponse{Volume: &v}, nil
 }
 
 func (s *service) DeleteVolume(
@@ -62,7 +62,7 @@ func (s *service) DeleteVolume(
 	// leaks. The slice's elements may not be pointers, but the structs
 	// themselves have fields that are.
 	copy(s.vols[i:], s.vols[i+1:])
-	s.vols[len(s.vols)-1] = csi.VolumeInfo{}
+	s.vols[len(s.vols)-1] = csi.Volume{}
 	s.vols = s.vols[:len(s.vols)-1]
 	log.WithField("volumeID", req.VolumeId).Debug("mock delete volume")
 	return &csi.DeleteVolumeResponse{}, nil
@@ -89,7 +89,7 @@ func (s *service) ControllerPublishVolume(
 	// Check to see if the volume is already published.
 	if device := v.Attributes[devPathKey]; device != "" {
 		return &csi.ControllerPublishVolumeResponse{
-			PublishVolumeInfo: map[string]string{
+			PublishInfo: map[string]string{
 				"device": device,
 			},
 		}, nil
@@ -101,7 +101,7 @@ func (s *service) ControllerPublishVolume(
 	s.vols[i] = v
 
 	return &csi.ControllerPublishVolumeResponse{
-		PublishVolumeInfo: map[string]string{
+		PublishInfo: map[string]string{
 			"device": device,
 		},
 	}, nil
@@ -155,18 +155,18 @@ func (s *service) ListVolumes(
 	// Copy the mock volumes into a new slice in order to avoid
 	// locking the service's volume slice for the duration of the
 	// ListVolumes RPC.
-	var vols []csi.VolumeInfo
+	var vols []csi.Volume
 	func() {
 		s.volsRWL.RLock()
 		defer s.volsRWL.RUnlock()
-		vols = make([]csi.VolumeInfo, len(s.vols))
+		vols = make([]csi.Volume, len(s.vols))
 		copy(vols, s.vols)
 	}()
 
 	var (
-		ulenVols      = uint32(len(vols))
+		ulenVols      = int32(len(vols))
 		maxEntries    = req.MaxEntries
-		startingToken uint32
+		startingToken int32
 	)
 
 	if v := req.StartingToken; v != "" {
@@ -174,10 +174,10 @@ func (s *service) ListVolumes(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
-				"startingToken=%d !< uint32=%d",
+				"startingToken=%d !< int32=%d",
 				startingToken, math.MaxUint32)
 		}
-		startingToken = uint32(i)
+		startingToken = int32(i)
 	}
 
 	if startingToken > ulenVols {
@@ -206,13 +206,13 @@ func (s *service) ListVolumes(
 
 	for i = 0; i < len(entries); i++ {
 		entries[i] = &csi.ListVolumesResponse_Entry{
-			VolumeInfo: &vols[j],
+			Volume: &vols[j],
 		}
 		j++
 	}
 
 	var nextToken string
-	if n := startingToken + uint32(i); n < ulenVols {
+	if n := startingToken + int32(i); n < ulenVols {
 		nextToken = fmt.Sprintf("%d", n)
 	}
 
@@ -239,28 +239,28 @@ func (s *service) ControllerGetCapabilities(
 
 	return &csi.ControllerGetCapabilitiesResponse{
 		Capabilities: []*csi.ControllerServiceCapability{
-			&csi.ControllerServiceCapability{
+			{
 				Type: &csi.ControllerServiceCapability_Rpc{
 					Rpc: &csi.ControllerServiceCapability_RPC{
 						Type: csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 					},
 				},
 			},
-			&csi.ControllerServiceCapability{
+			{
 				Type: &csi.ControllerServiceCapability_Rpc{
 					Rpc: &csi.ControllerServiceCapability_RPC{
 						Type: csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 					},
 				},
 			},
-			&csi.ControllerServiceCapability{
+			{
 				Type: &csi.ControllerServiceCapability_Rpc{
 					Rpc: &csi.ControllerServiceCapability_RPC{
 						Type: csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
 					},
 				},
 			},
-			&csi.ControllerServiceCapability{
+			{
 				Type: &csi.ControllerServiceCapability_Rpc{
 					Rpc: &csi.ControllerServiceCapability_RPC{
 						Type: csi.ControllerServiceCapability_RPC_GET_CAPACITY,

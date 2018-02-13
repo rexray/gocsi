@@ -16,7 +16,7 @@ func (s *service) NodePublishVolume(
 	req *csi.NodePublishVolumeRequest) (
 	*csi.NodePublishVolumeResponse, error) {
 
-	device, ok := req.PublishVolumeInfo["device"]
+	device, ok := req.PublishInfo["device"]
 	if !ok {
 		return nil, status.Error(
 			codes.InvalidArgument,
@@ -83,12 +83,12 @@ func (s *service) NodeUnpublishVolume(
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
-func (s *service) GetNodeID(
+func (s *service) NodeGetId(
 	ctx context.Context,
-	req *csi.GetNodeIDRequest) (
-	*csi.GetNodeIDResponse, error) {
+	req *csi.NodeGetIdRequest) (
+	*csi.NodeGetIdResponse, error) {
 
-	return &csi.GetNodeIDResponse{
+	return &csi.NodeGetIdResponse{
 		NodeId: s.nodeID,
 	}, nil
 }
@@ -108,7 +108,7 @@ func (s *service) NodeGetCapabilities(
 
 	return &csi.NodeGetCapabilitiesResponse{
 		Capabilities: []*csi.NodeServiceCapability{
-			&csi.NodeServiceCapability{
+			{
 				Type: &csi.NodeServiceCapability_Rpc{
 					Rpc: &csi.NodeServiceCapability_RPC{
 						Type: csi.NodeServiceCapability_RPC_UNKNOWN,
