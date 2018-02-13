@@ -373,7 +373,8 @@ if [ "$BUILD_RESULT" -eq 0 ]; then
   echo '           X_CSI_LOG_LEVEL=info \'
   echo "           $SP_DIR/$SP_NAME"
   echo
-  echo "  help available online at https://goo.gl/GBnreq"
+  echo "  help available online at"
+  echo "  https://github.com/thecodeteam/gocsi#bootstrapping-a-storage-plug-in"
 else
   exit 1
 fi
