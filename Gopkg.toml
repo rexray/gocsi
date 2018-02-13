@@ -3,43 +3,15 @@
 #
 # Refer to https://github.com/toml-lang/toml for detailed TOML docs.
 
+[prune]
+  non-go = true
+  go-tests = true
+  unused-packages = true
+
+  [[prune.project]]
+      name = "github.com/onsi/ginkgo"
+      unused-packages = false
+
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
-  branch = "master"
-
-[[constraint]]
-  name = "github.com/golang/protobuf"
-  branch = "master"
-
-[[constraint]]
-  name = "golang.org/x/net"
-  branch = "master"
-
-[[constraint]]
-  name = "google.golang.org/grpc"
-  version = "1.5.2"
-
-[[constraint]]
-  name = "github.com/sirupsen/logrus"
-  branch = "master"
-
-[[constraint]]
-  name = "github.com/coreos/etcd"
-  version = "v3.2.15"
-
-
-################################################################################
-##                                 Testing                                    ##
-################################################################################
-
-[[constraint]]
-  name = "github.com/onsi/ginkgo"
-  version = "1.4.0"
-
-[[constraint]]
-  name = "github.com/onsi/gomega"
-  version = "1.2.0"
-
-[[constraint]]
-  name = "github.com/akutz/memconn"
   branch = "master"
