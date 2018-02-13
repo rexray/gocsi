@@ -2,6 +2,7 @@
 # download the dep binary.
 /dep
 /.dep/
+/vendor/github.com/golang/dep
 
 # The ginkgo test binary
 /ginkgo
