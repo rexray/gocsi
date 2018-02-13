@@ -36,7 +36,6 @@ jobs:
       - stage:   test
         env:     JOB=csi-sp
         go:      1.9.3
-        before_install: make dep
         install:        make -C csc
         script:         make csi-sp
 
