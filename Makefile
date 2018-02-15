@@ -169,17 +169,41 @@ endif
 ifeq (true,$(TRAVIS))
 export X_CSI_SERIAL_VOL_ACCESS_TIMEOUT=3s
 endif
+ETCD_ENDPOINT := X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS=127.0.0.1:2379
 
-test: | $(GINKGO) $(ETCD)
-	$(GINKGO) $(GINKGO_RUN_OPTS) ./utils || test "$$?" -eq "197"
+test-serialvolume-etcd: | $(GINKGO) $(ETCD)
 	@rm -fr default.etcd etcd.log
 	./etcd > etcd.log 2>&1 &
-	X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS=127.0.0.1:2379 \
-	  $(GINKGO) $(GINKGO_RUN_OPTS) -skip "Idempotent Create" \
+	$(ETCD_ENDPOINT) $(GINKGO) $(GINKGO_RUN_OPTS) \
+	  ./middleware/serialvolume/etcd || test "$$?" -eq "197"
+	pkill etcd
+
+test-etcd: | $(GINKGO) $(ETCD)
+	@rm -fr default.etcd etcd.log
+	./etcd > etcd.log 2>&1 &
+	$(ETCD_ENDPOINT) $(GINKGO) $(GINKGO_RUN_OPTS) \
+	  -skip "Idempotent Create" \
 	  ./testing || test "$$?" -eq "197"
 	pkill etcd
+
+test-idempotent: | $(GINKGO)
 	$(GINKGO) $(GINKGO_RUN_OPTS) -focus "Idempotent Create" \
 	  ./testing || test "$$?" -eq "197"
+
+test-utils: | $(GINKGO)
+	$(GINKGO) $(GINKGO_RUN_OPTS) ./utils || test "$$?" -eq "197"
+
+test:
+	$(MAKE) test-utils
+	$(MAKE) test-idempotent
+	$(MAKE) test-serialvolume-etcd
+	$(MAKE) test-etcd
+
+.PHONY: test \
+	    test-utils \
+	    test-idempotent \
+		test-serialvolume-etcd \
+		test-testing-etcd
 
 
 ########################################################################
