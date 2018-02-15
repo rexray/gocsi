@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -525,4 +526,141 @@ func IsSuccessfulResponse(method string, err error) error {
 		return IsSuccess(err, codes.NotFound)
 	}
 	return err
+}
+
+// AreVolumeCapabilitiesCompatible returns a flag indicating whether
+// the volume capability array "a" is compatible with "b". A true value
+// indicates that "a" and "b" are equivalent or "b" is a superset of "a".
+func AreVolumeCapabilitiesCompatible(
+	a, b []*csi.VolumeCapability) (bool, error) {
+
+	if len(a) > len(b) {
+		return false, status.Error(
+			codes.AlreadyExists,
+			"requested capabilities exceed existing")
+	}
+
+	var i int
+
+	for _, va := range a {
+		for _, vb := range b {
+			if EqualVolumeCapability(va, vb) {
+				i++
+			}
+		}
+	}
+
+	return i >= len(a), nil
+}
+
+// IsVolumeCapabilityCompatible returns a flag indicating whether
+// the volume capability "a" is compatible with the set "b". A true value
+// indicates that "a" and "b" are equivalent or "b" is a superset of "a".
+func IsVolumeCapabilityCompatible(
+	a *csi.VolumeCapability, b []*csi.VolumeCapability) (bool, error) {
+
+	return AreVolumeCapabilitiesCompatible([]*csi.VolumeCapability{a}, b)
+}
+
+// EqualVolumeCapability returns a flag indicating if two csi.VolumeCapability
+// objects are equal. If a and b are both nil then false is returned.
+func EqualVolumeCapability(a, b *csi.VolumeCapability) bool {
+	if a == nil || b == nil {
+		return false
+	}
+
+	// Compare access modes.
+	if a.AccessMode != nil && b.AccessMode == nil {
+		return false
+	}
+	if a.AccessMode == nil && b.AccessMode != nil {
+		return false
+	}
+	if a.AccessMode != nil && b.AccessMode != nil &&
+		a.AccessMode.Mode != b.AccessMode.Mode {
+		return false
+	}
+
+	// If both capabilities are block then return true.
+	if a.GetBlock() != nil && b.GetBlock() != nil {
+		return true
+	}
+
+	aMount := a.GetMount()
+	bMount := b.GetMount()
+	if aMount != nil && bMount != nil {
+
+		// If the filesystem types are incompatible then return false.
+		if aMount.FsType != bMount.FsType {
+			return false
+		}
+
+		// Compare the mount flags lengths.
+		if len(aMount.MountFlags) != len(bMount.MountFlags) {
+			return false
+		}
+
+		// Copy the mount flags to prevent the original order
+		// from changing due to the sort operation below.
+		af := append([]string{}, aMount.MountFlags...)
+		bf := append([]string{}, bMount.MountFlags...)
+
+		// Sort the mount flags prior to comparison.
+		sort.Strings(af)
+		sort.Strings(bf)
+
+		// Compare the mount flags.
+		for j := range af {
+			if af[j] != bf[j] {
+				return false
+			}
+		}
+
+		// The mount capabilities are compatible; return true.
+		return true
+	}
+
+	return false
+}
+
+// EqualVolumeInfo returns a flag indicating if two csi.VolumeInfo
+// objects are equal. If a and b are both nil then false is returned.
+func EqualVolumeInfo(a, b *csi.VolumeInfo) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	return CompareVolumeInfo(*a, *b) == 0
+}
+
+// CompareVolumeInfo compares two csi.VolumeInfo objects and returns a
+// negative number if a < b, a positive number if a > b, and zero if
+// a == b.
+func CompareVolumeInfo(a, b csi.VolumeInfo) int {
+	if a.Id < b.Id {
+		return -1
+	}
+	if a.Id > b.Id {
+		return 1
+	}
+	if a.CapacityBytes < b.CapacityBytes {
+		return -1
+	}
+	if a.CapacityBytes > b.CapacityBytes {
+		return 1
+	}
+	if len(a.Attributes) < len(b.Attributes) {
+		return -1
+	}
+	if len(a.Attributes) > len(b.Attributes) {
+		return 1
+	}
+	for k, v := range a.Attributes {
+		if v < b.Attributes[k] {
+			return -1
+		}
+		if v > b.Attributes[k] {
+			return 1
+		}
+	}
+	return 0
 }
