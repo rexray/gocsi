@@ -133,6 +133,21 @@ environment variables:
       </td>
     </tr>
     <tr>
+      <td><code>CSI_MODE</code></td>
+      <td>
+        <p>Specifies the service mode of the storage plug-in. Valid
+        values are:</p>
+        <ul>
+          <li><code>&lt;empty&gt;</code></li>
+          <li><code>controller</code></li>
+          <li><code>node</code></li>
+        </ul>
+        <p>If unset or set to an empty value the storage plug-in activates
+        both controller and node services. The identity service is always
+        activated.</p>
+      </td>
+    </tr>
+    <tr>
       <td><code>X_CSI_ENDPOINT_PERMS</code></td>
       <td>
         <p>When <code>CSI_ENDPOINT</code> is set to a UNIX socket file

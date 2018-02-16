@@ -17,6 +17,7 @@ import (
 	"os/user"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"text/template"
@@ -279,38 +280,30 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		log.Info("identity service registered")
 
 		// Determine which of the controller/node services to register
-		csvc := sp.getEnvBool(ctx, EnvVarCtrlSvcOnly)
-		nsvc := sp.getEnvBool(ctx, EnvVarNodeSvcOnly)
-
-		if csvc && nsvc {
-			err = fmt.Errorf(
-				"invalid service restriction: %s=true %s=true",
-				EnvVarCtrlSvcOnly, EnvVarCtrlSvcOnly)
-			return
+		mode := csictx.Getenv(ctx, EnvVarMode)
+		if strings.EqualFold(mode, "controller") {
+			mode = "controller"
+		} else if strings.EqualFold(mode, "node") {
+			mode = "node"
+		} else {
+			mode = ""
 		}
-		if csvc {
+
+		if mode == "" || mode == "controller" {
 			if sp.Controller == nil {
 				err = errors.New("controller service is required")
 				return
 			}
 			csi.RegisterControllerServer(sp.server, sp.Controller)
 			log.Info("controller service registered")
-		} else if nsvc {
+		}
+		if mode == "" || mode == "node" {
 			if sp.Node == nil {
 				err = errors.New("node service is required")
 				return
 			}
 			csi.RegisterNodeServer(sp.server, sp.Node)
 			log.Info("node service registered")
-		} else {
-			if sp.Controller != nil {
-				csi.RegisterControllerServer(sp.server, sp.Controller)
-				log.Info("controller service registered")
-			}
-			if sp.Node != nil {
-				csi.RegisterNodeServer(sp.server, sp.Node)
-				log.Info("node service registered")
-			}
 		}
 
 		endpoint := fmt.Sprintf(

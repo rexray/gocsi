@@ -304,3 +304,173 @@ var _ = Describe("ParseMap", func() {
 		})
 	})
 })
+
+var _ = Describe("CompareVolumeInfo", func() {
+	It("a == b", func() {
+		a := csi.VolumeInfo{Id: "0"}
+		b := csi.VolumeInfo{Id: "0"}
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		a.CapacityBytes = 1
+		b.CapacityBytes = 1
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		a.Attributes = map[string]string{"key": "val"}
+		b.Attributes = map[string]string{"key": "val"}
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+	})
+	It("a > b", func() {
+		a := csi.VolumeInfo{Id: "0"}
+		b := csi.VolumeInfo{}
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(1))
+		b.Id = "0"
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		a.CapacityBytes = 1
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(1))
+		b.CapacityBytes = 1
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		a.Attributes = map[string]string{"key": "val"}
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(1))
+		b.Attributes = map[string]string{"key": "val"}
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+	})
+	It("a < b", func() {
+		b := csi.VolumeInfo{Id: "0"}
+		a := csi.VolumeInfo{}
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(-1))
+		a.Id = "0"
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		b.CapacityBytes = 1
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(-1))
+		a.CapacityBytes = 1
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		b.Attributes = map[string]string{"key": "val"}
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(-1))
+		a.Attributes = map[string]string{"key": "val"}
+		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+	})
+})
+
+var _ = Describe("EqualVolumeCapability", func() {
+	It("a == b", func() {
+		a := &csi.VolumeCapability{
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+			AccessType: &csi.VolumeCapability_Block{
+				Block: &csi.VolumeCapability_BlockVolume{},
+			},
+		}
+		b := &csi.VolumeCapability{
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+			AccessType: &csi.VolumeCapability_Block{
+				Block: &csi.VolumeCapability_BlockVolume{},
+			},
+		}
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeTrue())
+		a.AccessMode.Mode = csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeFalse())
+		b.AccessMode.Mode = csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeTrue())
+		a.AccessMode = nil
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeFalse())
+		b.AccessMode = nil
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeTrue())
+		a = nil
+		Ω(utils.EqualVolumeCapability(nil, b)).Should(BeFalse())
+		b = nil
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeFalse())
+
+		aAT := &csi.VolumeCapability_Mount{
+			Mount: &csi.VolumeCapability_MountVolume{
+				FsType:     "ext4",
+				MountFlags: []string{"rw"},
+			},
+		}
+		bAT := &csi.VolumeCapability_Mount{
+			Mount: &csi.VolumeCapability_MountVolume{
+				FsType:     "ext4",
+				MountFlags: []string{"rw"},
+			},
+		}
+
+		a = &csi.VolumeCapability{
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+			AccessType: aAT,
+		}
+		b = &csi.VolumeCapability{
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+			AccessType: bAT,
+		}
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeTrue())
+		aAT.Mount.FsType = "xfs"
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeFalse())
+		bAT.Mount.FsType = "xfs"
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeTrue())
+		aAT.Mount.MountFlags = append(aAT.Mount.MountFlags, "nosuid")
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeFalse())
+		bAT.Mount.MountFlags = append(bAT.Mount.MountFlags, "nosuid")
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeTrue())
+		aAT.Mount.MountFlags[0] = "ro"
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeFalse())
+		bAT.Mount.MountFlags[0] = "ro"
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeTrue())
+		aAT.Mount.MountFlags = nil
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeFalse())
+		bAT.Mount.MountFlags = nil
+		Ω(utils.EqualVolumeCapability(a, b)).Should(BeTrue())
+	})
+})
+
+var _ = Describe("AreVolumeCapabilitiesCompatible", func() {
+	It("compatible", func() {
+		aMountAT := &csi.VolumeCapability_Mount{
+			Mount: &csi.VolumeCapability_MountVolume{
+				FsType:     "ext4",
+				MountFlags: []string{"rw"},
+			},
+		}
+		a := []*csi.VolumeCapability{
+			&csi.VolumeCapability{
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+				},
+				AccessType: aMountAT,
+			},
+		}
+
+		b := []*csi.VolumeCapability{
+			&csi.VolumeCapability{
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+				},
+				AccessType: &csi.VolumeCapability_Block{
+					Block: &csi.VolumeCapability_BlockVolume{},
+				},
+			},
+			&csi.VolumeCapability{
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+				},
+				AccessType: &csi.VolumeCapability_Mount{
+					Mount: &csi.VolumeCapability_MountVolume{
+						FsType:     "ext4",
+						MountFlags: []string{"rw"},
+					},
+				},
+			},
+		}
+
+		Ω(utils.AreVolumeCapabilitiesCompatible(a, b)).Should(BeTrue())
+		aMountAT.Mount.MountFlags[0] = "ro"
+		Ω(utils.AreVolumeCapabilitiesCompatible(a, b)).Should(BeFalse())
+		a[0].AccessType = &csi.VolumeCapability_Block{
+			Block: &csi.VolumeCapability_BlockVolume{},
+		}
+		Ω(utils.AreVolumeCapabilitiesCompatible(a, b)).Should(BeTrue())
+	})
+})

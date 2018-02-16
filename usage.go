@@ -20,6 +20,17 @@ GLOBAL OPTIONS
         If the network type is omitted then the value is assumed to be an
         absolute or relative filesystem path to a UNIX socket file
 
+    X_CSI_MODE
+        Specifies the service mode of the storage plug-in. Valid values are:
+
+            * <empty>
+            * controller
+            * node
+
+        If unset or set to an empty value the storage plug-in activates
+        both controller and node services. The identity service is always
+        activated.
+
     X_CSI_ENDPOINT_PERMS
         When CSI_ENDPOINT is set to a UNIX socket file this environment
         variable may be used to specify the socket's file permissions
@@ -253,19 +264,6 @@ GLOBAL OPTIONS
     X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS_INSECURE
         A flag that indicates the TLS connection should not verify peer
         certificates.
-
-    X_CSI_PRIVATE_MOUNT_DIR
-        Specifies the path of the private mount directory. During a
-        NodePublishVolume RPC, the SP will mount a device into the
-        private mount area depending on the volume capability:
-
-            * For a Block capability the device will be bind mounted
-              to a file in the private mount directory.
-            * For a Mount capability the device will be mounted to a
-              directory in the private mount directory.
-
-        The SP then bind mounts the private mount to the target path
-        specified in the NodePublishVolumeRequest.
 
 The flags -?,-h,-help may be used to print this screen.
 `

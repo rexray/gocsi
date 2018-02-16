@@ -15,31 +15,35 @@ go_import_path: github.com/thecodeteam/gocsi
 jobs:
   include:
 
-      # Verify GoCSI builds without errors
-      - stage:   build
-        env:     PROG=gocsi.a
-        install: true
-        script:  make $PROG
-
-      - stage:   build
-        env:     PROG=csc
-        install: true
-        script:  make -C $PROG
-
-      - stage:   build
-        env:     PROG=mock
-        install: true
-        script:  make -C $PROG
-
-      # Test GoCSI's csp.sh script by creating and serving new SP and
+      # Test GoCSI's gocsi.sh script by creating and serving new SP and
       # then using csc to invoke GetSupportedVersions and GetPluginInfo
       - stage:   test
         env:     JOB=csi-sp
         install: make -C csc
-        script:  make csi-sp
+        script:  make $JOB
 
-      # Test GoCSI using the Mock CSI plug-in.
+      # Test the utils package.
       - stage:   test
-        env:     JOB=test
+        env:     JOB=test-utils
         install: make ginkgo
-        script:  make test
+        script:  make $JOB
+
+      # Test the Mock SP's idempotent behavior.
+      - stage:   test
+        env:     JOB=test-idempotent
+        install: make ginkgo
+        script:  make $JOB
+
+      # Test GoCSI with the Mock SP and etcd as the distributed lock
+      # provider.
+      - stage:   test
+        env:     JOB=test-etcd
+        install: make ginkgo
+        script:  make $JOB
+
+      # Test the serial volume middleware's etcd distributed lock
+      # provider.
+      - stage:   test
+        env:     JOB=test-serialvolume-etcd
+        install: make ginkgo
+        script:  make $JOB
