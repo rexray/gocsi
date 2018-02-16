@@ -20,6 +20,17 @@ GLOBAL OPTIONS
         If the network type is omitted then the value is assumed to be an
         absolute or relative filesystem path to a UNIX socket file
 
+    X_CSI_MODE
+        Specifies the service mode of the storage plug-in. Valid values are:
+
+            * <empty>
+            * controller
+            * node
+
+        If unset or set to an empty value the storage plug-in activates
+        both controller and node services. The identity service is always
+        activated.
+
     X_CSI_ENDPOINT_PERMS
         When CSI_ENDPOINT is set to a UNIX socket file this environment
         variable may be used to specify the socket's file permissions
