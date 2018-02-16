@@ -265,18 +265,5 @@ GLOBAL OPTIONS
         A flag that indicates the TLS connection should not verify peer
         certificates.
 
-    X_CSI_PRIVATE_MOUNT_DIR
-        Specifies the path of the private mount directory. During a
-        NodePublishVolume RPC, the SP will mount a device into the
-        private mount area depending on the volume capability:
-
-            * For a Block capability the device will be bind mounted
-              to a file in the private mount directory.
-            * For a Mount capability the device will be mounted to a
-              directory in the private mount directory.
-
-        The SP then bind mounts the private mount to the target path
-        specified in the NodePublishVolumeRequest.
-
 The flags -?,-h,-help may be used to print this screen.
 `

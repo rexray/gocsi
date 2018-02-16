@@ -254,13 +254,6 @@ const (
 	// variable that defines whether or not the TLS connection should
 	// verify certificates.
 	EnvVarSerialVolAccessEtcdTLSInsecure = "X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS_INSECURE"
-
-	// EnvVarPrivateMountDir is the name of the environment variable
-	// that specifies the path of the private mount directory used by
-	// SPs to mount a device during a NodePublishVolume RPC before
-	// bind mounting the file/directory from the private mount area
-	// to the target path.
-	EnvVarPrivateMountDir = "X_CSI_PRIVATE_MOUNT_DIR"
 )
 
 func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
