@@ -623,19 +623,19 @@ func EqualVolumeCapability(a, b *csi.VolumeCapability) bool {
 	return false
 }
 
-// EqualVolumeInfo returns a flag indicating if two csi.VolumeInfo
+// EqualVolume returns a flag indicating if two csi.Volume
 // objects are equal. If a and b are both nil then false is returned.
-func EqualVolumeInfo(a, b *csi.VolumeInfo) bool {
+func EqualVolume(a, b *csi.Volume) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	return CompareVolumeInfo(*a, *b) == 0
+	return CompareVolume(*a, *b) == 0
 }
 
-// CompareVolumeInfo compares two csi.VolumeInfo objects and returns a
+// CompareVolume compares two csi.Volume objects and returns a
 // negative number if a < b, a positive number if a > b, and zero if
 // a == b.
-func CompareVolumeInfo(a, b csi.VolumeInfo) int {
+func CompareVolume(a, b csi.Volume) int {
 	if a.Id < b.Id {
 		return -1
 	}

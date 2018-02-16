@@ -305,47 +305,47 @@ var _ = Describe("ParseMap", func() {
 	})
 })
 
-var _ = Describe("CompareVolumeInfo", func() {
+var _ = Describe("CompareVolume", func() {
 	It("a == b", func() {
-		a := csi.VolumeInfo{Id: "0"}
-		b := csi.VolumeInfo{Id: "0"}
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		a := csi.Volume{Id: "0"}
+		b := csi.Volume{Id: "0"}
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		a.CapacityBytes = 1
 		b.CapacityBytes = 1
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		a.Attributes = map[string]string{"key": "val"}
 		b.Attributes = map[string]string{"key": "val"}
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 	})
 	It("a > b", func() {
-		a := csi.VolumeInfo{Id: "0"}
-		b := csi.VolumeInfo{}
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(1))
+		a := csi.Volume{Id: "0"}
+		b := csi.Volume{}
+		Ω(utils.CompareVolume(a, b)).Should(Equal(1))
 		b.Id = "0"
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		a.CapacityBytes = 1
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(1))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(1))
 		b.CapacityBytes = 1
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		a.Attributes = map[string]string{"key": "val"}
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(1))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(1))
 		b.Attributes = map[string]string{"key": "val"}
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 	})
 	It("a < b", func() {
-		b := csi.VolumeInfo{Id: "0"}
-		a := csi.VolumeInfo{}
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(-1))
+		b := csi.Volume{Id: "0"}
+		a := csi.Volume{}
+		Ω(utils.CompareVolume(a, b)).Should(Equal(-1))
 		a.Id = "0"
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		b.CapacityBytes = 1
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(-1))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(-1))
 		a.CapacityBytes = 1
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		b.Attributes = map[string]string{"key": "val"}
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(-1))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(-1))
 		a.Attributes = map[string]string{"key": "val"}
-		Ω(utils.CompareVolumeInfo(a, b)).Should(Equal(0))
+		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 	})
 })
 
