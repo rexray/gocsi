@@ -12,15 +12,15 @@ import (
 var nodeGetIDCmd = &cobra.Command{
 	Use:     "get-id",
 	Aliases: []string{"id"},
-	Short:   `invokes the rpc "GetNodeID"`,
+	Short:   `invokes the rpc "NodeGetId"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		ctx, cancel := context.WithTimeout(root.ctx, root.timeout)
 		defer cancel()
 
-		rep, err := node.client.GetNodeID(
+		rep, err := node.client.NodeGetId(
 			ctx,
-			&csi.GetNodeIDRequest{
+			&csi.NodeGetIdRequest{
 				Version: &root.version.Version,
 			})
 		if err != nil {

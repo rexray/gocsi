@@ -29,10 +29,10 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ControllerPublishVolumeRequest{
-			Version:          &root.version.Version,
-			NodeId:           controllerPublishVolume.nodeID,
-			UserCredentials:  root.userCreds,
-			VolumeAttributes: controllerPublishVolume.attribs.data,
+			Version: &root.version.Version,
+			NodeId:  controllerPublishVolume.nodeID,
+			ControllerPublishCredentials: root.userCreds,
+			VolumeAttributes:             controllerPublishVolume.attribs.data,
 		}
 
 		if len(controllerPublishVolume.caps.data) > 0 {
@@ -53,7 +53,7 @@ USAGE
 			}
 
 			fmt.Printf("%q", args[i])
-			for k, v := range rep.PublishVolumeInfo {
+			for k, v := range rep.PublishInfo {
 				fmt.Printf("\t%q=%q", k, v)
 			}
 			fmt.Println()

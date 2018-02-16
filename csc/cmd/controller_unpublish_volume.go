@@ -27,9 +27,9 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ControllerUnpublishVolumeRequest{
-			Version:         &root.version.Version,
-			NodeId:          controllerUnpublishVolume.nodeID,
-			UserCredentials: root.userCreds,
+			Version: &root.version.Version,
+			NodeId:  controllerUnpublishVolume.nodeID,
+			ControllerUnpublishCredentials: root.userCreds,
 		}
 
 		for i := range args {
