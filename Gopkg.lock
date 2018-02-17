@@ -11,7 +11,7 @@
   branch = "master"
   name = "github.com/container-storage-interface/spec"
   packages = ["lib/go/csi"]
-  revision = "7ab01a90da87f9fef3ee1de0494962fdefaf7db7"
+  revision = "8b8a2effee2415a3c476fc9884fae868d9367c70"
 
 [[projects]]
   name = "github.com/coreos/etcd"

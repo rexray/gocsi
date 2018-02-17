@@ -91,10 +91,16 @@ var RootCmd = &cobra.Command{
 				root.format = supportedVersionsFormat
 			case pluginInfoCmd.Name():
 				root.format = pluginInfoFormat
+			case pluginCapsCmd.Name():
+				root.format = pluginCapsFormat
 			}
 		}
 		if root.format != "" {
-			tpl, err := template.New("t").Parse(root.format)
+			tpl, err := template.New("t").Funcs(template.FuncMap{
+				"isa": func(o interface{}, t string) bool {
+					return fmt.Sprintf("%T", o) == t
+				},
+			}).Parse(root.format)
 			if err != nil {
 				return err
 			}
