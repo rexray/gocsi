@@ -148,4 +148,23 @@ var _ = Describe("Identity", func() {
 			}
 		})
 	})
+
+	Describe("GetPluginCapabilities", func() {
+		It("Should Be Valid", func() {
+			rep, err := client.GetPluginCapabilities(
+				ctx, &csi.GetPluginCapabilitiesRequest{
+					Version: &csi.Version{
+						Major: 0,
+						Minor: 2,
+						Patch: 0,
+					},
+				})
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(rep).ShouldNot(BeNil())
+			Ω(rep.Capabilities).Should(HaveLen(1))
+			svc := rep.Capabilities[0].GetService()
+			Ω(svc).ShouldNot(BeNil())
+			Ω(svc.Type).Should(Equal(csi.PluginCapability_Service_CONTROLLER_SERVICE))
+		})
+	})
 })

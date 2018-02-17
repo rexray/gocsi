@@ -114,7 +114,7 @@ const (
 	VendorVersion = "0.0.0"
 
 	// SupportedVersions is a list of the CSI versions this SP supports.
-	SupportedVersions = "0.0.0"
+	SupportedVersions = "0.2.0"
 )
 
 // Service is a CSI SP and idempotency.Provider.
@@ -237,6 +237,14 @@ func (s *service) GetPluginInfo(
 	ctx context.Context,
 	req *csi.GetPluginInfoRequest) (
 	*csi.GetPluginInfoResponse, error) {
+
+	return nil, nil
+}
+
+func (s *service) GetPluginCapabilities(
+	ctx context.Context,
+	req *csi.GetPluginCapabilitiesRequest) (
+	*csi.GetPluginCapabilitiesResponse, error) {
 
 	return nil, nil
 }
