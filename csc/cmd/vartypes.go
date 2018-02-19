@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
-	"github.com/thecodeteam/gocsi/utils"
+	"github.com/rexray/gocsi/utils"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )

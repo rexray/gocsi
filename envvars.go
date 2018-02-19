@@ -7,8 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	csictx "github.com/thecodeteam/gocsi/context"
-	"github.com/thecodeteam/gocsi/utils"
+	csictx "github.com/rexray/gocsi/context"
+	"github.com/rexray/gocsi/utils"
 )
 
 const (

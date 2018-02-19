@@ -12,7 +12,7 @@ import (
 
 const (
 	// Name is the name of the CSI plug-in.
-	Name = "com.thecodeteam.mock"
+	Name = "com.rexray.mock"
 
 	// VendorVersion is the version returned by GetPluginInfo.
 	VendorVersion = "0.1.0"
@@ -23,7 +23,7 @@ const (
 
 // Manifest is the SP's manifest.
 var Manifest = map[string]string{
-	"url": "https://github.com/thecodeteam/gocsi/tree/master/mock",
+	"url": "https://github.com/rexray/gocsi/tree/master/mock",
 }
 
 // Service is the CSI Mock service provider.

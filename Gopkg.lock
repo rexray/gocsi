@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/akutz/gosync"
+  packages = ["."]
+  revision = "94b0033d0b5fc254594c3174329c19356c2c4f63"
+  version = "v0.1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/akutz/memconn"
   packages = ["."]
@@ -118,12 +124,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "github.com/thecodeteam/gosync"
-  packages = ["."]
-  revision = "94b0033d0b5fc254594c3174329c19356c2c4f63"
-  version = "v0.1.0"
-
-[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -233,6 +233,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "65371ac54edee8a02576b7bd8aa55ef9623b7efe724964c7523c6e03f84aa16b"
+  inputs-digest = "ca0e247cc8bbeda2ae04061436a2b8d83e8ce01f55b41f09aa4bf2d23323b400"
   solver-name = "gps-cdcl"
   solver-version = 1

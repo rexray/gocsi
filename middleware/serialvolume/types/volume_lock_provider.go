@@ -3,7 +3,7 @@ package types
 import (
 	"context"
 
-	"github.com/thecodeteam/gosync"
+	"github.com/akutz/gosync"
 )
 
 // VolumeLockerProvider is able to provide gosync.TryLocker objects for

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/thecodeteam/gosync"
+	"github.com/akutz/gosync"
 )
 
 type defaultLockProvider struct {

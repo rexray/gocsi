@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gocsi/mock/provider"
-	"github.com/thecodeteam/gocsi/mock/service"
-	"github.com/thecodeteam/gocsi/utils"
+	"github.com/rexray/gocsi/mock/provider"
+	"github.com/rexray/gocsi/mock/service"
+	"github.com/rexray/gocsi/utils"
 )
 
 func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {

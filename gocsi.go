@@ -27,8 +27,8 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	csictx "github.com/thecodeteam/gocsi/context"
-	"github.com/thecodeteam/gocsi/utils"
+	csictx "github.com/rexray/gocsi/context"
+	"github.com/rexray/gocsi/utils"
 )
 
 // Run launches a CSI storage plug-in.

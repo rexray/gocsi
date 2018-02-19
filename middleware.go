@@ -10,13 +10,13 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	csictx "github.com/thecodeteam/gocsi/context"
-	"github.com/thecodeteam/gocsi/middleware/logging"
-	"github.com/thecodeteam/gocsi/middleware/requestid"
-	"github.com/thecodeteam/gocsi/middleware/serialvolume"
-	"github.com/thecodeteam/gocsi/middleware/serialvolume/etcd"
-	"github.com/thecodeteam/gocsi/middleware/specvalidator"
-	"github.com/thecodeteam/gocsi/utils"
+	csictx "github.com/rexray/gocsi/context"
+	"github.com/rexray/gocsi/middleware/logging"
+	"github.com/rexray/gocsi/middleware/requestid"
+	"github.com/rexray/gocsi/middleware/serialvolume"
+	"github.com/rexray/gocsi/middleware/serialvolume/etcd"
+	"github.com/rexray/gocsi/middleware/specvalidator"
+	"github.com/rexray/gocsi/utils"
 )
 
 func (sp *StoragePlugin) initInterceptors(ctx context.Context) {

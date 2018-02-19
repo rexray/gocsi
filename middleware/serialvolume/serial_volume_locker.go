@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/thecodeteam/gosync"
+	"github.com/akutz/gosync"
 	xctx "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	mwtypes "github.com/thecodeteam/gocsi/middleware/serialvolume/types"
+	mwtypes "github.com/rexray/gocsi/middleware/serialvolume/types"
 )
 
 const pending = "pending"

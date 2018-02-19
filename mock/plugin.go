@@ -5,8 +5,8 @@ package main
 import "C"
 
 import (
-	"github.com/thecodeteam/gocsi/mock/provider"
-	"github.com/thecodeteam/gocsi/mock/service"
+	"github.com/rexray/gocsi/mock/provider"
+	"github.com/rexray/gocsi/mock/service"
 )
 
 ////////////////////////////////////////////////////////////////////////////////

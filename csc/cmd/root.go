@@ -13,7 +13,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/thecodeteam/gocsi/utils"
+	"github.com/rexray/gocsi/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
