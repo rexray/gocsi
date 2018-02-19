@@ -15,10 +15,10 @@ const (
 	Name = "com.rexray.mock"
 
 	// VendorVersion is the version returned by GetPluginInfo.
-	VendorVersion = "0.1.0"
+	VendorVersion = "0.2.0"
 
 	// SupportedVersions is a list of supported CSI versions.
-	SupportedVersions = "0.1.0, 0.2.0, 1.0.0, 1.1.0"
+	SupportedVersions = "0.2.0, 1.0.0, 1.1.0"
 )
 
 // Manifest is the SP's manifest.
@@ -36,7 +36,7 @@ type Service interface {
 type service struct {
 	sync.Mutex
 	nodeID  string
-	vols    []csi.VolumeInfo
+	vols    []csi.Volume
 	volsRWL sync.RWMutex
 	volsNID uint64
 }
@@ -44,7 +44,7 @@ type service struct {
 // New returns a new Service.
 func New() Service {
 	s := &service{nodeID: Name}
-	s.vols = []csi.VolumeInfo{
+	s.vols = []csi.Volume{
 		s.newVolume("Mock Volume 1", gib100),
 		s.newVolume("Mock Volume 2", gib100),
 		s.newVolume("Mock Volume 3", gib100),
@@ -53,31 +53,31 @@ func New() Service {
 }
 
 const (
-	kib    uint64 = 1024
-	mib    uint64 = kib * 1024
-	gib    uint64 = mib * 1024
-	gib100 uint64 = gib * 100
-	tib    uint64 = gib * 1024
-	tib100 uint64 = tib * 100
+	kib    int64 = 1024
+	mib    int64 = kib * 1024
+	gib    int64 = mib * 1024
+	gib100 int64 = gib * 100
+	tib    int64 = gib * 1024
+	tib100 int64 = tib * 100
 )
 
 var version = &csi.Version{Major: 0, Minor: 1, Patch: 0}
 
-func (s *service) newVolume(name string, capcity uint64) csi.VolumeInfo {
-	return csi.VolumeInfo{
+func (s *service) newVolume(name string, capcity int64) csi.Volume {
+	return csi.Volume{
 		Id:            fmt.Sprintf("%d", atomic.AddUint64(&s.volsNID, 1)),
 		Attributes:    map[string]string{"name": name},
 		CapacityBytes: capcity,
 	}
 }
 
-func (s *service) findVol(k, v string) (volIdx int, volInfo csi.VolumeInfo) {
+func (s *service) findVol(k, v string) (volIdx int, volInfo csi.Volume) {
 	s.volsRWL.RLock()
 	defer s.volsRWL.RUnlock()
 	return s.findVolNoLock(k, v)
 }
 
-func (s *service) findVolNoLock(k, v string) (volIdx int, volInfo csi.VolumeInfo) {
+func (s *service) findVolNoLock(k, v string) (volIdx int, volInfo csi.Volume) {
 	volIdx = -1
 
 	for i, vi := range s.vols {
@@ -97,7 +97,7 @@ func (s *service) findVolNoLock(k, v string) (volIdx int, volInfo csi.VolumeInfo
 }
 
 func (s *service) findVolByName(
-	ctx context.Context, name string) (int, csi.VolumeInfo) {
+	ctx context.Context, name string) (int, csi.Volume) {
 
 	return s.findVol("name", name)
 }

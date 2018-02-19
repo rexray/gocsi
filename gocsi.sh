@@ -114,7 +114,7 @@ const (
 	VendorVersion = "0.0.0"
 
 	// SupportedVersions is a list of the CSI versions this SP supports.
-	SupportedVersions = "0.0.0"
+	SupportedVersions = "0.2.0"
 )
 
 // Service is a CSI SP and idempotency.Provider.
@@ -240,6 +240,14 @@ func (s *service) GetPluginInfo(
 
 	return nil, nil
 }
+
+func (s *service) GetPluginCapabilities(
+	ctx context.Context,
+	req *csi.GetPluginCapabilitiesRequest) (
+	*csi.GetPluginCapabilitiesResponse, error) {
+
+	return nil, nil
+}
 EOF
 
 echo "  $SP_DIR/service/node.go"
@@ -268,10 +276,10 @@ func (s *service) NodeUnpublishVolume(
 	return nil, nil
 }
 
-func (s *service) GetNodeID(
+func (s *service) NodeGetId(
 	ctx context.Context,
-	req *csi.GetNodeIDRequest) (
-	*csi.GetNodeIDResponse, error) {
+	req *csi.NodeGetIdRequest) (
+	*csi.NodeGetIdResponse, error) {
 
 	return nil, nil
 }

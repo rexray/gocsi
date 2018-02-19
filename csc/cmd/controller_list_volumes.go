@@ -12,7 +12,7 @@ import (
 )
 
 var listVolumes struct {
-	maxEntries    uint32
+	maxEntries    int32
 	startingToken string
 	paging        bool
 }
@@ -64,7 +64,7 @@ var listVolumesCmd = &cobra.Command{
 func init() {
 	controllerCmd.AddCommand(listVolumesCmd)
 
-	listVolumesCmd.Flags().Uint32Var(
+	listVolumesCmd.Flags().Int32Var(
 		&listVolumes.maxEntries,
 		"max-entries",
 		0,

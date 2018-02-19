@@ -24,3 +24,13 @@ const supportedVersionsFormat = `{{range $v := .SupportedVersions}}` +
 const pluginInfoFormat = `{{printf "%q\t%q" .Name .VendorVersion}}` +
 	`{{range $k, $v := .Manifest}}{{printf "\t%q=%q" $k $v}}{{end}}` +
 	`{{"\n"}}`
+
+// pluginCapsFormat is the default Go template for emitting a
+// csi.GetPluginCapabilities
+const pluginCapsFormat = `{{range $v := .Capabilities}}` +
+	`{{with $t := .Type}}` +
+	`{{if isa $t "*csi.PluginCapability_Service_"}}{{if $t.Service}}` +
+	`{{printf "%s\n" $t.Service.Type}}` +
+	`{{end}}{{end}}` +
+	`{{end}}` +
+	`{{end}}`

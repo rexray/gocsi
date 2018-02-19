@@ -50,9 +50,9 @@ func ParseVersions(s string) []csi.Version {
 		major, _ := strconv.Atoi(m[1])
 		minor, _ := strconv.Atoi(m[2])
 		patch, _ := strconv.Atoi(m[3])
-		versions[i].Major = uint32(major)
-		versions[i].Minor = uint32(minor)
-		versions[i].Patch = uint32(patch)
+		versions[i].Major = int32(major)
+		versions[i].Minor = int32(minor)
+		versions[i].Patch = int32(patch)
 	}
 
 	return versions
@@ -386,10 +386,10 @@ func PageVolumes(
 	ctx context.Context,
 	client csi.ControllerClient,
 	req csi.ListVolumesRequest,
-	opts ...grpc.CallOption) (<-chan csi.VolumeInfo, <-chan error) {
+	opts ...grpc.CallOption) (<-chan csi.Volume, <-chan error) {
 
 	var (
-		cvol = make(chan csi.VolumeInfo)
+		cvol = make(chan csi.Volume)
 		cerr = make(chan error)
 	)
 
@@ -422,7 +422,7 @@ func PageVolumes(
 			for i = 0; i < len(res.Entries) && ctx.Err() == nil; i++ {
 
 				// Send the volume over the channel.
-				cvol <- *res.Entries[i].VolumeInfo
+				cvol <- *res.Entries[i].Volume
 
 				// Let the wait group know that this worker has completed
 				// its task.
@@ -623,19 +623,19 @@ func EqualVolumeCapability(a, b *csi.VolumeCapability) bool {
 	return false
 }
 
-// EqualVolumeInfo returns a flag indicating if two csi.VolumeInfo
+// EqualVolume returns a flag indicating if two csi.Volume
 // objects are equal. If a and b are both nil then false is returned.
-func EqualVolumeInfo(a, b *csi.VolumeInfo) bool {
+func EqualVolume(a, b *csi.Volume) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	return CompareVolumeInfo(*a, *b) == 0
+	return CompareVolume(*a, *b) == 0
 }
 
-// CompareVolumeInfo compares two csi.VolumeInfo objects and returns a
+// CompareVolume compares two csi.Volume objects and returns a
 // negative number if a < b, a positive number if a > b, and zero if
 // a == b.
-func CompareVolumeInfo(a, b csi.VolumeInfo) int {
+func CompareVolume(a, b csi.Volume) int {
 	if a.Id < b.Id {
 		return -1
 	}

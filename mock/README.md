@@ -43,4 +43,4 @@ values:
 | `X_CSI_REQUIRE_PUB_VOL_INFO` | `true` |
 | `X_CSI_CREATE_VOL_ALREADY_EXISTS` | `true` |
 | `X_CSI_DELETE_VOL_NOT_FOUND` | `true` |
-| `X_CSI_SUPPORTED_VERSIONS` | `0.1.0 0.2.0 1.0.0 1.1.0` |
+| `X_CSI_SUPPORTED_VERSIONS` | `0.2.0 1.0.0 1.1.0` |

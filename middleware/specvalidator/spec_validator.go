@@ -64,7 +64,7 @@ func WithResponseValidation() Option {
 }
 
 // WithRequiresNodeID is a Option that indicates
-// ControllerPublishVolume requests and GetNodeID responses must
+// ControllerPublishVolume requests and NodeGetId responses must
 // contain non-empty node ID data.
 func WithRequiresNodeID() Option {
 	return func(o *opts) {
@@ -285,7 +285,7 @@ type interceptorHasVolumeID interface {
 	GetVolumeId() string
 }
 type interceptorHasNodeID interface {
-	GetNodeId() string
+	NodeGetId() string
 }
 type interceptorHasUserCredentials interface {
 	GetUserCredentials() map[string]string
@@ -324,7 +324,7 @@ func (s *interceptor) validateRequest(
 	// If the node ID is not set then return an error.
 	if s.opts.requiresNodeID {
 		if treq, ok := req.(interceptorHasNodeID); ok {
-			if treq.GetNodeId() == "" {
+			if treq.NodeGetId() == "" {
 				return status.Error(
 					codes.InvalidArgument, "required: NodeID")
 			}
@@ -419,8 +419,8 @@ func (s *interceptor) validateResponse(
 	//
 	// Node Service
 	//
-	case *csi.GetNodeIDResponse:
-		return s.validateGetNodeIDResponse(ctx, *tobj)
+	case *csi.NodeGetIdResponse:
+		return s.validateNodeGetIdResponse(ctx, *tobj)
 	case *csi.NodeGetCapabilitiesResponse:
 		return s.validateNodeGetCapabilitiesResponse(ctx, *tobj)
 	}
@@ -517,7 +517,7 @@ func (s *interceptor) validateNodePublishVolumeRequest(
 			codes.InvalidArgument, "required: TargetPath")
 	}
 
-	if s.opts.requiresPubVolInfo && len(req.PublishVolumeInfo) == 0 {
+	if s.opts.requiresPubVolInfo && len(req.PublishInfo) == 0 {
 		return status.Error(
 			codes.InvalidArgument, "required: PublishVolumeInfo")
 	}
@@ -541,17 +541,17 @@ func (s *interceptor) validateCreateVolumeResponse(
 	ctx context.Context,
 	rep csi.CreateVolumeResponse) error {
 
-	if rep.VolumeInfo == nil {
-		return status.Error(codes.Internal, "nil: VolumeInfo")
+	if rep.Volume == nil {
+		return status.Error(codes.Internal, "nil: Volume")
 	}
 
-	if rep.VolumeInfo.Id == "" {
-		return status.Error(codes.Internal, "empty: VolumeInfo.Id")
+	if rep.Volume.Id == "" {
+		return status.Error(codes.Internal, "empty: Volume.Id")
 	}
 
-	if s.opts.requiresVolAttribs && len(rep.VolumeInfo.Attributes) == 0 {
+	if s.opts.requiresVolAttribs && len(rep.Volume.Attributes) == 0 {
 		return status.Error(
-			codes.Internal, "non-nil, empty: VolumeInfo.Attributes")
+			codes.Internal, "non-nil, empty: Volume.Attributes")
 	}
 
 	return nil
@@ -561,8 +561,8 @@ func (s *interceptor) validateControllerPublishVolumeResponse(
 	ctx context.Context,
 	rep csi.ControllerPublishVolumeResponse) error {
 
-	if s.opts.requiresPubVolInfo && len(rep.PublishVolumeInfo) == 0 {
-		return status.Error(codes.Internal, "empty: PublishVolumeInfo")
+	if s.opts.requiresPubVolInfo && len(rep.PublishInfo) == 0 {
+		return status.Error(codes.Internal, "empty: PublishInfo")
 	}
 	return nil
 }
@@ -572,21 +572,21 @@ func (s *interceptor) validateListVolumesResponse(
 	rep csi.ListVolumesResponse) error {
 
 	for i, e := range rep.Entries {
-		volInfo := e.VolumeInfo
-		if volInfo == nil {
+		vol := e.Volume
+		if vol == nil {
 			return status.Errorf(
 				codes.Internal,
-				"nil: Entries[%d].VolumeInfo", i)
+				"nil: Entries[%d].Volume", i)
 		}
-		if volInfo.Id == "" {
+		if vol.Id == "" {
 			return status.Errorf(
 				codes.Internal,
-				"empty: Entries[%d].VolumeInfo.Id", i)
+				"empty: Entries[%d].Volume.Id", i)
 		}
-		if volInfo.Attributes != nil && len(volInfo.Attributes) == 0 {
+		if vol.Attributes != nil && len(vol.Attributes) == 0 {
 			return status.Errorf(
 				codes.Internal,
-				"non-nil, empty: Entries[%d].VolumeInfo.Attributes", i)
+				"non-nil, empty: Entries[%d].Volume.Attributes", i)
 		}
 	}
 
@@ -661,9 +661,9 @@ func (s *interceptor) validateGetPluginInfoResponse(
 	return nil
 }
 
-func (s *interceptor) validateGetNodeIDResponse(
+func (s *interceptor) validateNodeGetIdResponse(
 	ctx context.Context,
-	rep csi.GetNodeIDResponse) error {
+	rep csi.NodeGetIdResponse) error {
 
 	if s.opts.requiresNodeID && rep.NodeId == "" {
 		return status.Error(codes.Internal, "empty: NodeID")
