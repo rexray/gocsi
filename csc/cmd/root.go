@@ -11,9 +11,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/rexray/gocsi/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/rexray/gocsi/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
@@ -113,12 +113,17 @@ var RootCmd = &cobra.Command{
 		// Create the gRPC client connection.
 		opts := []grpc.DialOption{
 			grpc.WithDialer(
-				func(target string, timeout time.Duration) (net.Conn, error) {
-					proto, addr, err := utils.ParseProtoAddr(target)
+				func(string, time.Duration) (net.Conn, error) {
+					proto, addr, err := utils.ParseProtoAddr(root.endpoint)
+					log.WithFields(map[string]interface{}{
+						"proto":   proto,
+						"addr":    addr,
+						"timeout": root.timeout,
+					}).Debug("parsed endpoint info")
 					if err != nil {
 						return nil, err
 					}
-					return net.DialTimeout(proto, addr, timeout)
+					return net.DialTimeout(proto, addr, root.timeout)
 				}),
 		}
 

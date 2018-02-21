@@ -260,6 +260,22 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
+func (s *service) NodeStageVolume(
+	ctx context.Context,
+	req *csi.NodeStageVolumeRequest) (
+	*csi.NodeStageVolumeResponse, error) {
+
+	return nil, nil
+}
+
+func (s *service) NodeUnstageVolume(
+	ctx context.Context,
+	req *csi.NodeUnstageVolumeRequest) (
+	*csi.NodeUnstageVolumeResponse, error) {
+
+	return nil, nil
+}
+
 func (s *service) NodePublishVolume(
 	ctx context.Context,
 	req *csi.NodePublishVolumeRequest) (
