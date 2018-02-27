@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/spf13/cobra"
 )
 

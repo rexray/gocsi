@@ -7,16 +7,16 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var nodePublishVolume struct {
-	nodeID     string
-	targetPath string
-	pubInfo    mapOfStringArg
-	attribs    mapOfStringArg
-	readOnly   bool
-	caps       volumeCapabilitySliceArg
+	targetPath        string
+	stagingTargetPath string
+	pubInfo           mapOfStringArg
+	attribs           mapOfStringArg
+	readOnly          bool
+	caps              volumeCapabilitySliceArg
 }
 
 var nodePublishVolumeCmd = &cobra.Command{
@@ -26,18 +26,18 @@ var nodePublishVolumeCmd = &cobra.Command{
 	Example: `
 USAGE
 
-    csc node publishvolume [flags] VOLUME_ID [VOLUME_ID...]
+    csc node publish [flags] VOLUME_ID [VOLUME_ID...]
 `,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.NodePublishVolumeRequest{
-			Version:                &root.version.Version,
-			TargetPath:             nodePublishVolume.targetPath,
-			PublishInfo:            nodePublishVolume.pubInfo.data,
-			Readonly:               nodePublishVolume.readOnly,
-			NodePublishCredentials: root.userCreds,
-			VolumeAttributes:       nodePublishVolume.attribs.data,
+			StagingTargetPath:  nodePublishVolume.stagingTargetPath,
+			TargetPath:         nodePublishVolume.targetPath,
+			PublishInfo:        nodePublishVolume.pubInfo.data,
+			Readonly:           nodePublishVolume.readOnly,
+			NodePublishSecrets: root.secrets,
+			VolumeAttributes:   nodePublishVolume.attribs.data,
 		}
 
 		if len(nodePublishVolume.caps.data) > 0 {
@@ -68,6 +68,12 @@ func init() {
 	nodeCmd.AddCommand(nodePublishVolumeCmd)
 
 	nodePublishVolumeCmd.Flags().StringVar(
+		&nodePublishVolume.stagingTargetPath,
+		"staging-target-path",
+		"",
+		"The path from which to bind mount the volume")
+
+	nodePublishVolumeCmd.Flags().StringVar(
 		&nodePublishVolume.targetPath,
 		"target-path",
 		"",
@@ -91,7 +97,7 @@ func init() {
 		&root.withRequiresPubVolInfo,
 		"with-requires-pub-info",
 		false,
-		`Marks the request's PublishVolumeInfo field as required.
+		`Marks the request's PublishInfo field as required.
         Enabling this option also enables --with-spec-validation.`)
 
 	flagVolumeAttributes(

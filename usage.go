@@ -74,12 +74,6 @@ GLOBAL OPTIONS
 
         The default value is WARN.
 
-    X_CSI_SUPPORTED_VERSIONS
-        A list of comma-separated versions strings: MAJOR.MINOR.PATCH.
-        Setting this environment variable will cause the program to
-        bypass the SP's GetSupportedVersions RPC and return the list of
-        specified versions instead.
-
     X_CSI_PLUGIN_INFO
         The plug-in information is specified via the following
         comma-separated format:
@@ -125,6 +119,10 @@ GLOBAL OPTIONS
         A flag that enables the validation of CSI response messages.
         Invalid responses are marshalled into a gRPC error with a code
         of "Internal."
+
+    X_CSI_REQUIRE_STAGING_TARGET_PATH
+        A flag that enables treating the following fields as required:
+            * NodePublishVolumeRequest.StagingTargetPath
 
     X_CSI_REQUIRE_NODE_ID
         A flag that enables treating the following fields as required:
@@ -183,15 +181,13 @@ GLOBAL OPTIONS
 
         Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
+    X_CSI_REQUIRE_CREDS_NODE_STG_VOL
+        A flag that enables treating the following fields as required:
+            * NodeStageVolumeRequest.UserCredentials
+
     X_CSI_REQUIRE_CREDS_NODE_PUB_VOL
         A flag that enables treating the following fields as required:
             * NodePublishVolumeRequest.UserCredentials
-
-        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
-
-    X_CSI_REQUIRE_CREDS_NODE_UNPUB_VOL
-        A flag that enables treating the following fields as required:
-            * NodeUnpublishVolumeRequest.UserCredentials
 
         Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 

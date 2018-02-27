@@ -21,10 +21,10 @@ import (
 var debug, _ = strconv.ParseBool(os.Getenv("X_CSI_DEBUG"))
 
 var root struct {
-	ctx       context.Context
-	client    *grpc.ClientConn
-	tpl       *template.Template
-	userCreds map[string]string
+	ctx     context.Context
+	client  *grpc.ClientConn
+	tpl     *template.Template
+	secrets map[string]string
 
 	genMarkdown bool
 	logLevel    logLevelArg
@@ -32,7 +32,6 @@ var root struct {
 	endpoint    string
 	insecure    bool
 	timeout     time.Duration
-	version     csiVersionArg
 	metadata    mapOfStringArg
 
 	withReqLogging bool
@@ -87,8 +86,6 @@ var RootCmd = &cobra.Command{
 				}
 			case createVolumeCmd.Name():
 				root.format = volumeInfoFormat
-			case supportedVersCmd.Name():
-				root.format = supportedVersionsFormat
 			case pluginInfoCmd.Name():
 				root.format = pluginInfoFormat
 			case pluginCapsCmd.Name():
@@ -108,7 +105,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		// Parse the credentials if they exist.
-		root.userCreds = utils.ParseMap(os.Getenv("X_CSI_USER_CREDENTIALS"))
+		root.secrets = utils.ParseMap(os.Getenv("X_CSI_SECRETS"))
 
 		// Create the gRPC client connection.
 		opts := []grpc.DialOption{
@@ -218,13 +215,6 @@ func init() {
             -m key1=val1,key2=val2 --metadata key3=val3
 
         Read more on gRPC metadata at https://goo.gl/iTci67`)
-
-	RootCmd.PersistentFlags().VarP(
-		&root.version,
-		"version",
-		"v",
-		`The version sent with an RPC may be specified as MAJOR.MINOR.PATCH`)
-
 }
 
 type logger struct {

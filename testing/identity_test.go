@@ -2,17 +2,15 @@ package gocsi_test
 
 import (
 	"context"
-	"fmt"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/rexray/gocsi"
 	csictx "github.com/rexray/gocsi/context"
 	"github.com/rexray/gocsi/mock/service"
-	"github.com/rexray/gocsi/utils"
 )
 
 var _ = Describe("Identity", func() {
@@ -44,21 +42,11 @@ var _ = Describe("Identity", func() {
 			name          string
 			vendorVersion string
 			manifest      map[string]string
-			version       csi.Version
 			reqVersion    string
 		)
 		JustBeforeEach(func() {
-			var ok bool
-			version, ok = utils.ParseVersion(reqVersion)
-			Ω(ok).ShouldNot(BeFalse())
 			var res *csi.GetPluginInfoResponse
-			res, err = client.GetPluginInfo(ctx, &csi.GetPluginInfoRequest{
-				Version: &csi.Version{
-					Major: version.GetMajor(),
-					Minor: version.GetMinor(),
-					Patch: version.GetPatch(),
-				},
-			})
+			res, err = client.GetPluginInfo(ctx, &csi.GetPluginInfoRequest{})
 			if err == nil {
 				name = res.Name
 				vendorVersion = res.VendorVersion
@@ -70,41 +58,12 @@ var _ = Describe("Identity", func() {
 			vendorVersion = ""
 			manifest = nil
 		})
-		shouldBeValid := func() {
+		It("Should be valid", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(name).Should(Equal(service.Name))
 			Ω(vendorVersion).Should(Equal(service.VendorVersion))
 			Ω(manifest).Should(HaveLen(1))
 			Ω(manifest["url"]).Should(Equal(service.Manifest["url"]))
-		}
-		shouldNotBeValid := func() {
-			Ω(err).Should(ΣCM(
-				codes.InvalidArgument,
-				fmt.Sprintf("invalid: Version=%s", CTest().ComponentTexts[3])))
-		}
-
-		Context("With Request Version", func() {
-			BeforeEach(func() {
-				reqVersion = CTest().ComponentTexts[3]
-			})
-			Context("0.0.0", func() {
-				It("Should Not Be Valid", shouldNotBeValid)
-			})
-			Context("0.1.0", func() {
-				It("Should Be Valid", shouldNotBeValid)
-			})
-			Context("0.2.0", func() {
-				It("Should Be Valid", shouldBeValid)
-			})
-			Context("1.0.0", func() {
-				It("Should Be Valid", shouldBeValid)
-			})
-			Context("1.1.0", func() {
-				It("Should Be Valid", shouldBeValid)
-			})
-			Context("1.2.0", func() {
-				It("Should Not Be Valid", shouldNotBeValid)
-			})
 		})
 
 		Context("With Invalid Plug-in Name Error", func() {
@@ -131,34 +90,10 @@ var _ = Describe("Identity", func() {
 		})
 	})
 
-	Describe("GetSupportedVersions", func() {
-		It("Should Be Valid", func() {
-			rep, err := client.GetSupportedVersions(
-				ctx, &csi.GetSupportedVersionsRequest{})
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(rep).ShouldNot(BeNil())
-			fmt.Fprintf(
-				GinkgoWriter, "expVersions: %v\n", mockSupportedVersions)
-			fmt.Fprintf(
-				GinkgoWriter, "actVersions: %v\n", rep.SupportedVersions)
-
-			Ω(rep.SupportedVersions).Should(HaveLen(len(mockSupportedVersions)))
-			for i, v := range rep.SupportedVersions {
-				Ω(*v).Should(Equal(mockSupportedVersions[i]))
-			}
-		})
-	})
-
 	Describe("GetPluginCapabilities", func() {
 		It("Should Be Valid", func() {
 			rep, err := client.GetPluginCapabilities(
-				ctx, &csi.GetPluginCapabilitiesRequest{
-					Version: &csi.Version{
-						Major: 0,
-						Minor: 2,
-						Patch: 0,
-					},
-				})
+				ctx, &csi.GetPluginCapabilitiesRequest{})
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(rep).ShouldNot(BeNil())
 			Ω(rep.Capabilities).Should(HaveLen(1))

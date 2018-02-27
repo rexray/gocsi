@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var controllerPublishVolume struct {
@@ -29,10 +29,9 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ControllerPublishVolumeRequest{
-			Version: &root.version.Version,
-			NodeId:  controllerPublishVolume.nodeID,
-			ControllerPublishCredentials: root.userCreds,
-			VolumeAttributes:             controllerPublishVolume.attribs.data,
+			NodeId: controllerPublishVolume.nodeID,
+			ControllerPublishSecrets: root.secrets,
+			VolumeAttributes:         controllerPublishVolume.attribs.data,
 		}
 
 		if len(controllerPublishVolume.caps.data) > 0 {

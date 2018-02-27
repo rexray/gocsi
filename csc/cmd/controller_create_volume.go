@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var createVolume struct {
@@ -38,10 +38,9 @@ CREATING MULTIPLE VOLUMES
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.CreateVolumeRequest{
-			Version:                     &root.version.Version,
-			VolumeCapabilities:          createVolume.caps.data,
-			Parameters:                  createVolume.params.data,
-			ControllerCreateCredentials: root.userCreds,
+			VolumeCapabilities:      createVolume.caps.data,
+			Parameters:              createVolume.params.data,
+			ControllerCreateSecrets: root.secrets,
 		}
 
 		if createVolume.reqBytes > 0 || createVolume.limBytes > 0 {

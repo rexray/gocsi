@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 func (s *service) NodeStageVolume(
@@ -109,28 +109,10 @@ func (s *service) NodeGetId(
 	}, nil
 }
 
-func (s *service) NodeProbe(
-	ctx context.Context,
-	req *csi.NodeProbeRequest) (
-	*csi.NodeProbeResponse, error) {
-
-	return &csi.NodeProbeResponse{}, nil
-}
-
 func (s *service) NodeGetCapabilities(
 	ctx context.Context,
 	req *csi.NodeGetCapabilitiesRequest) (
 	*csi.NodeGetCapabilitiesResponse, error) {
 
-	return &csi.NodeGetCapabilitiesResponse{
-		Capabilities: []*csi.NodeServiceCapability{
-			{
-				Type: &csi.NodeServiceCapability_Rpc{
-					Rpc: &csi.NodeServiceCapability_RPC{
-						Type: csi.NodeServiceCapability_RPC_UNKNOWN,
-					},
-				},
-			},
-		},
-	}, nil
+	return &csi.NodeGetCapabilitiesResponse{}, nil
 }

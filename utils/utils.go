@@ -11,7 +11,6 @@ import (
 	"os"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -20,89 +19,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
-const maxuint32 = 4294967295
-
-// ParseVersion parses a string for a CSI version.
-func ParseVersion(s string) (csi.Version, bool) {
-	if versions := ParseVersions(s); len(versions) > 0 {
-		return versions[0], true
-	}
-	return csi.Version{}, false
-}
-
-// ParseVersions parses a string for one or more CSI versions.
-func ParseVersions(s string) []csi.Version {
-	if s == "" {
-		return nil
-	}
-
-	rx := regexp.MustCompile(`(\d+)\.(\d+)\.(\d+)`)
-	matches := rx.FindAllStringSubmatch(s, -1)
-	if len(matches) == 0 {
-		return nil
-	}
-
-	versions := make([]csi.Version, len(matches))
-	for i, m := range matches {
-		major, _ := strconv.Atoi(m[1])
-		minor, _ := strconv.Atoi(m[2])
-		patch, _ := strconv.Atoi(m[3])
-		versions[i].Major = int32(major)
-		versions[i].Minor = int32(minor)
-		versions[i].Patch = int32(patch)
-	}
-
-	return versions
-}
-
-// SprintfVersion formats a Version as a string.
-func SprintfVersion(v csi.Version) string {
-	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
-}
-
-// FprintfVersion formats a Version as a string to the specified writer.
-func FprintfVersion(w io.Writer, v csi.Version) (int, error) {
-	return fmt.Fprintf(w, "%d.%d.%d", v.Major, v.Minor, v.Patch)
-}
-
-// CompareVersions compares two versions and returns:
-//
-//   -1 if a > b
-//    0 if a = b
-//    1 if a < b
-func CompareVersions(a, b *csi.Version) int8 {
-	if a == nil && b == nil {
-		return 0
-	}
-	if a != nil && b == nil {
-		return -1
-	}
-	if a == nil && b != nil {
-		return 1
-	}
-	if a.Major > b.Major {
-		return -1
-	}
-	if a.Major < b.Major {
-		return 1
-	}
-	if a.Minor > b.Minor {
-		return -1
-	}
-	if a.Minor < b.Minor {
-		return 1
-	}
-	if a.Patch > b.Patch {
-		return -1
-	}
-	if a.Patch < b.Patch {
-		return 1
-	}
-	return 0
-}
+// CSIEndpoint is the name of the environment variable that
+// contains the CSI endpoint.
+const CSIEndpoint = "CSI_ENDPOINT"
 
 // GetCSIEndpoint returns the network address specified by the
 // environment variable CSI_ENDPOINT.
@@ -512,19 +434,6 @@ func IsSuccess(err error, successCodes ...codes.Code) error {
 		}
 	}
 
-	return err
-}
-
-// IsSuccessfulResponse uses IsSuccess to determine if the response for
-// a specific CSI method is successful. If successful a nil value is
-// returned; otherwise the original error is returned.
-func IsSuccessfulResponse(method string, err error) error {
-	switch method {
-	case CreateVolume:
-		return IsSuccess(err, codes.AlreadyExists)
-	case DeleteVolume:
-		return IsSuccess(err, codes.NotFound)
-	}
 	return err
 }
 

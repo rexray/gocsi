@@ -1,10 +1,10 @@
 package utils
 
 import (
+	"reflect"
+
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-
-	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 // ChainUnaryClient chains one or more unary, client interceptors
@@ -107,30 +107,9 @@ func ChainUnaryServer(
 	}
 }
 
-// nilResponses exceeds the 80char code limit, but to modify it would render
-// it less readable than leaving it as is
-var nilResponses = map[string]interface{}{
-	CreateVolume:               (*csi.CreateVolumeResponse)(nil),
-	DeleteVolume:               (*csi.DeleteVolumeResponse)(nil),
-	ControllerPublishVolume:    (*csi.ControllerPublishVolumeResponse)(nil),
-	ControllerUnpublishVolume:  (*csi.ControllerUnpublishVolumeResponse)(nil),
-	ValidateVolumeCapabilities: (*csi.ValidateVolumeCapabilitiesResponse)(nil),
-	ListVolumes:                (*csi.ListVolumesResponse)(nil),
-	GetCapacity:                (*csi.GetCapacityResponse)(nil),
-	ControllerGetCapabilities:  (*csi.ControllerGetCapabilitiesResponse)(nil),
-	ControllerProbe:            (*csi.ControllerProbeResponse)(nil),
-	GetSupportedVersions:       (*csi.GetSupportedVersionsResponse)(nil),
-	GetPluginInfo:              (*csi.GetPluginInfoResponse)(nil),
-	NodeGetId:                  (*csi.NodeGetIdResponse)(nil),
-	NodePublishVolume:          (*csi.NodePublishVolumeResponse)(nil),
-	NodeUnpublishVolume:        (*csi.NodeUnpublishVolumeResponse)(nil),
-	NodeProbe:                  (*csi.NodeProbeResponse)(nil),
-	NodeGetCapabilities:        (*csi.NodeGetCapabilitiesResponse)(nil),
-}
-
 // IsNilResponse returns a flag indicating whether or not the provided
 // response object is a nil object wrapped inside a non-nil interface.
-func IsNilResponse(method string, rep interface{}) bool {
+func IsNilResponse(rep interface{}) bool {
 	// Determine whether or not the resposne is nil. Otherwise it
 	// will no longer be possible to perform a nil equality check on the
 	// response to the interface{} rules for nil comparison. For more info
@@ -139,8 +118,15 @@ func IsNilResponse(method string, rep interface{}) bool {
 	if rep == nil {
 		return true
 	}
-	if nilRep := nilResponses[method]; rep == nilRep {
-		return true
+	rv := reflect.ValueOf(rep)
+	switch rv.Kind() {
+	case reflect.Chan,
+		reflect.Func,
+		reflect.Interface,
+		reflect.Map,
+		reflect.Ptr,
+		reflect.Slice:
+		return rv.IsNil()
 	}
 	return false
 }

@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 
 	"github.com/rexray/gocsi/utils"
 )
@@ -22,31 +22,18 @@ type Option func(*opts)
 
 type opts struct {
 	sync.Mutex
-	supportedVersions   []csi.Version
-	reqValidation       bool
-	repValidation       bool
-	requiresNodeID      bool
-	requiresPubVolInfo  bool
-	requiresVolAttribs  bool
-	requiresCredentials map[string]struct{}
-}
-
-func (o *opts) requireCredentials(m string) {
-	o.Lock()
-	defer o.Unlock()
-	if o.requiresCredentials == nil {
-		o.requiresCredentials = map[string]struct{}{}
-	}
-	o.requiresCredentials[m] = struct{}{}
-}
-
-// WithSupportedVersions is a Option that indicates the
-// list of versions supported by any CSI RPC that participates in
-// version validation.
-func WithSupportedVersions(versions ...csi.Version) Option {
-	return func(o *opts) {
-		o.supportedVersions = versions
-	}
+	reqValidation               bool
+	repValidation               bool
+	requiresStagingTargetPath   bool
+	requiresNodeID              bool
+	requiresPubVolInfo          bool
+	requiresVolAttribs          bool
+	requiresCtlrNewVolSecrets   bool
+	requiresCtlrDelVolSecrets   bool
+	requiresCtlrPubVolSecrets   bool
+	requiresCtlrUnpubVolSecrets bool
+	requiresNodeStgVolSecrets   bool
+	requiresNodePubVolSecrets   bool
 }
 
 // WithRequestValidation is a Option that enables request validation.
@@ -72,10 +59,19 @@ func WithRequiresNodeID() Option {
 	}
 }
 
-// WithRequiresPublishVolumeInfo is a Option that indicates
+// WithRequiresStagingTargetPath is a Option that indicates
+// NodePublishVolume requests must have non-empty StagingTargetPath
+// fields.
+func WithRequiresStagingTargetPath() Option {
+	return func(o *opts) {
+		o.requiresStagingTargetPath = true
+	}
+}
+
+// WithRequiresPublishInfo is a Option that indicates
 // ControllerPublishVolume responses and NodePublishVolume requests must
 // contain non-empty publish volume info data.
-func WithRequiresPublishVolumeInfo() Option {
+func WithRequiresPublishInfo() Option {
 	return func(o *opts) {
 		o.requiresPubVolInfo = true
 	}
@@ -90,57 +86,57 @@ func WithRequiresVolumeAttributes() Option {
 	}
 }
 
-// WithRequiresCreateVolumeCredentials is a Option
-// that indicates the eponymous requests must contain non-empty credentials
+// WithRequiresControllerCreateVolumeSecrets is a Option
+// that indicates the eponymous requests must contain non-empty secrets
 // data.
-func WithRequiresCreateVolumeCredentials() Option {
+func WithRequiresControllerCreateVolumeSecrets() Option {
 	return func(o *opts) {
-		o.requireCredentials(utils.CreateVolume)
+		o.requiresCtlrNewVolSecrets = true
 	}
 }
 
-// WithRequiresDeleteVolumeCredentials is a Option
+// WithRequiresControllerDeleteVolumeSecrets is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresDeleteVolumeCredentials() Option {
+func WithRequiresControllerDeleteVolumeSecrets() Option {
 	return func(o *opts) {
-		o.requireCredentials(utils.DeleteVolume)
+		o.requiresCtlrDelVolSecrets = true
 	}
 }
 
-// WithRequiresControllerPublishVolumeCredentials is a Option
+// WithRequiresControllerPublishVolumeSecrets is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresControllerPublishVolumeCredentials() Option {
+func WithRequiresControllerPublishVolumeSecrets() Option {
 	return func(o *opts) {
-		o.requireCredentials(utils.ControllerPublishVolume)
+		o.requiresCtlrPubVolSecrets = true
 	}
 }
 
-// WithRequiresControllerUnpublishVolumeCredentials is a Option
+// WithRequiresControllerUnpublishVolumeSecrets is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresControllerUnpublishVolumeCredentials() Option {
+func WithRequiresControllerUnpublishVolumeSecrets() Option {
 	return func(o *opts) {
-		o.requireCredentials(utils.ControllerUnpublishVolume)
+		o.requiresCtlrUnpubVolSecrets = true
 	}
 }
 
-// WithRequiresNodePublishVolumeCredentials is a Option
+// WithRequiresNodeStageVolumeSecrets is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresNodePublishVolumeCredentials() Option {
+func WithRequiresNodeStageVolumeSecrets() Option {
 	return func(o *opts) {
-		o.requireCredentials(utils.NodePublishVolume)
+		o.requiresNodeStgVolSecrets = true
 	}
 }
 
-// WithRequiresNodeUnpublishVolumeCredentials is a Option
+// WithRequiresNodePublishVolumeSecrets is a Option
 // that indicates the eponymous requests must contain non-empty credentials
 // data.
-func WithRequiresNodeUnpublishVolumeCredentials() Option {
+func WithRequiresNodePublishVolumeSecrets() Option {
 	return func(o *opts) {
-		o.requireCredentials(utils.NodeUnpublishVolume)
+		o.requiresNodePubVolSecrets = true
 	}
 }
 
@@ -210,11 +206,6 @@ func (s *interceptor) handle(
 	}
 
 	if s.opts.reqValidation {
-		// Validate the request version.
-		if err := s.validateRequestVersion(ctx, req); err != nil {
-			return nil, err
-		}
-
 		// Validate the request against the CSI specification.
 		if err := s.validateRequest(ctx, method, req); err != nil {
 			return nil, err
@@ -230,20 +221,8 @@ func (s *interceptor) handle(
 		return nil, err
 	}
 
-	// Determine whether or not the response is nil. Otherwise it
-	// will no longer be possible to perform a nil equality check on the
-	// response to the interface{} rules for nil comparison.
-	//
-	// If the response is nil then go ahead and return a nil value
-	// directly in order to fulfill Go's rules about nil values and
-	// interface{} types.
-	if utils.IsNilResponse(method, rep) {
-		return nil, nil
-	}
-
-	log.WithField(
-		"repValidation", s.opts.repValidation).Debug("do rep validtion?")
 	if s.opts.repValidation {
+		log.Debug("response validation enabled")
 		// Validate the response against the CSI specification.
 		if err := s.validateResponse(ctx, method, rep); err != nil {
 
@@ -293,9 +272,6 @@ type interceptorHasUserCredentials interface {
 type interceptorHasVolumeAttributes interface {
 	GetVolumeAttributes() map[string]string
 }
-type interceptorHasVersion interface {
-	GetVersion() *csi.Version
-}
 
 func (s *interceptor) validateRequest(
 	ctx context.Context,
@@ -331,18 +307,6 @@ func (s *interceptor) validateRequest(
 		}
 	}
 
-	// Check to see if the request has credentials and if they're required.
-	// If the credentials are required but no credentials are specified then
-	// return an error.
-	if _, ok := s.opts.requiresCredentials[method]; ok {
-		if treq, ok := req.(interceptorHasUserCredentials); ok {
-			if len(treq.GetUserCredentials()) == 0 {
-				return status.Error(
-					codes.InvalidArgument, "required: UserCredentials")
-			}
-		}
-	}
-
 	// Check to see if the request has volume attributes and if they're
 	// required. If the volume attributes are required by no attributes are
 	// specified then return an error.
@@ -365,15 +329,21 @@ func (s *interceptor) validateRequest(
 	//
 	case *csi.CreateVolumeRequest:
 		return s.validateCreateVolumeRequest(ctx, *tobj)
+	case *csi.DeleteVolumeRequest:
+		return s.validateDeleteVolumeRequest(ctx, *tobj)
 	case *csi.ControllerPublishVolumeRequest:
 		return s.validateControllerPublishVolumeRequest(ctx, *tobj)
+	case *csi.ControllerUnpublishVolumeRequest:
+		return s.validateControllerUnpublishVolumeRequest(ctx, *tobj)
 	case *csi.ValidateVolumeCapabilitiesRequest:
 		return s.validateValidateVolumeCapabilitiesRequest(ctx, *tobj)
 	case *csi.GetCapacityRequest:
 		return s.validateGetCapacityRequest(ctx, *tobj)
-	//
-	// Node Service
-	//
+		//
+		// Node Service
+		//
+	case *csi.NodeStageVolumeRequest:
+		return s.validateNodeStageVolumeRequest(ctx, *tobj)
 	case *csi.NodePublishVolumeRequest:
 		return s.validateNodePublishVolumeRequest(ctx, *tobj)
 	case *csi.NodeUnpublishVolumeRequest:
@@ -388,8 +358,8 @@ func (s *interceptor) validateResponse(
 	method string,
 	rep interface{}) error {
 
-	if utils.IsNilResponse(method, rep) {
-		return nil
+	if utils.IsNilResponse(rep) {
+		return status.Error(codes.Internal, "nil response")
 	}
 
 	// Validate the field sizes.
@@ -412,8 +382,6 @@ func (s *interceptor) validateResponse(
 	//
 	// Identity Service
 	//
-	case *csi.GetSupportedVersionsResponse:
-		return s.validateGetSupportedVersionsResponse(ctx, *tobj)
 	case *csi.GetPluginInfoResponse:
 		return s.validateGetPluginInfoResponse(ctx, *tobj)
 	//
@@ -428,46 +396,6 @@ func (s *interceptor) validateResponse(
 	return nil
 }
 
-func (s *interceptor) validateRequestVersion(
-	ctx context.Context,
-	req interface{}) error {
-
-	// Check to see if the request version should be validated.
-	if len(s.opts.supportedVersions) == 0 {
-		return nil
-	}
-
-	treq, ok := req.(interceptorHasVersion)
-	if !ok {
-		return nil
-	}
-
-	var (
-		supported      bool
-		requestVersion = treq.GetVersion()
-	)
-
-	if requestVersion == nil {
-		return status.Error(codes.InvalidArgument, "nil: Version")
-	}
-
-	for _, supportedVersion := range s.opts.supportedVersions {
-		if utils.CompareVersions(requestVersion, &supportedVersion) == 0 {
-			supported = true
-			break
-		}
-	}
-
-	if !supported {
-		return status.Errorf(
-			codes.InvalidArgument,
-			"invalid: Version=%s",
-			utils.SprintfVersion(*requestVersion))
-	}
-
-	return nil
-}
-
 func (s *interceptor) validateCreateVolumeRequest(
 	ctx context.Context,
 	req csi.CreateVolumeRequest) error {
@@ -476,22 +404,56 @@ func (s *interceptor) validateCreateVolumeRequest(
 		return status.Error(
 			codes.InvalidArgument, "required: Name")
 	}
+	if s.opts.requiresCtlrNewVolSecrets {
+		if len(req.ControllerCreateSecrets) == 0 {
+			return status.Error(
+				codes.InvalidArgument, "required: ControllerCreateSecrets")
+		}
+	}
 
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, true)
 }
 
-// func (s *interceptor) validateDeleteVolumeRequest(
-// 	ctx context.Context,
-// 	req csi.DeleteVolumeRequest) error {
-//
-// 	return nil
-// }
+func (s *interceptor) validateDeleteVolumeRequest(
+	ctx context.Context,
+	req csi.DeleteVolumeRequest) error {
+
+	if s.opts.requiresCtlrDelVolSecrets {
+		if len(req.ControllerDeleteSecrets) == 0 {
+			return status.Error(
+				codes.InvalidArgument, "required: ControllerDeleteSecrets")
+		}
+	}
+
+	return nil
+}
 
 func (s *interceptor) validateControllerPublishVolumeRequest(
 	ctx context.Context,
 	req csi.ControllerPublishVolumeRequest) error {
 
+	if s.opts.requiresCtlrPubVolSecrets {
+		if len(req.ControllerPublishSecrets) == 0 {
+			return status.Error(
+				codes.InvalidArgument, "required: ControllerPublishSecrets")
+		}
+	}
+
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
+}
+
+func (s *interceptor) validateControllerUnpublishVolumeRequest(
+	ctx context.Context,
+	req csi.ControllerUnpublishVolumeRequest) error {
+
+	if s.opts.requiresCtlrUnpubVolSecrets {
+		if len(req.ControllerUnpublishSecrets) == 0 {
+			return status.Error(
+				codes.InvalidArgument, "required: ControllerUnpublishSecrets")
+		}
+	}
+
+	return nil
 }
 
 func (s *interceptor) validateValidateVolumeCapabilitiesRequest(
@@ -508,9 +470,38 @@ func (s *interceptor) validateGetCapacityRequest(
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, false)
 }
 
+func (s *interceptor) validateNodeStageVolumeRequest(
+	ctx context.Context,
+	req csi.NodeStageVolumeRequest) error {
+
+	if req.StagingTargetPath == "" {
+		return status.Error(
+			codes.InvalidArgument, "required: StagingTargetPath")
+	}
+
+	if s.opts.requiresPubVolInfo && len(req.PublishInfo) == 0 {
+		return status.Error(
+			codes.InvalidArgument, "required: PublishInfo")
+	}
+
+	if s.opts.requiresNodeStgVolSecrets {
+		if len(req.NodeStageSecrets) == 0 {
+			return status.Error(
+				codes.InvalidArgument, "required: NodeStageSecrets")
+		}
+	}
+
+	return validateVolumeCapabilityArg(req.VolumeCapability, true)
+}
+
 func (s *interceptor) validateNodePublishVolumeRequest(
 	ctx context.Context,
 	req csi.NodePublishVolumeRequest) error {
+
+	if s.opts.requiresStagingTargetPath && req.StagingTargetPath == "" {
+		return status.Error(
+			codes.InvalidArgument, "required: StagingTargetPath")
+	}
 
 	if req.TargetPath == "" {
 		return status.Error(
@@ -519,7 +510,14 @@ func (s *interceptor) validateNodePublishVolumeRequest(
 
 	if s.opts.requiresPubVolInfo && len(req.PublishInfo) == 0 {
 		return status.Error(
-			codes.InvalidArgument, "required: PublishVolumeInfo")
+			codes.InvalidArgument, "required: PublishInfo")
+	}
+
+	if s.opts.requiresNodePubVolSecrets {
+		if len(req.NodePublishSecrets) == 0 {
+			return status.Error(
+				codes.InvalidArgument, "required: NodePublishSecrets")
+		}
 	}
 
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
@@ -599,16 +597,6 @@ func (s *interceptor) validateControllerGetCapabilitiesResponse(
 
 	if rep.Capabilities != nil && len(rep.Capabilities) == 0 {
 		return status.Error(codes.Internal, "non-nil, empty: Capabilities")
-	}
-	return nil
-}
-
-func (s *interceptor) validateGetSupportedVersionsResponse(
-	ctx context.Context,
-	rep csi.GetSupportedVersionsResponse) error {
-
-	if len(rep.SupportedVersions) == 0 {
-		return status.Error(codes.Internal, "empty: SupportedVersions")
 	}
 	return nil
 }

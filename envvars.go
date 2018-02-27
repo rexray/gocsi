@@ -49,12 +49,6 @@ const (
 	// WARN, INFO, and DEBUG.
 	EnvVarLogLevel = "X_CSI_LOG_LEVEL"
 
-	// EnvVarSupportedVersions is the name of the environment variable used
-	// to specify a list of comma-separated versions supported by the SP. If
-	// no value is specified then the SP does not perform a version check on
-	// the RPC.
-	EnvVarSupportedVersions = "X_CSI_SUPPORTED_VERSIONS"
-
 	// EnvVarPluginInfo is the name of the environment variable used to
 	// specify the plug-in info in the format:
 	//
@@ -126,6 +120,11 @@ const (
 	// ControllerPublishVolume and GetNodeId.
 	EnvVarRequireNodeID = "X_CSI_REQUIRE_NODE_ID"
 
+	// EnvVarRequireStagingTargetPath is the name of the environment variable
+	// used to determine whether or not the NodePublishVolume request field
+	// StagingTargetPath is required.
+	EnvVarRequireStagingTargetPath = "X_CSI_REQUIRE_STAGING_TARGET_PATH"
+
 	// EnvVarRequirePubVolInfo is the name of the environment variable used
 	// to determine whether or not publish volume info is required for
 	// requests that accept it and responses that return it such as
@@ -163,15 +162,15 @@ const (
 	// are required for the eponymous RPC.
 	EnvVarCredsCtrlrUnpubVol = "X_CSI_REQUIRE_CREDS_CTRLR_UNPUB_VOL"
 
+	// EnvVarCredsNodeStgVol is the name of the environment
+	// variable used to determine whether or not user credentials are required
+	// for the eponymous RPC.
+	EnvVarCredsNodeStgVol = "X_CSI_REQUIRE_CREDS_NODE_STG_VOL"
+
 	// EnvVarCredsNodePubVol is the name of the environment
 	// variable used to determine whether or not user credentials are required
 	// for the eponymous RPC.
 	EnvVarCredsNodePubVol = "X_CSI_REQUIRE_CREDS_NODE_PUB_VOL"
-
-	// EnvVarCredsNodeUnpubVol is the name of the environment
-	// variable used to determine whether or not user credentials are required
-	// for the eponymous RPC.
-	EnvVarCredsNodeUnpubVol = "X_CSI_REQUIRE_CREDS_NODE_UNPUB_VOL"
 
 	// EnvVarSerialVolAccess is the name of the environment variable
 	// used to determine whether or not to enable serial volume access.
@@ -297,14 +296,6 @@ func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
 	}
 
 	return
-}
-
-func (sp *StoragePlugin) initSupportedVersions(ctx context.Context) {
-	szVersions, ok := csictx.LookupEnv(ctx, EnvVarSupportedVersions)
-	if !ok {
-		return
-	}
-	sp.supportedVersions = utils.ParseVersions(szVersions)
 }
 
 func (sp *StoragePlugin) initPluginInfo(ctx context.Context) {

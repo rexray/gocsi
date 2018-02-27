@@ -8,8 +8,6 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
-
 	csictx "github.com/rexray/gocsi/context"
 	"github.com/rexray/gocsi/middleware/logging"
 	"github.com/rexray/gocsi/middleware/requestid"
@@ -29,6 +27,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withRepLogging         = sp.getEnvBool(ctx, EnvVarRepLogging)
 		withSerialVol          = sp.getEnvBool(ctx, EnvVarSerialVolAccess)
 		withSpec               = sp.getEnvBool(ctx, EnvVarSpecValidation)
+		withStgTgtPath         = sp.getEnvBool(ctx, EnvVarRequireStagingTargetPath)
 		withNodeID             = sp.getEnvBool(ctx, EnvVarRequireNodeID)
 		withPubVolInfo         = sp.getEnvBool(ctx, EnvVarRequirePubVolInfo)
 		withVolAttribs         = sp.getEnvBool(ctx, EnvVarRequireVolAttribs)
@@ -37,8 +36,8 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withCredsDelVol        = sp.getEnvBool(ctx, EnvVarCredsDeleteVol)
 		withCredsCtrlrPubVol   = sp.getEnvBool(ctx, EnvVarCredsCtrlrPubVol)
 		withCredsCtrlrUnpubVol = sp.getEnvBool(ctx, EnvVarCredsCtrlrUnpubVol)
+		withCredsNodeStgVol    = sp.getEnvBool(ctx, EnvVarCredsNodeStgVol)
 		withCredsNodePubVol    = sp.getEnvBool(ctx, EnvVarCredsNodePubVol)
-		withCredsNodeUnpubVol  = sp.getEnvBool(ctx, EnvVarCredsNodeUnpubVol)
 	)
 
 	// Enable all cred requirements if the general option is enabled.
@@ -47,8 +46,8 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withCredsDelVol = true
 		withCredsCtrlrPubVol = true
 		withCredsCtrlrUnpubVol = true
+		withCredsNodeStgVol = true
 		withCredsNodePubVol = true
-		withCredsNodeUnpubVol = true
 	}
 
 	// Initialize request & response validation to the global validaiton value.
@@ -62,6 +61,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 	// should be enabled implicitly.
 	if !withSpecReq {
 		withSpecReq = withCreds ||
+			withStgTgtPath ||
 			withNodeID ||
 			withPubVolInfo ||
 			withVolAttribs
@@ -119,48 +119,49 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 				specvalidator.WithResponseValidation())
 			log.Debug("enabled spec validator opt: response validation")
 		}
-		if len(sp.supportedVersions) > 0 {
-			specOpts = append(
-				specOpts,
-				specvalidator.WithSupportedVersions(sp.supportedVersions...))
-		}
 		if withCredsNewVol {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresCreateVolumeCredentials())
+				specvalidator.WithRequiresControllerCreateVolumeSecrets())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"CreateVolume")
 		}
 		if withCredsDelVol {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresDeleteVolumeCredentials())
+				specvalidator.WithRequiresControllerDeleteVolumeSecrets())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"DeleteVolume")
 		}
 		if withCredsCtrlrPubVol {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresControllerPublishVolumeCredentials())
+				specvalidator.WithRequiresControllerPublishVolumeSecrets())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"ControllerPublishVolume")
 		}
 		if withCredsCtrlrUnpubVol {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresControllerUnpublishVolumeCredentials())
+				specvalidator.WithRequiresControllerUnpublishVolumeSecrets())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"ControllerUnpublishVolume")
 		}
+		if withCredsNodeStgVol {
+			specOpts = append(specOpts,
+				specvalidator.WithRequiresNodeStageVolumeSecrets())
+			log.Debug("enabled spec validator opt: requires creds: " +
+				"NodeStageVolume")
+		}
 		if withCredsNodePubVol {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresNodePublishVolumeCredentials())
+				specvalidator.WithRequiresNodePublishVolumeSecrets())
 			log.Debug("enabled spec validator opt: requires creds: " +
 				"NodePublishVolume")
 		}
-		if withCredsNodeUnpubVol {
-			specOpts = append(specOpts,
-				specvalidator.WithRequiresNodeUnpublishVolumeCredentials())
-			log.Debug("enabled spec validator opt: requires creds: " +
-				"NodeUnpublishVolume")
-		}
 
+		if withStgTgtPath {
+			specOpts = append(specOpts,
+				specvalidator.WithRequiresStagingTargetPath())
+			log.Debug("enabled spec validator opt: " +
+				"requires starging target path")
+		}
 		if withNodeID {
 			specOpts = append(specOpts,
 				specvalidator.WithRequiresNodeID())
@@ -168,8 +169,8 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		}
 		if withPubVolInfo {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresPublishVolumeInfo())
-			log.Debug("enabled spec validator opt: requires pub vol info")
+				specvalidator.WithRequiresPublishInfo())
+			log.Debug("enabled spec validator opt: requires pub info")
 		}
 		if withVolAttribs {
 			specOpts = append(specOpts,
@@ -183,11 +184,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 	if _, ok := csictx.LookupEnv(ctx, EnvVarPluginInfo); ok {
 		log.Debug("enabled GetPluginInfo interceptor")
 		sp.Interceptors = append(sp.Interceptors, sp.getPluginInfo)
-	}
-
-	if len(sp.supportedVersions) > 0 {
-		log.Debug("enabled GetSupportedVersions interceptor")
-		sp.Interceptors = append(sp.Interceptors, sp.getSupportedVersions)
 	}
 
 	if withSerialVol {
@@ -230,36 +226,23 @@ func (sp *StoragePlugin) injectContext(
 	return handler(csictx.WithLookupEnv(ctx, sp.lookupEnv), req)
 }
 
-func (sp *StoragePlugin) getSupportedVersions(
-	ctx context.Context,
-	req interface{},
-	info *grpc.UnaryServerInfo,
-	handler grpc.UnaryHandler) (interface{}, error) {
-
-	if info.FullMethod != utils.GetSupportedVersions ||
-		len(sp.supportedVersions) == 0 {
-
-		return handler(ctx, req)
-	}
-
-	rep := &csi.GetSupportedVersionsResponse{
-		SupportedVersions: make([]*csi.Version, len(sp.supportedVersions)),
-	}
-	for i := range sp.supportedVersions {
-		rep.SupportedVersions[i] = &sp.supportedVersions[i]
-	}
-
-	return rep, nil
-}
-
 func (sp *StoragePlugin) getPluginInfo(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
-	if info.FullMethod != utils.GetPluginInfo || sp.pluginInfo.Name == "" {
+	if sp.pluginInfo.Name == "" {
 		return handler(ctx, req)
 	}
+
+	_, service, method, err := utils.ParseMethod(info.FullMethod)
+	if err != nil {
+		return nil, err
+	}
+	if service != "Identity" || method != "GetPluginInfo" {
+		return handler(ctx, req)
+	}
+
 	return &sp.pluginInfo, nil
 }

@@ -48,12 +48,6 @@ func New() gocsi.StoragePluginProvider {
 			//    * ControllerPublishVolumeResponse.PublishInfo
 			//    * NodePublishVolumeRequest.PublishInfo
 			gocsi.EnvVarRequirePubVolInfo + "=true",
-
-			// Provide the list of versions supported by this SP. The
-			// specified versions will be:
-			//     * Returned by GetSupportedVersions
-			//     * Used to validate the Version field of incoming RPCs
-			gocsi.EnvVarSupportedVersions + "=" + service.SupportedVersions,
 		},
 	}
 }

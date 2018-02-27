@@ -15,7 +15,7 @@ of CSI storage plug-ins (SP):
 The following example illustrates using Docker in combination with the
 GoCSI SP bootstrapper to create a new CSI SP from scratch, serve it on a
 UNIX socket, and then use the GoCSI command line client [`csc`](./csc/) to
-invoke the `GetSupportedVersions` and `GetPluginInfo` RPCs:
+invoke the `GetPluginInfo` RPC:
 
 ```shell
 $ docker run -it golang:latest sh -c \
@@ -83,12 +83,6 @@ services defined in `service` package. The file `provider.go` may be
 modified to:
 
 * Supply default values for the SP's environment variable configuration properties
-
-The generated file configures the following options and their default values:
-
-| Option | Value | Description |
-|--------|-------|-------------|
-| `X_CSI_SUPPORTED_VERSIONS` | `0.0.0` | The CSI versions supported by the SP. Settings this option also relieves the SP of its responsibility to provide an implementation of the RPC `GetSupportedVersions` |
 
 Please see the Mock SP's [`provider.go`](./mock/provider/provider.go) file
 for a more complete example.
@@ -203,13 +197,6 @@ environment variables:
       </td>
     </tr>
     <tr>
-      <td><code>X_CSI_SUPPORTED_VERSIONS</code></td>
-      <td>A space-delimited list of versions formatted
-      <code>MAJOR.MINOR.PATCH.</code> Setting this environment variable
-      bypasses the SP's <code>GetSupportedVersions</code> RPC and returns
-      this list of versions instead.</td>
-    </tr>
-    <tr>
       <td><code>X_CSI_REQ_LOGGING</code></td>
       <td><p>A flag that enables logging of incoming requests to
       <code>STDOUT</code>.</p>
@@ -249,6 +236,16 @@ environment variables:
       <td>A flag that enables the validation of CSI response messages.
       Invalid responses are marshalled into a gRPC error with a code
       of <code>Internal</code>.</td>
+    </tr>
+    <tr>
+      <td><code>X_CSI_REQUIRE_STAGING_TARGET_PATH</code></td>
+      <td>
+        <p>A flag that enables treating the following fields as required:</p>
+        <ul>
+          <li><code>NodePublishVolumeRequest.StagingTargetPath</code></li>
+      </ul>
+      <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
+      </td>
     </tr>
     <tr>
       <td><code>X_CSI_REQUIRE_NODE_ID</code></td>
@@ -331,18 +328,18 @@ environment variables:
       </td>
     </tr>
     <tr>
-      <td><code>X_CSI_REQUIRE_CREDS_NODE_PUB_VOL</code></td>
+      <td><code>X_CSI_REQUIRE_CREDS_NODE_STG_VOL</code></td>
       <td>
         <p>A flag that enables treating the following fields as required:</p>
-        <ul><li><code>NodePublishVolumeRequest.UserCredentials</code></li></ul>
+        <ul><li><code>NodeStageVolumeRequest.UserCredentials</code></li></ul>
         <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
-      <td><code>X_CSI_REQUIRE_CREDS_NODE_UNPUB_VOL</code></td>
+      <td><code>X_CSI_REQUIRE_CREDS_NODE_PUB_VOL</code></td>
       <td>
         <p>A flag that enables treating the following fields as required:</p>
-        <ul><li><code>NodeUnpublishVolumeRequest.UserCredentials</code></li></ul>
+        <ul><li><code>NodePublishVolumeRequest.UserCredentials</code></li></ul>
         <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
