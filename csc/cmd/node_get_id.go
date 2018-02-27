@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var nodeGetIDCmd = &cobra.Command{
@@ -20,9 +20,7 @@ var nodeGetIDCmd = &cobra.Command{
 
 		rep, err := node.client.NodeGetId(
 			ctx,
-			&csi.NodeGetIdRequest{
-				Version: &root.version.Version,
-			})
+			&csi.NodeGetIdRequest{})
 		if err != nil {
 			return err
 		}

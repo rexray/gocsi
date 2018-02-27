@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var nodeGetCapabilitiesCmd = &cobra.Command{
@@ -20,9 +20,7 @@ var nodeGetCapabilitiesCmd = &cobra.Command{
 
 		rep, err := node.client.NodeGetCapabilities(
 			ctx,
-			&csi.NodeGetCapabilitiesRequest{
-				Version: &root.version.Version,
-			})
+			&csi.NodeGetCapabilitiesRequest{})
 		if err != nil {
 			return err
 		}

@@ -49,12 +49,12 @@ func getClientInterceptorsDialOpt() grpc.DialOption {
 		var specOpts []specvalidator.Option
 		if root.withRequiresCreds {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresCreateVolumeCredentials(),
-				specvalidator.WithRequiresDeleteVolumeCredentials(),
-				specvalidator.WithRequiresControllerPublishVolumeCredentials(),
-				specvalidator.WithRequiresControllerUnpublishVolumeCredentials(),
-				specvalidator.WithRequiresNodePublishVolumeCredentials(),
-				specvalidator.WithRequiresNodeUnpublishVolumeCredentials())
+				specvalidator.WithRequiresControllerCreateVolumeSecrets(),
+				specvalidator.WithRequiresControllerDeleteVolumeSecrets(),
+				specvalidator.WithRequiresControllerPublishVolumeSecrets(),
+				specvalidator.WithRequiresControllerUnpublishVolumeSecrets(),
+				specvalidator.WithRequiresNodeStageVolumeSecrets(),
+				specvalidator.WithRequiresNodePublishVolumeSecrets())
 			log.Debug("enabled spec validator opt: requires creds")
 		}
 		if root.withRequiresNodeID {
@@ -64,7 +64,7 @@ func getClientInterceptorsDialOpt() grpc.DialOption {
 		}
 		if root.withRequiresPubVolInfo {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresPublishVolumeInfo())
+				specvalidator.WithRequiresPublishInfo())
 			log.Debug("enabled spec validator opt: requires pub vol info")
 		}
 		if root.withRequiresVolumeAttributes {

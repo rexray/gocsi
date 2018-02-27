@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -145,7 +146,7 @@ func (s *interceptor) handle(
 	}
 
 	// Print the response data if it is set.
-	if !utils.IsNilResponse(method, rep) {
+	if !utils.IsNilResponse(rep) {
 		rprintReqOrRep(w, rep)
 	}
 	fmt.Fprintln(s.opts.repw, w.String())
@@ -166,7 +167,7 @@ func rprintReqOrRep(w io.Writer, obj interface{}) {
 	printComma := false
 	for i := 0; i < nf; i++ {
 		name := tv.Field(i).Name
-		if name == "UserCredentials" {
+		if strings.Contains(name, "Secrets") {
 			continue
 		}
 		sv := fmt.Sprintf("%v", rv.Field(i).Interface())

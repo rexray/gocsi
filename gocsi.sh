@@ -87,12 +87,6 @@ func New() gocsi.StoragePluginProvider {
 
 			// Enable serial volume access.
 			gocsi.EnvVarSerialVolAccess + "=true",
-
-			// Provide the list of versions supported by this SP. The
-			// specified versions will be:
-			//     * Returned by GetSupportedVersions
-			//     * Used to validate the Version field of incoming RPCs
-			gocsi.EnvVarSupportedVersions + "=" + service.SupportedVersions,
 		},
 	}
 }
@@ -103,7 +97,7 @@ cat << EOF > "service/service.go"
 package service
 
 import (
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 const (
@@ -112,9 +106,6 @@ const (
 
 	// VendorVersion is the version of this CSP SP.
 	VendorVersion = "0.0.0"
-
-	// SupportedVersions is a list of the CSI versions this SP supports.
-	SupportedVersions = "0.2.0"
 )
 
 // Service is a CSI SP and idempotency.Provider.
@@ -139,7 +130,7 @@ package service
 import (
 	"golang.org/x/net/context"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 func (s *service) CreateVolume(
@@ -205,14 +196,6 @@ func (s *service) ControllerGetCapabilities(
 
 	return nil, nil
 }
-
-func (s *service) ControllerProbe(
-	ctx context.Context,
-	req *csi.ControllerProbeRequest) (
-	*csi.ControllerProbeResponse, error) {
-
-	return nil, nil
-}
 EOF
 
 echo "  $SP_DIR/service/identity.go"
@@ -222,13 +205,13 @@ package service
 import (
 	"golang.org/x/net/context"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
-func (s *service) GetSupportedVersions(
+func (s *service) Probe(
 	ctx context.Context,
-	req *csi.GetSupportedVersionsRequest) (
-	*csi.GetSupportedVersionsResponse, error) {
+	req *csi.ProbeRequest) (
+	*csi.ProbeResponse, error) {
 
 	return nil, nil
 }
@@ -257,7 +240,7 @@ package service
 import (
 	"golang.org/x/net/context"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 func (s *service) NodeStageVolume(
@@ -296,14 +279,6 @@ func (s *service) NodeGetId(
 	ctx context.Context,
 	req *csi.NodeGetIdRequest) (
 	*csi.NodeGetIdResponse, error) {
-
-	return nil, nil
-}
-
-func (s *service) NodeProbe(
-	ctx context.Context,
-	req *csi.NodeProbeRequest) (
-	*csi.NodeProbeResponse, error) {
 
 	return nil, nil
 }

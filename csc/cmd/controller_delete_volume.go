@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var deleteVolumeCmd = &cobra.Command{
@@ -23,8 +23,7 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.DeleteVolumeRequest{
-			Version:                     &root.version.Version,
-			ControllerDeleteCredentials: root.userCreds,
+			ControllerDeleteSecrets: root.secrets,
 		}
 
 		for i := range args {

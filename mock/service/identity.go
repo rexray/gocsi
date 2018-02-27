@@ -2,18 +2,16 @@ package service
 
 import (
 	"golang.org/x/net/context"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
-func (s *service) GetSupportedVersions(
+func (s *service) Probe(
 	ctx context.Context,
-	req *csi.GetSupportedVersionsRequest) (
-	*csi.GetSupportedVersionsResponse, error) {
+	req *csi.ProbeRequest) (
+	*csi.ProbeResponse, error) {
 
-	return nil, status.Error(codes.Unimplemented, "")
+	return &csi.ProbeResponse{}, nil
 }
 
 func (s *service) GetPluginInfo(

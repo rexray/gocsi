@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 
 	"github.com/rexray/gocsi/mock/service"
 	"github.com/rexray/gocsi/utils"
@@ -23,8 +23,6 @@ var _ = Describe("Controller", func() {
 		ctx      context.Context
 		gclient  *grpc.ClientConn
 		client   csi.ControllerClient
-
-		version *csi.Version
 
 		vol       *csi.Volume
 		volID     string
@@ -39,7 +37,6 @@ var _ = Describe("Controller", func() {
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
-		version = &mockSupportedVersions[0]
 		volID = "4"
 		volName = "Test Volume"
 		reqBytes = 1.074e+10 //  10GiB
@@ -61,8 +58,6 @@ var _ = Describe("Controller", func() {
 		client = nil
 		stopMock()
 
-		version = nil
-
 		vol = nil
 		volID = ""
 		volName = ""
@@ -78,7 +73,7 @@ var _ = Describe("Controller", func() {
 		cvol, cerr := utils.PageVolumes(
 			ctx,
 			client,
-			csi.ListVolumesRequest{Version: version})
+			csi.ListVolumesRequest{})
 		for {
 			select {
 			case v, ok := <-cvol:
@@ -97,8 +92,7 @@ var _ = Describe("Controller", func() {
 
 	createNewVolumeWithResult := func() (*csi.Volume, error) {
 		req := &csi.CreateVolumeRequest{
-			Name:    volName,
-			Version: version,
+			Name: volName,
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: reqBytes,
 				LimitBytes:    limBytes,
@@ -106,8 +100,8 @@ var _ = Describe("Controller", func() {
 			VolumeCapabilities: []*csi.VolumeCapability{
 				utils.NewMountCapability(0, fsType, mntFlags...),
 			},
-			ControllerCreateCredentials: userCreds,
-			Parameters:                  params,
+			// ControllerCreateCredentials: userCreds,
+			Parameters: params,
 		}
 		res, err := client.CreateVolume(ctx, req)
 		if res == nil {
@@ -339,7 +333,6 @@ var _ = Describe("Controller", func() {
 			_, err = client.DeleteVolume(
 				ctx,
 				&csi.DeleteVolumeRequest{
-					Version:  version,
 					VolumeId: volID,
 				})
 		}
@@ -385,15 +378,6 @@ var _ = Describe("Controller", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 			})
 		})
-		Context("Missing Version", func() {
-			BeforeEach(func() {
-				version = nil
-			})
-			It("Should Not Be Valid", func() {
-				Ω(err).Should(HaveOccurred())
-				Ω(err).Should(ΣCM(codes.InvalidArgument, "nil: Version"))
-			})
-		})
 	})
 
 	Describe("ListVolumes", func() {
@@ -431,7 +415,6 @@ var _ = Describe("Controller", func() {
 
 		publishVolume := func() {
 			req := &csi.ControllerPublishVolumeRequest{
-				Version:  version,
 				VolumeId: "1",
 				NodeId:   service.Name,
 				Readonly: true,
@@ -469,7 +452,6 @@ var _ = Describe("Controller", func() {
 				_, err := client.ControllerUnpublishVolume(
 					ctx,
 					&csi.ControllerUnpublishVolumeRequest{
-						Version:  version,
 						VolumeId: "1",
 						NodeId:   service.Name,
 					})

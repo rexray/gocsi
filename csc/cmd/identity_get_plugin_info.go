@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var pluginInfoCmd = &cobra.Command{
@@ -20,9 +20,7 @@ var pluginInfoCmd = &cobra.Command{
 
 		rep, err := identity.client.GetPluginInfo(
 			ctx,
-			&csi.GetPluginInfoRequest{
-				Version: &root.version.Version,
-			})
+			&csi.GetPluginInfoRequest{})
 		if err != nil {
 			return err
 		}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var getCapacity struct {
@@ -26,7 +26,6 @@ var getCapacityCmd = &cobra.Command{
 		rep, err := controller.client.GetCapacity(
 			ctx,
 			&csi.GetCapacityRequest{
-				Version:            &root.version.Version,
 				VolumeCapabilities: getCapacity.caps.data,
 				Parameters:         getCapacity.params.data,
 			})

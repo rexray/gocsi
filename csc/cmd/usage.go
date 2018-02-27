@@ -141,14 +141,15 @@ ENVIRONMENT OPTIONS
         Setting X_CSI_DEBUG=true is the same as:
             --log-level=debug --with-request-logging --with-response-logging
 
-    X_CSI_USER_CREDENTIALS
-        This environment variable may be used by RPCs to send user credentials.
+    X_CSI_SECRETS
+        This environment variable may be used by RPCs to send secrets data
+        along with the request.
 
-        csc does not allow user credentials via command line arguments in order
-        to prevent sensitive information from appearing as part of a process
-        listing.
+        csc does not allow secrets to be inputted via command line arguments
+        in order to prevent sensitive information from appearing as part of a
+        process listing.
 
-        One or more credentials may be specified as comma-separated key/value
+        One or more secrets may be specified as comma-separated key/value
         pairs:
 
             user1=pass, "user2=trailing whitespace ", "user 3= pass"

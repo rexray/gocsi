@@ -1,89 +1,26 @@
 package utils
 
-const (
-	// Namespace is the namesapce used by the protobuf.
-	Namespace = "csi"
-
-	// CSIEndpoint is the name of the environment variable that
-	// contains the CSI endpoint.
-	CSIEndpoint = "CSI_ENDPOINT"
-
-	//
-	// Controller Service
-	//
-	ctrlSvc = "/" + Namespace + ".Controller/"
-
-	// CreateVolume is the full method name for the
-	// eponymous RPC message.
-	CreateVolume = ctrlSvc + "CreateVolume"
-
-	// DeleteVolume is the full method name for the
-	// eponymous RPC message.
-	DeleteVolume = ctrlSvc + "DeleteVolume"
-
-	// ControllerPublishVolume is the full method name for the
-	// eponymous RPC message.
-	ControllerPublishVolume = ctrlSvc + "ControllerPublishVolume"
-
-	// ControllerUnpublishVolume is the full method name for the
-	// eponymous RPC message.
-	ControllerUnpublishVolume = ctrlSvc + "ControllerUnpublishVolume"
-
-	// ValidateVolumeCapabilities is the full method name for the
-	// eponymous RPC message.
-	ValidateVolumeCapabilities = ctrlSvc + "ValidateVolumeCapabilities"
-
-	// ListVolumes is the full method name for the
-	// eponymous RPC message.
-	ListVolumes = ctrlSvc + "ListVolumes"
-
-	// GetCapacity is the full method name for the
-	// eponymous RPC message.
-	GetCapacity = ctrlSvc + "GetCapacity"
-
-	// ControllerGetCapabilities is the full method name for the
-	// eponymous RPC message.
-	ControllerGetCapabilities = ctrlSvc + "ControllerGetCapabilities"
-
-	// ControllerProbe is the full method name for the
-	// eponymous RPC message.
-	ControllerProbe = ctrlSvc + "ControllerProbe"
-
-	//
-	// Identity Service
-	//
-	identSvc = "/" + Namespace + ".Identity/"
-
-	// GetSupportedVersions is the full method name for the
-	// eponymous RPC message.
-	GetSupportedVersions = identSvc + "GetSupportedVersions"
-
-	// GetPluginInfo is the full method name for the
-	// eponymous RPC message.
-	GetPluginInfo = identSvc + "GetPluginInfo"
-
-	//
-	// Node Service
-	//
-	nodeSvc = "/" + Namespace + ".Node/"
-
-	// NodeGetId is the full method name for the
-	// eponymous RPC message.
-	NodeGetId = nodeSvc + "NodeGetId"
-
-	// NodePublishVolume is the full method name for the
-	// eponymous RPC message.
-	NodePublishVolume = nodeSvc + "NodePublishVolume"
-
-	// NodeUnpublishVolume is the full method name for the
-	// eponymous RPC message.
-	NodeUnpublishVolume = nodeSvc + "NodeUnpublishVolume"
-
-	// NodeProbe is the full method name for the
-	// eponymous RPC message.
-	NodeProbe = nodeSvc + "NodeProbe"
-
-	// NodeGetCapabilities is the full method name for the
-	// eponymous RPC message.
-	NodeGetCapabilities = nodeSvc + "NodeGetCapabilities"
+import (
+	"fmt"
+	"regexp"
+	"strconv"
 )
+
+const parseMethodPatt = `^/csi\.v(\d+)\.([^/]+?)/(.+)$`
+
+// ParseMethod parses a gRPC method and returns the CSI version, service
+// to which the method belongs, and the method's name. An example value
+// for the "fullMethod" argument is "/csi.v0.Identity/GetPluginInfo".
+func ParseMethod(
+	fullMethod string) (version int32, service, methodName string, err error) {
+	rx := regexp.MustCompile(parseMethodPatt)
+	m := rx.FindStringSubmatch(fullMethod)
+	if len(m) == 0 {
+		return 0, "", "", fmt.Errorf("ParseMethod: invalid: %s", fullMethod)
+	}
+	v, err := strconv.ParseInt(m[1], 10, 32)
+	if err != nil {
+		return 0, "", "", fmt.Errorf("ParseMethod: %v", err)
+	}
+	return int32(v), m[2], m[3], nil
+}

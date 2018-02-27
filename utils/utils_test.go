@@ -3,74 +3,61 @@ package utils_test
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/rexray/gocsi/utils"
 )
 
+var _ = Describe("ParseMethod", func() {
+	var (
+		err        error
+		version    int32
+		service    string
+		methodName string
+	)
+	BeforeEach(func() {
+		version, service, methodName, err = utils.ParseMethod(
+			CurrentGinkgoTestDescription().ComponentTexts[1])
+	})
+	It("/csi.v0.Identity/GetPluginInfo", func() {
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(version).Should(Equal(int32(0)))
+		Ω(service).Should(Equal("Identity"))
+		Ω(methodName).Should(Equal("GetPluginInfo"))
+	})
+	It("/csi.v1.Identity/GetPluginInfo", func() {
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(version).Should(Equal(int32(1)))
+		Ω(service).Should(Equal("Identity"))
+		Ω(methodName).Should(Equal("GetPluginInfo"))
+	})
+	It("/csi.v1.Node/NodePublishVolume", func() {
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(version).Should(Equal(int32(1)))
+		Ω(service).Should(Equal("Node"))
+		Ω(methodName).Should(Equal("NodePublishVolume"))
+	})
+	It("/csi.v1-rc1.Node/NodePublishVolume", func() {
+		Ω(err).Should(HaveOccurred())
+		Ω(err.Error()).Should(Equal(fmt.Sprintf("ParseMethod: invalid: %s",
+			CurrentGinkgoTestDescription().ComponentTexts[1])))
+	})
+	It("/csi.v1.Node", func() {
+		Ω(err).Should(HaveOccurred())
+		Ω(err.Error()).Should(Equal(fmt.Sprintf("ParseMethod: invalid: %s",
+			CurrentGinkgoTestDescription().ComponentTexts[1])))
+	})
+	It(fmt.Sprintf("/csi.v%d.Node/NodePublishVolume", math.MaxInt64), func() {
+		Ω(err).Should(HaveOccurred())
+		Ω(err.Error()).Should(Equal(fmt.Sprintf(
+			`ParseMethod: strconv.ParseInt: `+
+				`parsing "%d": value out of range`, math.MaxInt64)))
+	})
+})
+
 var errMissingCSIEndpoint = errors.New("missing CSI_ENDPOINT")
-
-var _ = Describe("ParseVersion", func() {
-	shouldParse := func() csi.Version {
-		v, ok := utils.ParseVersion(
-			CurrentGinkgoTestDescription().ComponentTexts[1])
-		Ω(ok).Should(BeTrue())
-		return v
-	}
-	Context("0.0.0", func() {
-		It("Should Parse", func() {
-			v := shouldParse()
-			Ω(v.GetMajor()).Should(Equal(int32(0)))
-			Ω(v.GetMinor()).Should(Equal(int32(0)))
-			Ω(v.GetPatch()).Should(Equal(int32(0)))
-		})
-	})
-	Context("0.1.0", func() {
-		It("Should Parse", func() {
-			v := shouldParse()
-			Ω(v.GetMajor()).Should(Equal(int32(0)))
-			Ω(v.GetMinor()).Should(Equal(int32(1)))
-			Ω(v.GetPatch()).Should(Equal(int32(0)))
-		})
-	})
-	Context("1.1.0", func() {
-		It("Should Parse", func() {
-			v := shouldParse()
-			Ω(v.GetMajor()).Should(Equal(int32(1)))
-			Ω(v.GetMinor()).Should(Equal(int32(1)))
-			Ω(v.GetPatch()).Should(Equal(int32(0)))
-		})
-	})
-})
-
-var _ = Describe("ParseVersions", func() {
-	shouldParse := func() []csi.Version {
-		return utils.ParseVersions(
-			CurrentGinkgoTestDescription().ComponentTexts[1])
-	}
-	Context("0.1.0 0.2.0 1.0.0 1.1.0", func() {
-		It("Should Parse", func() {
-			v := shouldParse()
-			Ω(v).Should(HaveLen(4))
-			Ω(v[0].Major).Should(Equal(int32(0)))
-			Ω(v[0].Minor).Should(Equal(int32(1)))
-			Ω(v[0].Patch).Should(Equal(int32(0)))
-
-			Ω(v[1].Major).Should(Equal(int32(0)))
-			Ω(v[1].Minor).Should(Equal(int32(2)))
-			Ω(v[1].Patch).Should(Equal(int32(0)))
-
-			Ω(v[2].Major).Should(Equal(int32(1)))
-			Ω(v[2].Minor).Should(Equal(int32(0)))
-			Ω(v[2].Patch).Should(Equal(int32(0)))
-
-			Ω(v[3].Major).Should(Equal(int32(1)))
-			Ω(v[3].Minor).Should(Equal(int32(1)))
-			Ω(v[3].Patch).Should(Equal(int32(0)))
-		})
-	})
-})
 
 var _ = Describe("GetCSIEndpoint", func() {
 	var (

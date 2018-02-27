@@ -7,11 +7,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var nodeUnpublishVolume struct {
-	nodeID     string
 	targetPath string
 }
 
@@ -22,15 +21,13 @@ var nodeUnpublishVolumeCmd = &cobra.Command{
 	Example: `
 USAGE
 
-    csc node unpublishvolume [flags] VOLUME_ID [VOLUME_ID...]
+    csc node unpublish [flags] VOLUME_ID [VOLUME_ID...]
 `,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.NodeUnpublishVolumeRequest{
-			Version:                  &root.version.Version,
-			TargetPath:               nodeUnpublishVolume.targetPath,
-			NodeUnpublishCredentials: root.userCreds,
+			TargetPath: nodeUnpublishVolume.targetPath,
 		}
 
 		for i := range args {
@@ -61,7 +58,4 @@ func init() {
 		"target-path",
 		"",
 		"The path from which to unmount the volume")
-
-	flagWithRequiresCreds(
-		nodeUnpublishVolumeCmd.Flags(), &root.withRequiresCreds, "")
 }

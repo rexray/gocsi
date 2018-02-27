@@ -40,7 +40,7 @@ dep-ensure: | $(DEP)
 ##                               CSI SPEC                             ##
 ########################################################################
 CSI_SPEC :=  vendor/github.com/container-storage-interface/spec
-CSI_GOSRC := $(CSI_SPEC)/lib/go/csi/csi.pb.go
+CSI_GOSRC := $(CSI_SPEC)/lib/go/csi/v0/csi.pb.go
 
 
 ########################################################################
@@ -99,7 +99,6 @@ $(CSI_SP_LOG): $(CSI_SP)
 	  X_CSI_LOG_LEVEL=debug \
 	  X_CSI_REQ_LOGGING=true \
 	  X_CSI_REP_LOGGING=true \
-	  X_CSI_SUPPORTED_VERSIONS="0.2.0 1.0.0 1.1.0" \
 	  X_CSI_PLUGIN_INFO="My CSI Plug-in,0.1.0,status=online" \
 	  $< > $(CSI_SP_LOG) 2>&1 &
 	@for i in 1 2 3 4 5 6 7 8 9 10; do \
@@ -108,14 +107,9 @@ $(CSI_SP_LOG): $(CSI_SP)
 	done
 	@echo && \
 	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
-	  printf "%-74s" "invoking GetSupportedVersions" && printf ' ==\n' && \
-	  printf '=%.0s' $$(seq 1 80) && echo
-	csc/csc -e $(CSI_SP_SOCK) i version
-	@echo && \
-	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
 	  printf "%-74s" "invoking GetPluginInfo" && printf ' ==\n' && \
 	  printf '=%.0s' $$(seq 1 80) && echo
-	csc/csc -e $(CSI_SP_SOCK) i info -v 0.2.0
+	csc/csc -e $(CSI_SP_SOCK) i info
 	@echo && \
 	  printf '=%.0s' $$(seq 1 80) && printf '\n== ' && \
 	  printf "%-74s" "killing $(<F) with SIGINT" && printf ' ==\n' && \

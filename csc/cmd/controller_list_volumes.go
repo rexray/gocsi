@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 
 	"github.com/rexray/gocsi/utils"
 )
@@ -26,7 +26,6 @@ var listVolumesCmd = &cobra.Command{
 		defer cancel()
 
 		req := csi.ListVolumesRequest{
-			Version:       &root.version.Version,
 			MaxEntries:    listVolumes.maxEntries,
 			StartingToken: listVolumes.startingToken,
 		}

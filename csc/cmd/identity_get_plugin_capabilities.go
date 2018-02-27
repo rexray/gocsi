@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var pluginCapsCmd = &cobra.Command{
@@ -20,9 +20,7 @@ var pluginCapsCmd = &cobra.Command{
 
 		rep, err := identity.client.GetPluginCapabilities(
 			ctx,
-			&csi.GetPluginCapabilitiesRequest{
-				Version: &root.version.Version,
-			})
+			&csi.GetPluginCapabilitiesRequest{})
 		if err != nil {
 			return err
 		}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 var controllerGetCapabilitiesCmd = &cobra.Command{
@@ -20,9 +20,7 @@ var controllerGetCapabilitiesCmd = &cobra.Command{
 
 		rep, err := controller.client.ControllerGetCapabilities(
 			ctx,
-			&csi.ControllerGetCapabilitiesRequest{
-				Version: &root.version.Version,
-			})
+			&csi.ControllerGetCapabilitiesRequest{})
 		if err != nil {
 			return err
 		}

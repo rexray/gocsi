@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 func (s *service) CreateVolume(
@@ -269,12 +269,4 @@ func (s *service) ControllerGetCapabilities(
 			},
 		},
 	}, nil
-}
-
-func (s *service) ControllerProbe(
-	ctx context.Context,
-	req *csi.ControllerProbeRequest) (
-	*csi.ControllerProbeResponse, error) {
-
-	return &csi.ControllerProbeResponse{}, nil
 }

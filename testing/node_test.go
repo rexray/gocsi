@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/rexray/gocsi/mock/service"
 	"github.com/rexray/gocsi/utils"
 )
@@ -18,21 +18,18 @@ var _ = Describe("Node", func() {
 		ctx      context.Context
 		gclient  *grpc.ClientConn
 		client   csi.NodeClient
-		version  *csi.Version
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
 		gclient, stopMock, err = startMockServer(ctx)
 		Ω(err).ShouldNot(HaveOccurred())
 		client = csi.NewNodeClient(gclient)
-		version = &mockSupportedVersions[0]
 	})
 	AfterEach(func() {
 		ctx = nil
 		gclient.Close()
 		gclient = nil
 		client = nil
-		version = nil
 		stopMock()
 	})
 
@@ -40,7 +37,7 @@ var _ = Describe("Node", func() {
 		cvol, cerr := utils.PageVolumes(
 			ctx,
 			csi.NewControllerClient(gclient),
-			csi.ListVolumesRequest{Version: version})
+			csi.ListVolumesRequest{})
 		for {
 			select {
 			case v, ok := <-cvol:
@@ -62,9 +59,7 @@ var _ = Describe("Node", func() {
 		BeforeEach(func() {
 			res, err := client.NodeGetId(
 				ctx,
-				&csi.NodeGetIdRequest{
-					Version: &mockSupportedVersions[0],
-				})
+				&csi.NodeGetIdRequest{})
 			Ω(err).ShouldNot(HaveOccurred())
 			nodeID = res.NodeId
 		})
@@ -82,7 +77,6 @@ var _ = Describe("Node", func() {
 
 		publishVolume := func() {
 			req := &csi.NodePublishVolumeRequest{
-				Version:     version,
 				VolumeId:    "1",
 				PublishInfo: map[string]string{"device": device},
 				VolumeCapability: utils.NewMountCapability(
@@ -111,7 +105,6 @@ var _ = Describe("Node", func() {
 				_, err = client.NodeUnpublishVolume(
 					ctx,
 					&csi.NodeUnpublishVolumeRequest{
-						Version:    version,
 						VolumeId:   "1",
 						TargetPath: targetPath,
 					})

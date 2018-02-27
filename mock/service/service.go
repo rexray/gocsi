@@ -6,7 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"golang.org/x/net/context"
 )
 
@@ -16,9 +16,6 @@ const (
 
 	// VendorVersion is the version returned by GetPluginInfo.
 	VendorVersion = "0.2.0"
-
-	// SupportedVersions is a list of supported CSI versions.
-	SupportedVersions = "0.2.0, 1.0.0, 1.1.0"
 )
 
 // Manifest is the SP's manifest.
@@ -60,8 +57,6 @@ const (
 	tib    int64 = gib * 1024
 	tib100 int64 = tib * 100
 )
-
-var version = &csi.Version{Major: 0, Minor: 1, Patch: 0}
 
 func (s *service) newVolume(name string, capcity int64) csi.Volume {
 	return csi.Volume{

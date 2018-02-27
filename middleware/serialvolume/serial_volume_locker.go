@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/akutz/gosync"
 	xctx "golang.org/x/net/context"
 	"google.golang.org/grpc"

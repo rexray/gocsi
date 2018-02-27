@@ -22,10 +22,9 @@ import (
 	"syscall"
 	"text/template"
 
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-
-	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	csictx "github.com/rexray/gocsi/context"
 	"github.com/rexray/gocsi/utils"
@@ -197,9 +196,8 @@ type StoragePlugin struct {
 	stopOnce  sync.Once
 	server    *grpc.Server
 
-	envVars           map[string]string
-	pluginInfo        csi.GetPluginInfoResponse
-	supportedVersions []csi.Version
+	envVars    map[string]string
+	pluginInfo csi.GetPluginInfoResponse
 }
 
 // Serve accepts incoming connections on the listener lis, creating
@@ -235,9 +233,6 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		if err = sp.initEndpointOwner(ctx, lis); err != nil {
 			return
 		}
-
-		// Initialize the storage plug-in's list of supported versions.
-		sp.initSupportedVersions(ctx)
 
 		// Initialize the storage plug-in's info.
 		sp.initPluginInfo(ctx)

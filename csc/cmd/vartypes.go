@@ -8,9 +8,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
-	"github.com/rexray/gocsi/utils"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 )
 
 // mapOfStringArg is used for parsing a csv, key=value arg into
@@ -39,27 +38,6 @@ func (s *mapOfStringArg) Set(val string) error {
 		case 2:
 			s.data[vp[0]] = vp[1]
 		}
-	}
-	return nil
-}
-
-// csiVersionArg is used for parsing a CSI version argument
-type csiVersionArg struct {
-	csi.Version
-}
-
-func (s *csiVersionArg) String() string {
-	return "0.0.0"
-}
-
-func (s *csiVersionArg) Type() string {
-	return "major.minor.patch"
-}
-
-func (s *csiVersionArg) Set(val string) error {
-	var ok bool
-	if s.Version, ok = utils.ParseVersion(val); !ok {
-		return fmt.Errorf("invalid versions: %s", val)
 	}
 	return nil
 }
