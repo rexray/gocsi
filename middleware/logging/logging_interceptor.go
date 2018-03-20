@@ -7,74 +7,83 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	csictx "github.com/rexray/gocsi/context"
+	csienv "github.com/rexray/gocsi/env"
 	"github.com/rexray/gocsi/utils"
 )
 
-// Option configures the logging interceptor.
-type Option func(*opts)
+// Middleware provides logging capabilities for gRPC requests and responses.
+type Middleware struct {
+	sync.Once
 
-type opts struct {
-	reqw io.Writer
-	repw io.Writer
+	// RequestWriter is the request writer.
+	RequestWriter io.Writer
+
+	// ResponseWriter is the response writer.
+	ResponseWriter io.Writer
 }
 
-// WithRequestLogging is a Option that enables request logging
-// for the logging interceptor.
-func WithRequestLogging(w io.Writer) Option {
-	return func(o *opts) {
-		if w == nil {
-			w = os.Stdout
+// Init is available to explicitly initialize the middleware.
+func (s *Middleware) Init(ctx context.Context) (err error) {
+	return s.initOnce(ctx)
+}
+
+func (s *Middleware) initOnce(ctx context.Context) (err error) {
+	s.Once.Do(func() {
+		err = s.init(ctx)
+	})
+	return
+}
+
+func (s *Middleware) init(ctx context.Context) error {
+	if csienv.IsDebug(ctx) {
+		if s.RequestWriter == nil {
+			s.RequestWriter = os.Stdout
 		}
-		o.reqw = w
-	}
-}
-
-// WithResponseLogging is a Option that enables response logging
-// for the logging interceptor.
-func WithResponseLogging(w io.Writer) Option {
-	return func(o *opts) {
-		if w == nil {
-			w = os.Stdout
+		if s.ResponseWriter == nil {
+			s.ResponseWriter = os.Stdout
 		}
-		o.repw = w
 	}
-}
 
-type interceptor struct {
-	opts opts
-}
-
-// NewServerLogger returns a new UnaryServerInterceptor that can be
-// configured to log both request and response data.
-func NewServerLogger(
-	opts ...Option) grpc.UnaryServerInterceptor {
-
-	return newLoggingInterceptor(opts...).handleServer
-}
-
-// NewClientLogger provides a UnaryClientInterceptor that can be
-// configured to log both request and response data.
-func NewClientLogger(
-	opts ...Option) grpc.UnaryClientInterceptor {
-
-	return newLoggingInterceptor(opts...).handleClient
-}
-
-func newLoggingInterceptor(opts ...Option) *interceptor {
-	i := &interceptor{}
-	for _, withOpts := range opts {
-		withOpts(&i.opts)
+	if v, ok := csienv.LookupEnv(ctx, "X_CSI_REQ_LOGGING"); ok {
+		if b, err := strconv.ParseBool(v); err == nil {
+			if b && s.RequestWriter == nil {
+				s.RequestWriter = os.Stdout
+			} else {
+				s.RequestWriter = nil
+			}
+		}
 	}
-	return i
+	if v, ok := csienv.LookupEnv(ctx, "X_CSI_REP_LOGGING"); ok {
+		if b, err := strconv.ParseBool(v); err == nil {
+			if b && s.ResponseWriter == nil {
+				s.ResponseWriter = os.Stdout
+			} else {
+				s.ResponseWriter = nil
+			}
+		}
+	}
+
+	if s.RequestWriter != nil {
+		log.Info("middleware: request logging")
+	}
+	if s.ResponseWriter != nil {
+		log.Info("middleware: response logging")
+	}
+
+	return nil
 }
 
-func (s *interceptor) handleServer(
+// HandleServer is a server-side, unary gRPC interceptor.
+func (s *Middleware) HandleServer(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
@@ -85,7 +94,8 @@ func (s *interceptor) handleServer(
 	})
 }
 
-func (s *interceptor) handleClient(
+// HandleClient is a client-side, unary gRPC interceptor.
+func (s *Middleware) HandleClient(
 	ctx context.Context,
 	method string,
 	req, rep interface{},
@@ -99,11 +109,15 @@ func (s *interceptor) handleClient(
 	return err
 }
 
-func (s *interceptor) handle(
+func (s *Middleware) handle(
 	ctx context.Context,
 	method string,
 	req interface{},
 	next func() (interface{}, error)) (rep interface{}, failed error) {
+
+	if err := s.initOnce(ctx); err != nil {
+		return nil, err
+	}
 
 	// If the request is nil then pass control to the next handler
 	// in the chain.
@@ -115,13 +129,13 @@ func (s *interceptor) handle(
 	reqID, reqIDOK := csictx.GetRequestID(ctx)
 
 	// Print the request
-	if s.opts.reqw != nil {
+	if s.RequestWriter != nil {
 		fmt.Fprintf(w, "%s: ", method)
 		if reqIDOK {
 			fmt.Fprintf(w, "REQ %04d", reqID)
 		}
 		rprintReqOrRep(w, req)
-		fmt.Fprintln(s.opts.reqw, w.String())
+		fmt.Fprintln(s.RequestWriter, w.String())
 	}
 
 	w.Reset()
@@ -129,7 +143,7 @@ func (s *interceptor) handle(
 	// Get the response.
 	rep, failed = next()
 
-	if s.opts.repw == nil {
+	if s.ResponseWriter == nil {
 		return
 	}
 
@@ -149,7 +163,7 @@ func (s *interceptor) handle(
 	if !utils.IsNilResponse(rep) {
 		rprintReqOrRep(w, rep)
 	}
-	fmt.Fprintln(s.opts.repw, w.String())
+	fmt.Fprintln(s.ResponseWriter, w.String())
 
 	return
 }
@@ -184,4 +198,27 @@ func rprintReqOrRep(w io.Writer, obj interface{}) {
 		printComma = true
 		fmt.Fprintf(w, "%s=%s", name, sv)
 	}
+}
+
+// Usage returns the middleware's usage string.
+func (s *Middleware) Usage() string {
+	return usage
+}
+
+const usage = `REQUEST & RESPONSE LOGGING
+    X_CSI_REQ_LOGGING
+        A flag that enables logging of incoming requests to STDOUT.
+
+    X_CSI_REP_LOGGING
+        A flag that enables logging of outgoing responses to STDOUT.`
+
+func getEnvBool(ctx context.Context, key string) bool {
+	v, ok := csienv.LookupEnv(ctx, key)
+	if !ok {
+		return false
+	}
+	if b, err := strconv.ParseBool(v); err == nil {
+		return b
+	}
+	return false
 }

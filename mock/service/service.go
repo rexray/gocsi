@@ -1,12 +1,15 @@
 package service
 
 import (
+	gctx "context"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/rexray/gocsi"
 	"golang.org/x/net/context"
 )
 
@@ -28,6 +31,10 @@ type Service interface {
 	csi.ControllerServer
 	csi.IdentityServer
 	csi.NodeServer
+	BeforeServe(
+		ctx gctx.Context,
+		sp *gocsi.StoragePlugin,
+		lis net.Listener) error
 }
 
 type service struct {
@@ -47,6 +54,14 @@ func New() Service {
 		s.newVolume("Mock Volume 3", gib100),
 	}
 	return s
+}
+
+func (s *service) BeforeServe(
+	ctx gctx.Context,
+	sp *gocsi.StoragePlugin,
+	lis net.Listener) error {
+
+	return nil
 }
 
 const (

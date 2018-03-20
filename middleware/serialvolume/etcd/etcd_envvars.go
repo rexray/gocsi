@@ -1,19 +1,19 @@
 package etcd
 
 const (
-	// EnvVarDomain is the name of the environment variable that defines
-	// the lock provider's concurrency domain.
-	EnvVarDomain = "X_CSI_SERIAL_VOL_ACCESS_ETCD_DOMAIN"
-
-	// EnvVarEndpoints is the name of the environment variable that defines
-	// the lock provider's etcd endoints.
-	EnvVarEndpoints = "X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS"
+	// EnvVarPrefix is the name of the environment
+	// variable that defines the lock provider's concurrency domain.
+	EnvVarPrefix = "X_CSI_SERIAL_VOL_ACCESS_ETCD_PREFIX"
 
 	// EnvVarTTL is the name of the environment
 	// variable that defines the length of time etcd will wait before
 	// releasing ownership of a distributed lock if the lock's session
 	// has not been renewed.
 	EnvVarTTL = "X_CSI_SERIAL_VOL_ACCESS_ETCD_TTL"
+
+	// EnvVarEndpoints is the name of the environment
+	// variable that defines the lock provider's etcd endoints.
+	EnvVarEndpoints = "X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS"
 
 	// EnvVarAutoSyncInterval is the name of the environment
 	// variable that defines the interval to update endpoints with its latest

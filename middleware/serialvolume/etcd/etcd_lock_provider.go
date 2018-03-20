@@ -6,196 +6,167 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/akutz/gosync"
 	etcd "github.com/coreos/etcd/clientv3"
 	etcdsync "github.com/coreos/etcd/clientv3/concurrency"
 	log "github.com/sirupsen/logrus"
-	"github.com/akutz/gosync"
 
-	csictx "github.com/rexray/gocsi/context"
-	mwtypes "github.com/rexray/gocsi/middleware/serialvolume/types"
+	csienv "github.com/rexray/gocsi/env"
 )
 
-// New returns a new etcd volume lock provider.
-func New(
-	ctx context.Context,
-	domain string,
-	ttl time.Duration,
-	config *etcd.Config) (mwtypes.VolumeLockerProvider, error) {
-
-	fields := map[string]interface{}{}
-
-	if domain == "" {
-		domain = csictx.Getenv(ctx, EnvVarDomain)
-	}
-	domain = path.Join("/", domain)
-	fields["serialvol.etcd.domain"] = domain
-
-	if ttl == 0 {
-		ttl, _ = time.ParseDuration(csictx.Getenv(ctx, EnvVarTTL))
-		if ttl > 0 {
-			fields["serialvol.etcd.ttl"] = ttl
-		}
-	}
-
-	if config == nil {
-		cfg, err := initConfig(ctx, fields)
-		if err != nil {
-			return nil, err
-		}
-		config = &cfg
-	}
-
-	log.WithFields(fields).Info("creating serial vol etcd lock provider")
-
-	client, err := etcd.New(*config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &provider{
-		client: client,
-		domain: domain,
-		ttl:    int(ttl.Seconds()),
-	}, nil
+// LockProvider is an etcd-based implementation of the
+// serialvolume.LockProvider interface.
+type LockProvider struct {
+	sync.Once
+	Domain string
+	TTL    time.Duration
+	Config etcd.Config
+	client *etcd.Client
 }
 
-func initConfig(
-	ctx context.Context,
-	fields map[string]interface{}) (etcd.Config, error) {
+func (p *LockProvider) init(ctx context.Context) error {
+	p.Domain = csienv.Getenv(ctx, EnvVarPrefix)
+	p.Domain = path.Join("/", p.Domain)
+	p.TTL, _ = time.ParseDuration(csienv.Getenv(ctx, EnvVarTTL))
 
-	config := etcd.Config{}
-
-	if v := csictx.Getenv(ctx, EnvVarEndpoints); v != "" {
-		config.Endpoints = strings.Split(v, ",")
-		fields["serialvol.etcd.Endpoints"] = v
+	if v := csienv.Getenv(ctx, EnvVarEndpoints); v != "" {
+		p.Config.Endpoints = strings.Split(v, ",")
 	}
 
-	if v := csictx.Getenv(ctx, EnvVarAutoSyncInterval); v != "" {
+	if v := csienv.Getenv(ctx, EnvVarAutoSyncInterval); v != "" {
 		v, err := time.ParseDuration(v)
 		if err != nil {
-			return config, err
+			return err
 		}
-		config.AutoSyncInterval = v
-		fields["serialvol.etcd.AutoSyncInterval"] = v
+		p.Config.AutoSyncInterval = v
 	}
 
-	if v := csictx.Getenv(ctx, EnvVarDialKeepAliveTime); v != "" {
+	if v := csienv.Getenv(ctx, EnvVarDialKeepAliveTime); v != "" {
 		v, err := time.ParseDuration(v)
 		if err != nil {
-			return config, err
+			return err
 		}
-		config.DialKeepAliveTime = v
-		fields["serialvol.etcd.DialKeepAliveTime"] = v
+		p.Config.DialKeepAliveTime = v
 	}
 
-	if v := csictx.Getenv(ctx, EnvVarDialKeepAliveTimeout); v != "" {
+	if v := csienv.Getenv(ctx, EnvVarDialKeepAliveTimeout); v != "" {
 		v, err := time.ParseDuration(v)
 		if err != nil {
-			return config, err
+			return err
 		}
-		config.DialKeepAliveTimeout = v
-		fields["serialvol.etcd.DialKeepAliveTimeout"] = v
+		p.Config.DialKeepAliveTimeout = v
 	}
 
-	if v := csictx.Getenv(ctx, EnvVarDialTimeout); v != "" {
+	if v := csienv.Getenv(ctx, EnvVarDialTimeout); v != "" {
 		v, err := time.ParseDuration(v)
 		if err != nil {
-			return config, err
+			return err
 		}
-		config.DialTimeout = v
-		fields["serialvol.etcd.DialTimeout"] = v
+		p.Config.DialTimeout = v
 	}
 
-	if v := csictx.Getenv(ctx, EnvVarMaxCallRecvMsgSz); v != "" {
+	if v := csienv.Getenv(ctx, EnvVarMaxCallRecvMsgSz); v != "" {
 		i, err := strconv.Atoi(v)
 		if err != nil {
-			return config, err
+			return err
 		}
-		config.MaxCallRecvMsgSize = i
-		fields["serialvol.etcd.MaxCallRecvMsgSize"] = i
+		p.Config.MaxCallRecvMsgSize = i
 	}
 
-	if v := csictx.Getenv(ctx, EnvVarMaxCallSendMsgSz); v != "" {
+	if v := csienv.Getenv(ctx, EnvVarMaxCallSendMsgSz); v != "" {
 		i, err := strconv.Atoi(v)
 		if err != nil {
-			return config, err
+			return err
 		}
-		config.MaxCallSendMsgSize = i
-		fields["serialvol.etcd.MaxCallSendMsgSize"] = i
+		p.Config.MaxCallSendMsgSize = i
 	}
 
-	if v := csictx.Getenv(ctx, EnvVarUsername); v != "" {
-		config.Username = v
-		fields["serialvol.etcd.Username"] = v
+	if v := csienv.Getenv(ctx, EnvVarUsername); v != "" {
+		p.Config.Username = v
 	}
-	if v := csictx.Getenv(ctx, EnvVarPassword); v != "" {
-		config.Password = v
-		fields["serialvol.etcd.Password"] = "********"
+	if v := csienv.Getenv(ctx, EnvVarPassword); v != "" {
+		p.Config.Password = v
 	}
 
-	if v, ok := csictx.LookupEnv(ctx, EnvVarRejectOldCluster); ok {
+	if v, ok := csienv.LookupEnv(ctx, EnvVarRejectOldCluster); ok {
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			return config, err
+			return err
 		}
-		config.RejectOldCluster = b
-		fields["serialvol.etcd.RejectOldCluster"] = b
+		p.Config.RejectOldCluster = b
 	}
 
-	if v, ok := csictx.LookupEnv(ctx, EnvVarTLS); ok {
+	if v, ok := csienv.LookupEnv(ctx, EnvVarTLS); ok {
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			return config, err
+			return err
 		}
 		if b {
-			config.TLS = &tls.Config{}
-			fields["serialvol.etcd.tls"] = b
-			if v, ok := csictx.LookupEnv(ctx, EnvVarTLSInsecure); ok {
+			p.Config.TLS = &tls.Config{}
+			if v, ok := csienv.LookupEnv(ctx, EnvVarTLSInsecure); ok {
 				b, err := strconv.ParseBool(v)
 				if err != nil {
-					return config, err
+					return err
 				}
-				config.TLS.InsecureSkipVerify = b
-				fields["serialvol.etcd.tls.insecure"] = b
+				p.Config.TLS.InsecureSkipVerify = b
 			}
 		}
 	}
 
-	return config, nil
+	client, err := etcd.New(p.Config)
+	if err != nil {
+		return err
+	}
+	p.client = client
+
+	log.WithField("config", p.Config).Info(
+		"created etcd-enabled serial volume access lock provider")
+	return nil
 }
 
-type provider struct {
-	client *etcd.Client
-	domain string
-	ttl    int
-}
-
-func (p *provider) Close() error {
+func (p *LockProvider) Close() error {
 	return p.client.Close()
 }
 
-func (p *provider) GetLockWithID(
+func (p *LockProvider) GetLockWithID(
 	ctx context.Context, id string) (gosync.TryLocker, error) {
 
-	return p.getLock(ctx, path.Join(p.domain, "volumesByID", id))
+	var err error
+	p.Once.Do(func() {
+		err = p.init(ctx)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return p.getLock(ctx, path.Join(p.Domain, "volumesByID", id))
 }
 
-func (p *provider) GetLockWithName(
+func (p *LockProvider) GetLockWithName(
 	ctx context.Context, name string) (gosync.TryLocker, error) {
 
-	return p.getLock(ctx, path.Join(p.domain, "volumesByName", name))
+	var err error
+	p.Once.Do(func() {
+		err = p.init(ctx)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return p.getLock(ctx, path.Join(p.Domain, "volumesByName", name))
 }
 
-func (p *provider) getLock(
+func (p *LockProvider) getLock(
 	ctx context.Context, pfx string) (gosync.TryLocker, error) {
 
 	log.Debugf("EtcdVolumeLockProvider: getLock: pfx=%v", pfx)
 
 	opts := []etcdsync.SessionOption{etcdsync.WithContext(ctx)}
-	if p.ttl > 0 {
-		opts = append(opts, etcdsync.WithTTL(p.ttl))
+	if p.TTL > 0 {
+		opts = append(opts, etcdsync.WithTTL(int(p.TTL.Seconds())))
 	}
 
 	sess, err := etcdsync.NewSession(p.client, opts...)
@@ -297,3 +268,70 @@ func (m *TryMutex) TryLock(timeout time.Duration) bool {
 	}
 	return true
 }
+
+// Usage returns the lock provider's usage string.
+func (i *LockProvider) Usage() string {
+	return usage
+}
+
+const usage = `SERIAL VOLUME ACCESS ETCD
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_DOMAIN
+        The name of the environment variable that defines the etcd lock
+        provider's concurrency domain.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_TTL
+        The length of time etcd will wait before  releasing ownership of a
+        distributed lock if the lock's session has not been renewed.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS
+        A comma-separated list of etcd endpoints. If specified then the
+        SP's serial volume access middleware will leverage etcd to enable
+        distributed locking.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_AUTO_SYNC_INTERVAL
+        A time.Duration string that specifies the interval to update
+        endpoints with its latest members. A value of 0 disables
+        auto-sync. By default auto-sync is disabled.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_TIMEOUT
+        A time.Duration string that specifies the timeout for failing to
+        establish a connection.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_KEEP_ALIVE_TIME
+        A time.Duration string that defines the time after which the client
+        pings the server to see if the transport is alive.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_DIAL_KEEP_ALIVE_TIMEOUT
+        A time.Duration string that defines the time that the client waits for
+        a response for the keep-alive probe. If the response is not received
+        in this time, the connection is closed.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_MAX_CALL_SEND_MSG_SZ
+        Defines the client-side request send limit in bytes. If 0, it defaults
+        to 2.0 MiB (2 * 1024 * 1024). Make sure that "MaxCallSendMsgSize" <
+        server-side default send/recv limit. ("--max-request-bytes" flag to
+        etcd or "embed.Config.MaxRequestBytes").
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_MAX_CALL_RECV_MSG_SZ
+        Defines the client-side response receive limit. If 0, it defaults to
+        "math.MaxInt32", because range response can easily exceed request send
+        limits. Make sure that "MaxCallRecvMsgSize" >= server-side default
+        send/recv limit. ("--max-request-bytes" flag to etcd or
+        "embed.Config.MaxRequestBytes").
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_USERNAME
+        The user name used for authentication.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_PASSWORD
+        The password used for authentication.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_REJECT_OLD_CLUSTER
+        A flag that indicates refusal to create a client against an outdated
+        cluster.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS
+        A flag that indicates the client should attempt a TLS connection.
+
+    X_CSI_SERIAL_VOL_ACCESS_ETCD_TLS_INSECURE
+        A flag that indicates the TLS connection should not verify peer
+        certificates.`

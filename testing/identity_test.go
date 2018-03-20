@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
-	"github.com/rexray/gocsi"
-	csictx "github.com/rexray/gocsi/context"
+
+	csienv "github.com/rexray/gocsi/env"
 	"github.com/rexray/gocsi/mock/service"
 )
 
@@ -69,9 +69,9 @@ var _ = Describe("Identity", func() {
 		Context("With Invalid Plug-in Name Error", func() {
 			BeforeEach(func() {
 				reqVersion = "0.2.0"
-				ctx = csictx.WithEnviron(ctx,
+				ctx = csienv.WithEnviron(ctx,
 					[]string{
-						gocsi.EnvVarPluginInfo + "=Mock,v1.0.0",
+						"X_CSI_PLUGIN_INFO=Mock,v1.0.0",
 					})
 			})
 			It("Should Not Be Valid", func() {

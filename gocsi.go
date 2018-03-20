@@ -26,7 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	csictx "github.com/rexray/gocsi/context"
+	csienv "github.com/rexray/gocsi/env"
 	"github.com/rexray/gocsi/utils"
 )
 
@@ -36,40 +36,41 @@ func Run(
 	appName, appDescription, appUsage string,
 	sp StoragePluginProvider) {
 
-	// Check for the debug value.
-	if v, ok := csictx.LookupEnv(ctx, EnvVarDebug); ok {
-		if ok, _ := strconv.ParseBool(v); ok {
-			csictx.Setenv(ctx, EnvVarLogLevel, "debug")
-			csictx.Setenv(ctx, EnvVarReqLogging, "true")
-			csictx.Setenv(ctx, EnvVarRepLogging, "true")
-		}
-	}
-
 	// Adjust the log level.
 	lvl := log.InfoLevel
-	if v, ok := csictx.LookupEnv(ctx, EnvVarLogLevel); ok {
-		var err error
-		if lvl, err = log.ParseLevel(v); err != nil {
-			lvl = log.InfoLevel
+	if csienv.IsDebug(ctx) {
+		lvl = log.DebugLevel
+	} else {
+		if v, ok := csienv.LookupEnv(ctx, csienv.LogLevel); ok {
+			if lvl2, err := log.ParseLevel(v); err == nil {
+				lvl = lvl2
+			}
 		}
 	}
 	log.SetLevel(lvl)
 
+	var spUsage string
+	if o, ok := sp.(hasUsage); ok {
+		spUsage = o.Usage()
+	}
+
 	printUsage := func() {
 		// app is the information passed to the printUsage function
 		app := struct {
-			Name        string
-			Description string
-			Usage       string
-			BinPath     string
+			Name               string
+			Description        string
+			AppUsage           string
+			StoragePluginUsage string
+			BinPath            string
 		}{
 			appName,
 			appDescription,
 			appUsage,
+			spUsage,
 			os.Args[0],
 		}
 
-		t, err := template.New("t").Parse(usage)
+		t, err := template.New("t").Parse(usageTemplate)
 		if err != nil {
 			log.WithError(err).Fatalln("failed to parse usage template")
 		}
@@ -80,18 +81,17 @@ func Run(
 	}
 
 	// Check for a help flag.
-	fs := flag.NewFlagSet("csp", flag.ExitOnError)
-	fs.Usage = printUsage
 	var help bool
-	fs.BoolVar(&help, "?", false, "")
-	err := fs.Parse(os.Args)
-	if err == flag.ErrHelp || help {
+	flag.Usage = printUsage
+	flag.BoolVar(&help, "?", false, "")
+	flag.Parse()
+	if help {
 		printUsage()
 		os.Exit(1)
 	}
 
 	// If no endpoint is set then print the usage.
-	if os.Getenv(EnvVarEndpoint) == "" {
+	if os.Getenv(csienv.Endpoint) == "" {
 		printUsage()
 		os.Exit(1)
 	}
@@ -176,11 +176,9 @@ type StoragePlugin struct {
 	// or provided list of interceptors.
 	ServerOpts []grpc.ServerOption
 
-	// Interceptors is a list of gRPC server interceptors to use when
-	// serving the SP. This list should not include the interceptors
-	// defined in the GoCSI package as those are configured by default
-	// based on runtime configuration settings.
-	Interceptors []grpc.UnaryServerInterceptor
+	// Middleware is a list of gRPC server-side middleware to use when
+	// serving the SP.
+	Middleware []ServerMiddleware
 
 	// BeforeServe is an optional callback that is invoked after the
 	// StoragePlugin has been initialized, just prior to the creation
@@ -196,8 +194,7 @@ type StoragePlugin struct {
 	stopOnce  sync.Once
 	server    *grpc.Server
 
-	envVars    map[string]string
-	pluginInfo csi.GetPluginInfoResponse
+	envVars map[string]string
 }
 
 // Serve accepts incoming connections on the listener lis, creating
@@ -206,20 +203,21 @@ type StoragePlugin struct {
 // to reply to them. Serve returns when lis.Accept fails with fatal
 // errors.  lis will be closed when this method returns.
 // Serve always returns non-nil error.
-func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
-	var err error
+func (sp *StoragePlugin) Serve(
+	ctx context.Context, lis net.Listener) (err error) {
+
 	sp.serveOnce.Do(func() {
 		// Please note that the order of the below init functions is
 		// important and should not be altered unless by someone aware
 		// of how they work.
 
-		// Adding this function to the context allows `csictx.LookupEnv`
+		// Adding this function to the context allows `csienv.LookupEnv`
 		// to search this SP's default env vars for a value.
-		ctx = csictx.WithLookupEnv(ctx, sp.lookupEnv)
+		ctx = csienv.WithLookupEnv(ctx, sp.lookupEnv)
 
-		// Adding this function to the context allows `csictx.Setenv`
+		// Adding this function to the context allows `csienv.Setenv`
 		// to set environment variables in this SP's env var store.
-		ctx = csictx.WithSetenv(ctx, sp.setenv)
+		ctx = csienv.WithSetenv(ctx, sp.setEnv)
 
 		// Initialize the storage plug-in's environment variables map.
 		sp.initEnvVars(ctx)
@@ -234,24 +232,17 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 			return
 		}
 
-		// Initialize the storage plug-in's info.
-		sp.initPluginInfo(ctx)
-
 		// Initialize the interceptors.
-		sp.initInterceptors(ctx)
+		if err = sp.initMiddleware(ctx); err != nil {
+			return
+		}
 
 		// Invoke the SP's BeforeServe function to give the SP a chance
 		// to perform any local initialization routines.
-		if f := sp.BeforeServe; f != nil {
-			if err = f(ctx, sp, lis); err != nil {
+		if sp.BeforeServe != nil {
+			if err = sp.BeforeServe(ctx, sp, lis); err != nil {
 				return
 			}
-		}
-
-		// Add the interceptors to the server if any are configured.
-		if i := sp.Interceptors; len(i) > 0 {
-			sp.ServerOpts = append(sp.ServerOpts,
-				grpc.UnaryInterceptor(utils.ChainUnaryServer(i...)))
 		}
 
 		// Initialize the gRPC server.
@@ -275,7 +266,7 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		log.Info("identity service registered")
 
 		// Determine which of the controller/node services to register
-		mode := csictx.Getenv(ctx, EnvVarMode)
+		mode := csienv.Getenv(ctx, csienv.Mode)
 		if strings.EqualFold(mode, "controller") {
 			mode = "controller"
 		} else if strings.EqualFold(mode, "node") {
@@ -310,7 +301,7 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 		err = sp.server.Serve(lis)
 		return
 	})
-	return err
+	return
 }
 
 // Stop stops the gRPC server. It immediately closes all open
@@ -344,7 +335,7 @@ func (sp *StoragePlugin) initEndpointPerms(
 		return nil
 	}
 
-	v, ok := csictx.LookupEnv(ctx, EnvVarEndpointPerms)
+	v, ok := csienv.LookupEnv(ctx, csienv.EndpointPerms)
 	if !ok || v == "0755" {
 		return nil
 	}
@@ -385,7 +376,7 @@ func (sp *StoragePlugin) initEndpointOwner(
 		pgid = gid
 	)
 
-	if v, ok := csictx.LookupEnv(ctx, EnvVarEndpointUser); ok {
+	if v, ok := csienv.LookupEnv(ctx, csienv.EndpointUser); ok {
 		m, err := regexp.MatchString(`^\d+$`, v)
 		if err != nil {
 			return err
@@ -412,7 +403,7 @@ func (sp *StoragePlugin) initEndpointOwner(
 		uid = iuid
 	}
 
-	if v, ok := csictx.LookupEnv(ctx, EnvVarEndpointGroup); ok {
+	if v, ok := csienv.LookupEnv(ctx, csienv.EndpointGroup); ok {
 		m, err := regexp.MatchString(`^\d+$`, v)
 		if err != nil {
 			return err
@@ -454,25 +445,74 @@ func (sp *StoragePlugin) initEndpointOwner(
 	return nil
 }
 
+func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
+
+	// Copy the environment variables from the public EnvVar
+	// string slice to the private envVars map for quick lookup.
+	sp.envVars = map[string]string{}
+	for _, v := range sp.EnvVars {
+		// Environment variables must adhere to one of the following
+		// formats:
+		//
+		//     - ENV_VAR_KEY=
+		//     - ENV_VAR_KEY=ENV_VAR_VAL
+		pair := strings.SplitN(v, "=", 2)
+		if len(pair) < 1 || len(pair) > 2 {
+			continue
+		}
+
+		// Ensure the environment variable is stored in all upper-case
+		// to make subsequent map-lookups deterministic.
+		key := strings.ToUpper(pair[0])
+
+		// Check to see if the value for the key is available from the
+		// context's os.Environ or os.LookupEnv functions. If neither
+		// return a value then use the provided default value.
+		var val string
+		if v, ok := csienv.LookupEnv(ctx, key); ok {
+			val = v
+		} else if len(pair) > 1 {
+			val = pair[1]
+		}
+		sp.envVars[key] = val
+	}
+
+	// If there is an environment variable string slice in the context, be sure
+	// to add it to the list of the SP's environment variables.
+	if envVars, ok := csienv.GetEnviron(ctx); ok {
+		for _, v := range envVars {
+			// Environment variables must adhere to one of the following
+			// formats:
+			//
+			//     - ENV_VAR_KEY=
+			//     - ENV_VAR_KEY=ENV_VAR_VAL
+			pair := strings.SplitN(v, "=", 2)
+			if len(pair) < 1 || len(pair) > 2 {
+				continue
+			}
+
+			// Ensure the environment variable is stored in all upper-case
+			// to make subsequent map-lookups deterministic.
+			var val string
+			key := strings.ToUpper(pair[0])
+			if len(pair) > 1 {
+				val = pair[1]
+			}
+			sp.envVars[key] = val
+		}
+	}
+
+	return
+}
+
 func (sp *StoragePlugin) lookupEnv(key string) (string, bool) {
 	val, ok := sp.envVars[key]
 	return val, ok
 }
 
-func (sp *StoragePlugin) setenv(key, val string) error {
+func (sp *StoragePlugin) setEnv(key, val string) error {
 	sp.envVars[key] = val
 	return nil
-}
-
-func (sp *StoragePlugin) getEnvBool(ctx context.Context, key string) bool {
-	v, ok := csictx.LookupEnv(ctx, key)
-	if !ok {
-		return false
-	}
-	if b, err := strconv.ParseBool(v); err == nil {
-		return b
-	}
-	return false
 }
 
 func trapSignals(onExit, onAbort func()) {

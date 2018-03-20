@@ -3,6 +3,7 @@ package specvalidator
 import (
 	"reflect"
 	"regexp"
+	"strconv"
 	"sync"
 
 	"github.com/golang/protobuf/proto"
@@ -14,161 +15,140 @@ import (
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 
+	csienv "github.com/rexray/gocsi/env"
 	"github.com/rexray/gocsi/utils"
 )
 
-// Option configures the spec validator interceptor.
-type Option func(*opts)
-
-type opts struct {
-	sync.Mutex
-	reqValidation               bool
-	repValidation               bool
-	requiresStagingTargetPath   bool
-	requiresNodeID              bool
-	requiresPubVolInfo          bool
-	requiresVolAttribs          bool
-	requiresCtlrNewVolSecrets   bool
-	requiresCtlrDelVolSecrets   bool
-	requiresCtlrPubVolSecrets   bool
-	requiresCtlrUnpubVolSecrets bool
-	requiresNodeStgVolSecrets   bool
-	requiresNodePubVolSecrets   bool
+// Middleware injects a unique ID into outgoing requests and reads the
+// ID from incoming requests.
+type Middleware struct {
+	sync.Once
+	RequestValidation                       bool
+	ResponseValidation                      bool
+	RequireStagingTargetPath                bool
+	RequireNodeID                           bool
+	RequirePublishInfo                      bool
+	RequireVolumeAttributes                 bool
+	RequireControllerCreateVolumeSecrets    bool
+	RequireControllerDeleteVolumeSecrets    bool
+	RequireControllerPublishVolumeSecrets   bool
+	RequireControllerUnpublishVolumeSecrets bool
+	RequireNodeStageVolumeSecrets           bool
+	RequireNodePublishVolumeSecrets         bool
 }
 
-// WithRequestValidation is a Option that enables request validation.
-func WithRequestValidation() Option {
-	return func(o *opts) {
-		o.reqValidation = true
+// Init is available to explicitly initialize the middleware.
+func (s *Middleware) Init(ctx context.Context) (err error) {
+	return s.initOnce(ctx)
+}
+
+func (s *Middleware) initOnce(ctx context.Context) (err error) {
+	s.Once.Do(func() {
+		err = s.init(ctx)
+	})
+	return
+}
+
+func (s *Middleware) init(ctx context.Context) error {
+
+	setBool := func(addr *bool, key string) {
+		v, ok := csienv.LookupEnv(ctx, key)
+		if !ok {
+			return
+		}
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return
+		}
+		*addr = b
+		log.WithField(key, b).Debug("middleware: spec validation")
+		if b {
+			s.RequestValidation = true
+		}
 	}
-}
+	setBool(
+		&s.RequireStagingTargetPath,
+		"X_CSI_REQUIRE_STAGING_TARGET_PATH")
+	setBool(
+		&s.RequireNodeID,
+		"X_CSI_REQUIRE_NODE_ID")
+	setBool(
+		&s.RequirePublishInfo,
+		"X_CSI_REQUIRE_PUB_INFO")
+	setBool(
+		&s.RequireVolumeAttributes,
+		"X_CSI_REQUIRE_VOL_ATTRIBS")
+	setBool(
+		&s.RequireNodeID,
+		"X_CSI_REQUIRE_NODE_ID")
 
-// WithResponseValidation is a Option that enables response validation.
-func WithResponseValidation() Option {
-	return func(o *opts) {
-		o.repValidation = true
+	if v, ok := csienv.LookupEnv(ctx, "X_CSI_REQUIRE_SECRETS"); ok {
+		if b, _ := strconv.ParseBool(v); b {
+			s.RequireControllerCreateVolumeSecrets = true
+			s.RequireControllerDeleteVolumeSecrets = true
+			s.RequireControllerPublishVolumeSecrets = true
+			s.RequireControllerUnpublishVolumeSecrets = true
+			s.RequireNodeStageVolumeSecrets = true
+			s.RequireNodePublishVolumeSecrets = true
+		}
 	}
-}
+	setBool(
+		&s.RequireControllerCreateVolumeSecrets,
+		"X_CSI_REQUIRE_SECRETS_CTRLR_CREATE_VOL")
+	setBool(
+		&s.RequireControllerDeleteVolumeSecrets,
+		"X_CSI_REQUIRE_SECRETS_CTRLR_DELETE_VOL")
+	setBool(
+		&s.RequireControllerPublishVolumeSecrets,
+		"X_CSI_REQUIRE_SECRETS_CTRLR_PUB_VOL")
+	setBool(
+		&s.RequireControllerUnpublishVolumeSecrets,
+		"X_CSI_REQUIRE_SECRETS_CTRLR_UNPUB_VOL")
+	setBool(
+		&s.RequireNodeStageVolumeSecrets,
+		"X_CSI_REQUIRE_SECRETS_NODE_STAGE_VOL")
+	setBool(
+		&s.RequireNodePublishVolumeSecrets,
+		"X_CSI_REQUIRE_SECRETS_NODE_PUB_VOL")
 
-// WithRequiresNodeID is a Option that indicates
-// ControllerPublishVolume requests and NodeGetId responses must
-// contain non-empty node ID data.
-func WithRequiresNodeID() Option {
-	return func(o *opts) {
-		o.requiresNodeID = true
+	if v, ok := csienv.LookupEnv(ctx, "X_CSI_SPEC_VALIDATION"); ok {
+		if b, err := strconv.ParseBool(v); err == nil {
+			s.RequestValidation = b
+			s.ResponseValidation = b
+		}
 	}
-}
+	// Even if request validation is implicitly enabled, it can be
+	// explicitly disabled.
+	setBool(
+		&s.RequestValidation,
+		"X_CSI_SPEC_REQ_VALIDATION")
+	setBool(
+		&s.ResponseValidation,
+		"X_CSI_SPEC_REP_VALIDATION")
 
-// WithRequiresStagingTargetPath is a Option that indicates
-// NodePublishVolume requests must have non-empty StagingTargetPath
-// fields.
-func WithRequiresStagingTargetPath() Option {
-	return func(o *opts) {
-		o.requiresStagingTargetPath = true
+	if s.RequestValidation || s.ResponseValidation {
+		log.WithFields(map[string]interface{}{
+			"RequestValidation":                       s.RequestValidation,
+			"ResponseValidation":                      s.ResponseValidation,
+			"RequireStagingTargetPath":                s.RequireStagingTargetPath,
+			"RequireNodeID":                           s.RequireNodeID,
+			"RequirePublishInfo":                      s.RequirePublishInfo,
+			"RequireVolumeAttributes":                 s.RequireVolumeAttributes,
+			"RequireControllerCreateVolumeSecrets":    s.RequireControllerCreateVolumeSecrets,
+			"RequireControllerDeleteVolumeSecrets":    s.RequireControllerDeleteVolumeSecrets,
+			"RequireControllerPublishVolumeSecrets":   s.RequireControllerPublishVolumeSecrets,
+			"RequireControllerUnpublishVolumeSecrets": s.RequireControllerUnpublishVolumeSecrets,
+			"RequireNodeStageVolumeSecrets":           s.RequireNodeStageVolumeSecrets,
+			"RequireNodePublishVolumeSecrets":         s.RequireNodePublishVolumeSecrets,
+		}).Info("middleware: spec validation")
 	}
+
+	return nil
 }
 
-// WithRequiresPublishInfo is a Option that indicates
-// ControllerPublishVolume responses and NodePublishVolume requests must
-// contain non-empty publish volume info data.
-func WithRequiresPublishInfo() Option {
-	return func(o *opts) {
-		o.requiresPubVolInfo = true
-	}
-}
-
-// WithRequiresVolumeAttributes is a Option that indicates
-// ControllerPublishVolume, ValidateVolumeCapabilities, and NodePublishVolume
-// requests must contain non-empty volume attribute data.
-func WithRequiresVolumeAttributes() Option {
-	return func(o *opts) {
-		o.requiresVolAttribs = true
-	}
-}
-
-// WithRequiresControllerCreateVolumeSecrets is a Option
-// that indicates the eponymous requests must contain non-empty secrets
-// data.
-func WithRequiresControllerCreateVolumeSecrets() Option {
-	return func(o *opts) {
-		o.requiresCtlrNewVolSecrets = true
-	}
-}
-
-// WithRequiresControllerDeleteVolumeSecrets is a Option
-// that indicates the eponymous requests must contain non-empty credentials
-// data.
-func WithRequiresControllerDeleteVolumeSecrets() Option {
-	return func(o *opts) {
-		o.requiresCtlrDelVolSecrets = true
-	}
-}
-
-// WithRequiresControllerPublishVolumeSecrets is a Option
-// that indicates the eponymous requests must contain non-empty credentials
-// data.
-func WithRequiresControllerPublishVolumeSecrets() Option {
-	return func(o *opts) {
-		o.requiresCtlrPubVolSecrets = true
-	}
-}
-
-// WithRequiresControllerUnpublishVolumeSecrets is a Option
-// that indicates the eponymous requests must contain non-empty credentials
-// data.
-func WithRequiresControllerUnpublishVolumeSecrets() Option {
-	return func(o *opts) {
-		o.requiresCtlrUnpubVolSecrets = true
-	}
-}
-
-// WithRequiresNodeStageVolumeSecrets is a Option
-// that indicates the eponymous requests must contain non-empty credentials
-// data.
-func WithRequiresNodeStageVolumeSecrets() Option {
-	return func(o *opts) {
-		o.requiresNodeStgVolSecrets = true
-	}
-}
-
-// WithRequiresNodePublishVolumeSecrets is a Option
-// that indicates the eponymous requests must contain non-empty credentials
-// data.
-func WithRequiresNodePublishVolumeSecrets() Option {
-	return func(o *opts) {
-		o.requiresNodePubVolSecrets = true
-	}
-}
-
-type interceptor struct {
-	opts opts
-}
-
-// NewServerSpecValidator returns a new UnaryServerInterceptor that validates
+// HandleServer is a UnaryServerInterceptor that validates
 // server request and response data against the CSI specification.
-func NewServerSpecValidator(
-	opts ...Option) grpc.UnaryServerInterceptor {
-
-	return newSpecValidator(opts...).handleServer
-}
-
-// NewClientSpecValidator provides a UnaryClientInterceptor that validates
-// client request and response data against the CSI specification.
-func NewClientSpecValidator(
-	opts ...Option) grpc.UnaryClientInterceptor {
-
-	return newSpecValidator(opts...).handleClient
-}
-
-func newSpecValidator(opts ...Option) *interceptor {
-	i := &interceptor{}
-	for _, withOpts := range opts {
-		withOpts(&i.opts)
-	}
-	return i
-}
-
-func (s *interceptor) handleServer(
+func (s *Middleware) HandleServer(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
@@ -179,7 +159,9 @@ func (s *interceptor) handleServer(
 	})
 }
 
-func (s *interceptor) handleClient(
+// HandleClient is a UnaryClientInterceptor that validates
+// client request and response data against the CSI specification.
+func (s *Middleware) HandleClient(
 	ctx context.Context,
 	method string,
 	req, rep interface{},
@@ -193,11 +175,15 @@ func (s *interceptor) handleClient(
 	return err
 }
 
-func (s *interceptor) handle(
+func (s *Middleware) handle(
 	ctx context.Context,
 	method string,
 	req interface{},
 	next func() (interface{}, error)) (interface{}, error) {
+
+	if err := s.initOnce(ctx); err != nil {
+		return nil, err
+	}
 
 	// If the request is nil then pass control to the next handler
 	// in the chain.
@@ -205,7 +191,7 @@ func (s *interceptor) handle(
 		return next()
 	}
 
-	if s.opts.reqValidation {
+	if s.RequestValidation {
 		// Validate the request against the CSI specification.
 		if err := s.validateRequest(ctx, method, req); err != nil {
 			return nil, err
@@ -221,8 +207,7 @@ func (s *interceptor) handle(
 		return nil, err
 	}
 
-	if s.opts.repValidation {
-		log.Debug("response validation enabled")
+	if s.ResponseValidation {
 		// Validate the response against the CSI specification.
 		if err := s.validateResponse(ctx, method, rep); err != nil {
 
@@ -273,7 +258,7 @@ type interceptorHasVolumeAttributes interface {
 	GetVolumeAttributes() map[string]string
 }
 
-func (s *interceptor) validateRequest(
+func (s *Middleware) validateRequest(
 	ctx context.Context,
 	method string,
 	req interface{}) error {
@@ -298,7 +283,7 @@ func (s *interceptor) validateRequest(
 
 	// Check to see if the request has a node ID and if it is set.
 	// If the node ID is not set then return an error.
-	if s.opts.requiresNodeID {
+	if s.RequireNodeID {
 		if treq, ok := req.(interceptorHasNodeID); ok {
 			if treq.NodeGetId() == "" {
 				return status.Error(
@@ -310,7 +295,7 @@ func (s *interceptor) validateRequest(
 	// Check to see if the request has volume attributes and if they're
 	// required. If the volume attributes are required by no attributes are
 	// specified then return an error.
-	if s.opts.requiresVolAttribs {
+	if s.RequireVolumeAttributes {
 		if treq, ok := req.(interceptorHasVolumeAttributes); ok {
 			if len(treq.GetVolumeAttributes()) == 0 {
 				return status.Error(
@@ -353,7 +338,7 @@ func (s *interceptor) validateRequest(
 	return nil
 }
 
-func (s *interceptor) validateResponse(
+func (s *Middleware) validateResponse(
 	ctx context.Context,
 	method string,
 	rep interface{}) error {
@@ -388,7 +373,7 @@ func (s *interceptor) validateResponse(
 	// Node Service
 	//
 	case *csi.NodeGetIdResponse:
-		return s.validateNodeGetIdResponse(ctx, *tobj)
+		return s.validateNodeGetIDResponse(ctx, *tobj)
 	case *csi.NodeGetCapabilitiesResponse:
 		return s.validateNodeGetCapabilitiesResponse(ctx, *tobj)
 	}
@@ -396,7 +381,7 @@ func (s *interceptor) validateResponse(
 	return nil
 }
 
-func (s *interceptor) validateCreateVolumeRequest(
+func (s *Middleware) validateCreateVolumeRequest(
 	ctx context.Context,
 	req csi.CreateVolumeRequest) error {
 
@@ -404,7 +389,7 @@ func (s *interceptor) validateCreateVolumeRequest(
 		return status.Error(
 			codes.InvalidArgument, "required: Name")
 	}
-	if s.opts.requiresCtlrNewVolSecrets {
+	if s.RequireControllerCreateVolumeSecrets {
 		if len(req.ControllerCreateSecrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: ControllerCreateSecrets")
@@ -414,11 +399,11 @@ func (s *interceptor) validateCreateVolumeRequest(
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, true)
 }
 
-func (s *interceptor) validateDeleteVolumeRequest(
+func (s *Middleware) validateDeleteVolumeRequest(
 	ctx context.Context,
 	req csi.DeleteVolumeRequest) error {
 
-	if s.opts.requiresCtlrDelVolSecrets {
+	if s.RequireControllerDeleteVolumeSecrets {
 		if len(req.ControllerDeleteSecrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: ControllerDeleteSecrets")
@@ -428,11 +413,11 @@ func (s *interceptor) validateDeleteVolumeRequest(
 	return nil
 }
 
-func (s *interceptor) validateControllerPublishVolumeRequest(
+func (s *Middleware) validateControllerPublishVolumeRequest(
 	ctx context.Context,
 	req csi.ControllerPublishVolumeRequest) error {
 
-	if s.opts.requiresCtlrPubVolSecrets {
+	if s.RequireControllerPublishVolumeSecrets {
 		if len(req.ControllerPublishSecrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: ControllerPublishSecrets")
@@ -442,11 +427,11 @@ func (s *interceptor) validateControllerPublishVolumeRequest(
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
 }
 
-func (s *interceptor) validateControllerUnpublishVolumeRequest(
+func (s *Middleware) validateControllerUnpublishVolumeRequest(
 	ctx context.Context,
 	req csi.ControllerUnpublishVolumeRequest) error {
 
-	if s.opts.requiresCtlrUnpubVolSecrets {
+	if s.RequireControllerUnpublishVolumeSecrets {
 		if len(req.ControllerUnpublishSecrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: ControllerUnpublishSecrets")
@@ -456,21 +441,21 @@ func (s *interceptor) validateControllerUnpublishVolumeRequest(
 	return nil
 }
 
-func (s *interceptor) validateValidateVolumeCapabilitiesRequest(
+func (s *Middleware) validateValidateVolumeCapabilitiesRequest(
 	ctx context.Context,
 	req csi.ValidateVolumeCapabilitiesRequest) error {
 
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, true)
 }
 
-func (s *interceptor) validateGetCapacityRequest(
+func (s *Middleware) validateGetCapacityRequest(
 	ctx context.Context,
 	req csi.GetCapacityRequest) error {
 
 	return validateVolumeCapabilitiesArg(req.VolumeCapabilities, false)
 }
 
-func (s *interceptor) validateNodeStageVolumeRequest(
+func (s *Middleware) validateNodeStageVolumeRequest(
 	ctx context.Context,
 	req csi.NodeStageVolumeRequest) error {
 
@@ -479,12 +464,12 @@ func (s *interceptor) validateNodeStageVolumeRequest(
 			codes.InvalidArgument, "required: StagingTargetPath")
 	}
 
-	if s.opts.requiresPubVolInfo && len(req.PublishInfo) == 0 {
+	if s.RequirePublishInfo && len(req.PublishInfo) == 0 {
 		return status.Error(
 			codes.InvalidArgument, "required: PublishInfo")
 	}
 
-	if s.opts.requiresNodeStgVolSecrets {
+	if s.RequireNodeStageVolumeSecrets {
 		if len(req.NodeStageSecrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: NodeStageSecrets")
@@ -494,11 +479,11 @@ func (s *interceptor) validateNodeStageVolumeRequest(
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
 }
 
-func (s *interceptor) validateNodePublishVolumeRequest(
+func (s *Middleware) validateNodePublishVolumeRequest(
 	ctx context.Context,
 	req csi.NodePublishVolumeRequest) error {
 
-	if s.opts.requiresStagingTargetPath && req.StagingTargetPath == "" {
+	if s.RequireStagingTargetPath && req.StagingTargetPath == "" {
 		return status.Error(
 			codes.InvalidArgument, "required: StagingTargetPath")
 	}
@@ -508,12 +493,12 @@ func (s *interceptor) validateNodePublishVolumeRequest(
 			codes.InvalidArgument, "required: TargetPath")
 	}
 
-	if s.opts.requiresPubVolInfo && len(req.PublishInfo) == 0 {
+	if s.RequirePublishInfo && len(req.PublishInfo) == 0 {
 		return status.Error(
 			codes.InvalidArgument, "required: PublishInfo")
 	}
 
-	if s.opts.requiresNodePubVolSecrets {
+	if s.RequireNodePublishVolumeSecrets {
 		if len(req.NodePublishSecrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: NodePublishSecrets")
@@ -523,7 +508,7 @@ func (s *interceptor) validateNodePublishVolumeRequest(
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
 }
 
-func (s *interceptor) validateNodeUnpublishVolumeRequest(
+func (s *Middleware) validateNodeUnpublishVolumeRequest(
 	ctx context.Context,
 	req csi.NodeUnpublishVolumeRequest) error {
 
@@ -535,7 +520,7 @@ func (s *interceptor) validateNodeUnpublishVolumeRequest(
 	return nil
 }
 
-func (s *interceptor) validateCreateVolumeResponse(
+func (s *Middleware) validateCreateVolumeResponse(
 	ctx context.Context,
 	rep csi.CreateVolumeResponse) error {
 
@@ -547,7 +532,7 @@ func (s *interceptor) validateCreateVolumeResponse(
 		return status.Error(codes.Internal, "empty: Volume.Id")
 	}
 
-	if s.opts.requiresVolAttribs && len(rep.Volume.Attributes) == 0 {
+	if s.RequireVolumeAttributes && len(rep.Volume.Attributes) == 0 {
 		return status.Error(
 			codes.Internal, "non-nil, empty: Volume.Attributes")
 	}
@@ -555,17 +540,17 @@ func (s *interceptor) validateCreateVolumeResponse(
 	return nil
 }
 
-func (s *interceptor) validateControllerPublishVolumeResponse(
+func (s *Middleware) validateControllerPublishVolumeResponse(
 	ctx context.Context,
 	rep csi.ControllerPublishVolumeResponse) error {
 
-	if s.opts.requiresPubVolInfo && len(rep.PublishInfo) == 0 {
+	if s.RequirePublishInfo && len(rep.PublishInfo) == 0 {
 		return status.Error(codes.Internal, "empty: PublishInfo")
 	}
 	return nil
 }
 
-func (s *interceptor) validateListVolumesResponse(
+func (s *Middleware) validateListVolumesResponse(
 	ctx context.Context,
 	rep csi.ListVolumesResponse) error {
 
@@ -591,7 +576,7 @@ func (s *interceptor) validateListVolumesResponse(
 	return nil
 }
 
-func (s *interceptor) validateControllerGetCapabilitiesResponse(
+func (s *Middleware) validateControllerGetCapabilitiesResponse(
 	ctx context.Context,
 	rep csi.ControllerGetCapabilitiesResponse) error {
 
@@ -607,11 +592,9 @@ const (
 	pluginVendorVersionPatt = `^v?(\d+\.){2}(\d+)(-.+)?$`
 )
 
-func (s *interceptor) validateGetPluginInfoResponse(
+func (s *Middleware) validateGetPluginInfoResponse(
 	ctx context.Context,
 	rep csi.GetPluginInfoResponse) error {
-
-	log.Debug("validateGetPluginInfoResponse: enter")
 
 	if rep.Name == "" {
 		return status.Error(codes.Internal, "empty: Name")
@@ -649,17 +632,17 @@ func (s *interceptor) validateGetPluginInfoResponse(
 	return nil
 }
 
-func (s *interceptor) validateNodeGetIdResponse(
+func (s *Middleware) validateNodeGetIDResponse(
 	ctx context.Context,
 	rep csi.NodeGetIdResponse) error {
 
-	if s.opts.requiresNodeID && rep.NodeId == "" {
+	if s.RequireNodeID && rep.NodeId == "" {
 		return status.Error(codes.Internal, "empty: NodeID")
 	}
 	return nil
 }
 
-func (s *interceptor) validateNodeGetCapabilitiesResponse(
+func (s *Middleware) validateNodeGetCapabilitiesResponse(
 	ctx context.Context,
 	rep csi.NodeGetCapabilitiesResponse) error {
 
@@ -809,3 +792,96 @@ func validateFieldSizes(msg interface{}) error {
 	}
 	return nil
 }
+
+// Usage returns the middleware's usage string.
+func (s *Middleware) Usage() string {
+	return usage
+}
+
+const usage = `SPEC VALIDATION
+    X_CSI_SPEC_VALIDATION
+        Setting X_CSI_SPEC_VALIDATION=true is the same as:
+            X_CSI_SPEC_REQ_VALIDATION=true
+            X_CSI_SPEC_REP_VALIDATION=true
+
+    X_CSI_SPEC_REQ_VALIDATION
+        A flag that enables the validation of CSI request messages.
+
+    X_CSI_SPEC_REP_VALIDATION
+        A flag that enables the validation of CSI response messages.
+        Invalid responses are marshalled into a gRPC error with a code
+        of "Internal."
+
+    X_CSI_REQUIRE_STAGING_TARGET_PATH
+        A flag that enables treating the following fields as required:
+            * NodePublishVolumeRequest.StagingTargetPath
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_NODE_ID
+        A flag that enables treating the following fields as required:
+            * ControllerPublishVolumeRequest.NodeId
+            * NodeGetIdResponse.NodeId
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_PUB_INFO
+        A flag that enables treating the following fields as required:
+            * ControllerPublishVolumeResponse.PublishInfo
+            * NodeStageVolumeRequest.PublishInfo
+            * NodePublishVolumeRequest.PublishInfo
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_VOL_ATTRIBS
+        A flag that enables treating the following fields as required:
+            * ControllerPublishVolumeRequest.VolumeAttributes
+            * ValidateVolumeCapabilitiesRequest.VolumeAttributes
+            * NodePublishVolumeRequest.VolumeAttributes
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_SECRETS
+        Setting X_CSI_REQUIRE_SECRETS=true is the same as:
+            X_CSI_REQUIRE_SECRETS_CTRLR_CREATE_VOL=true
+            X_CSI_REQUIRE_SECRETS_CTRLR_DELETE_VOL=true
+            X_CSI_REQUIRE_SECRETS_CTRLR_PUB_VOL=true
+            X_CSI_REQUIRE_SECRETS_CTRLR_UNPUB_VOL=true
+            X_CSI_REQUIRE_SECRETS_NODE_STAGE_VOL=true
+            X_CSI_REQUIRE_SECRETS_NODE_PUB_VOL=true
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_SECRETS_CTRLR_CREATE_VOL
+        A flag that enables treating the following fields as required:
+            * CreateVolumeRequest.UserCredentials
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_SECRETS_CTRLR_DELETE_VOL
+        A flag that enables treating the following fields as required:
+            * DeleteVolumeRequest.UserCredentials
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_SECRETS_CTRLR_PUB_VOL
+        A flag that enables treating the following fields as required:
+            * ControllerPublishVolumeRequest.UserCredentials
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_SECRETS_CTRLR_UNPUB_VOL
+        A flag that enables treating the following fields as required:
+            * ControllerUnpublishVolumeRequest.UserCredentials
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
+
+    X_CSI_REQUIRE_SECRETS_NODE_STAGE_VOL
+        A flag that enables treating the following fields as required:
+            * NodeStageVolumeRequest.UserCredentials
+
+    X_CSI_REQUIRE_SECRETS_NODE_PUB_VOL
+        A flag that enables treating the following fields as required:
+            * NodePublishVolumeRequest.UserCredentials
+
+        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.`

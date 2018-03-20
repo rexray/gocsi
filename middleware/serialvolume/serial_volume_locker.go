@@ -2,84 +2,91 @@ package serialvolume
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"sync"
 	"time"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/akutz/gosync"
-	xctx "golang.org/x/net/context"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	mwtypes "github.com/rexray/gocsi/middleware/serialvolume/types"
+	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+
+	csienv "github.com/rexray/gocsi/env"
 )
 
 const pending = "pending"
 
-// Option configures the interceptor.
-type Option func(*opts)
+// LockProvider is able to provide gosync.TryLocker objects for
+// volumes by ID and name.
+type LockProvider interface {
+	// GetLockWithID gets a lock for a volume with provided ID. If a lock
+	// for the specified volume ID does not exist then a new lock is created
+	// and returned.
+	GetLockWithID(ctx context.Context, id string) (gosync.TryLocker, error)
 
-type opts struct {
-	timeout time.Duration
-	locker  mwtypes.VolumeLockerProvider
+	// GetLockWithName gets a lock for a volume with provided name. If a lock
+	// for the specified volume name does not exist then a new lock is created
+	// and returned.
+	GetLockWithName(ctx context.Context, name string) (gosync.TryLocker, error)
 }
 
-// WithTimeout is an Option that sets the timeout used by the interceptor.
-func WithTimeout(t time.Duration) Option {
-	return func(o *opts) {
-		o.timeout = t
-	}
+type hasUsage interface {
+	// Usage returns the lock provider's usage string.
+	Usage() string
 }
 
-// WithLockProvider is an Option that sets the lock provider used by the
-// interceptor.
-func WithLockProvider(p mwtypes.VolumeLockerProvider) Option {
-	return func(o *opts) {
-		o.locker = p
-	}
+// Middleware provides serial volume access.
+type Middleware struct {
+	sync.Once
+	Timeout      time.Duration
+	LockProvider LockProvider
 }
 
-// New returns a new server-side, gRPC interceptor
-// that provides serial access to volume resources across the following
-// RPCs:
-//
-//  * CreateVolume
-//  * DeleteVolume
-//  * ControllerPublishVolume
-//  * ControllerUnpublishVolume
-//  * NodePublishVolume
-//  * NodeUnpublishVolume
-func New(opts ...Option) grpc.UnaryServerInterceptor {
+// Init is available to explicitly initialize the middleware.
+func (i *Middleware) Init(ctx context.Context) (err error) {
+	return i.initOnce(ctx)
+}
 
-	i := &interceptor{}
+func (i *Middleware) initOnce(ctx context.Context) (err error) {
+	i.Once.Do(func() {
+		err = i.init(ctx)
+	})
+	return
+}
 
-	// Configure the interceptor's options.
-	for _, setOpt := range opts {
-		setOpt(&i.opts)
-	}
-
-	// If no lock provider is configured then set the default,
-	// in-memory provider.
-	if i.opts.locker == nil {
-		i.opts.locker = &defaultLockProvider{
-			volIDLocks:   map[string]gosync.TryLocker{},
-			volNameLocks: map[string]gosync.TryLocker{},
-		}
+func (i *Middleware) init(ctx context.Context) error {
+	if v, ok := csienv.LookupEnv(ctx, "X_CSI_SERIAL_VOL_ACCESS_TIMEOUT"); ok {
+		i.Timeout, _ = time.ParseDuration(v)
 	}
 
-	return i.handle
+	log.WithFields(map[string]interface{}{
+		"Timeout":      i.Timeout,
+		"LockProvider": fmt.Sprintf("%T", i.LockProvider),
+	}).Info("middleware: serial volume access")
+
+	return nil
 }
 
-type interceptor struct {
-	opts opts
-}
+// ErrNoLockProvider occurs when no lock provider is assigned to the
+// SerialVolumeAccess middleware.
+var ErrNoLockProvider = errors.New("no volume lock provider")
 
-func (i *interceptor) handle(
-	ctx xctx.Context,
+// HandleServer is a server-side, gRPC interceptor that provides serial
+// access to volume resources.
+func (i *Middleware) HandleServer(
+	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
+
+	if i.LockProvider == nil {
+		return nil, ErrNoLockProvider
+	}
 
 	switch treq := req.(type) {
 	case *csi.ControllerPublishVolumeRequest:
@@ -90,6 +97,10 @@ func (i *interceptor) handle(
 		return i.createVolume(ctx, treq, info, handler)
 	case *csi.DeleteVolumeRequest:
 		return i.deleteVolume(ctx, treq, info, handler)
+	case *csi.NodeStageVolumeRequest:
+		return i.nodeStageVolume(ctx, treq, info, handler)
+	case *csi.NodeUnstageVolumeRequest:
+		return i.nodeUnstageVolume(ctx, treq, info, handler)
 	case *csi.NodePublishVolumeRequest:
 		return i.nodePublishVolume(ctx, treq, info, handler)
 	case *csi.NodeUnpublishVolumeRequest:
@@ -99,20 +110,20 @@ func (i *interceptor) handle(
 	return handler(ctx, req)
 }
 
-func (i *interceptor) controllerPublishVolume(
+func (i *Middleware) controllerPublishVolume(
 	ctx context.Context,
 	req *csi.ControllerPublishVolumeRequest,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	lock, err := i.opts.locker.GetLockWithID(ctx, req.VolumeId)
+	lock, err := i.LockProvider.GetLockWithID(ctx, req.VolumeId)
 	if err != nil {
 		return nil, err
 	}
 	if closer, ok := lock.(io.Closer); ok {
 		defer closer.Close()
 	}
-	if !lock.TryLock(i.opts.timeout) {
+	if !lock.TryLock(i.Timeout) {
 		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
@@ -120,20 +131,20 @@ func (i *interceptor) controllerPublishVolume(
 	return handler(ctx, req)
 }
 
-func (i *interceptor) controllerUnpublishVolume(
+func (i *Middleware) controllerUnpublishVolume(
 	ctx context.Context,
 	req *csi.ControllerUnpublishVolumeRequest,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	lock, err := i.opts.locker.GetLockWithID(ctx, req.VolumeId)
+	lock, err := i.LockProvider.GetLockWithID(ctx, req.VolumeId)
 	if err != nil {
 		return nil, err
 	}
 	if closer, ok := lock.(io.Closer); ok {
 		defer closer.Close()
 	}
-	if !lock.TryLock(i.opts.timeout) {
+	if !lock.TryLock(i.Timeout) {
 		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
@@ -141,20 +152,20 @@ func (i *interceptor) controllerUnpublishVolume(
 	return handler(ctx, req)
 }
 
-func (i *interceptor) createVolume(
+func (i *Middleware) createVolume(
 	ctx context.Context,
 	req *csi.CreateVolumeRequest,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	lock, err := i.opts.locker.GetLockWithName(ctx, req.Name)
+	lock, err := i.LockProvider.GetLockWithName(ctx, req.Name)
 	if err != nil {
 		return nil, err
 	}
 	if closer, ok := lock.(io.Closer); ok {
 		defer closer.Close()
 	}
-	if !lock.TryLock(i.opts.timeout) {
+	if !lock.TryLock(i.Timeout) {
 		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
@@ -162,20 +173,20 @@ func (i *interceptor) createVolume(
 	return handler(ctx, req)
 }
 
-func (i *interceptor) deleteVolume(
+func (i *Middleware) deleteVolume(
 	ctx context.Context,
 	req *csi.DeleteVolumeRequest,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	lock, err := i.opts.locker.GetLockWithID(ctx, req.VolumeId)
+	lock, err := i.LockProvider.GetLockWithID(ctx, req.VolumeId)
 	if err != nil {
 		return nil, err
 	}
 	if closer, ok := lock.(io.Closer); ok {
 		defer closer.Close()
 	}
-	if !lock.TryLock(i.opts.timeout) {
+	if !lock.TryLock(i.Timeout) {
 		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
@@ -183,20 +194,62 @@ func (i *interceptor) deleteVolume(
 	return handler(ctx, req)
 }
 
-func (i *interceptor) nodePublishVolume(
+func (i *Middleware) nodeStageVolume(
+	ctx context.Context,
+	req *csi.NodeStageVolumeRequest,
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler) (res interface{}, resErr error) {
+
+	lock, err := i.LockProvider.GetLockWithID(ctx, req.VolumeId)
+	if err != nil {
+		return nil, err
+	}
+	if closer, ok := lock.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if !lock.TryLock(i.Timeout) {
+		return nil, status.Error(codes.Aborted, pending)
+	}
+	defer lock.Unlock()
+
+	return handler(ctx, req)
+}
+
+func (i *Middleware) nodeUnstageVolume(
+	ctx context.Context,
+	req *csi.NodeUnstageVolumeRequest,
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler) (res interface{}, resErr error) {
+
+	lock, err := i.LockProvider.GetLockWithID(ctx, req.VolumeId)
+	if err != nil {
+		return nil, err
+	}
+	if closer, ok := lock.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if !lock.TryLock(i.Timeout) {
+		return nil, status.Error(codes.Aborted, pending)
+	}
+	defer lock.Unlock()
+
+	return handler(ctx, req)
+}
+
+func (i *Middleware) nodePublishVolume(
 	ctx context.Context,
 	req *csi.NodePublishVolumeRequest,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	lock, err := i.opts.locker.GetLockWithID(ctx, req.VolumeId)
+	lock, err := i.LockProvider.GetLockWithID(ctx, req.VolumeId)
 	if err != nil {
 		return nil, err
 	}
 	if closer, ok := lock.(io.Closer); ok {
 		defer closer.Close()
 	}
-	if !lock.TryLock(i.opts.timeout) {
+	if !lock.TryLock(i.Timeout) {
 		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
@@ -204,23 +257,38 @@ func (i *interceptor) nodePublishVolume(
 	return handler(ctx, req)
 }
 
-func (i *interceptor) nodeUnpublishVolume(
+func (i *Middleware) nodeUnpublishVolume(
 	ctx context.Context,
 	req *csi.NodeUnpublishVolumeRequest,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (res interface{}, resErr error) {
 
-	lock, err := i.opts.locker.GetLockWithID(ctx, req.VolumeId)
+	lock, err := i.LockProvider.GetLockWithID(ctx, req.VolumeId)
 	if err != nil {
 		return nil, err
 	}
 	if closer, ok := lock.(io.Closer); ok {
 		defer closer.Close()
 	}
-	if !lock.TryLock(i.opts.timeout) {
+	if !lock.TryLock(i.Timeout) {
 		return nil, status.Error(codes.Aborted, pending)
 	}
 	defer lock.Unlock()
 
 	return handler(ctx, req)
 }
+
+// Usage returns the middleware's usage string.
+func (i *Middleware) Usage() string {
+	if lp, ok := i.LockProvider.(hasUsage); ok {
+		return fmt.Sprintf("%s\n\n%s", usage, lp.Usage())
+	}
+	return usage
+}
+
+const usage = `SERIAL VOLUME ACCESS
+    X_CSI_SERIAL_VOL_ACCESS_TIMEOUT
+        A time.Duration string that determines how long the serial volume
+        access middleware waits to obtain a lock for the request's volume before
+        returning a the gRPC error code FailedPrecondition (5) to indicate
+        an operation is already pending for the specified volume.`

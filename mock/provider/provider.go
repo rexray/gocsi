@@ -1,12 +1,14 @@
 package provider
 
 import (
-	"context"
-	"net"
-
-	log "github.com/sirupsen/logrus"
+	"os"
 
 	"github.com/rexray/gocsi"
+	"github.com/rexray/gocsi/middleware/logging"
+	"github.com/rexray/gocsi/middleware/plugininfo"
+	"github.com/rexray/gocsi/middleware/requestid"
+	"github.com/rexray/gocsi/middleware/serialvolume"
+	"github.com/rexray/gocsi/middleware/specvalidator"
 	"github.com/rexray/gocsi/mock/service"
 )
 
@@ -23,31 +25,48 @@ func New() gocsi.StoragePluginProvider {
 		// gRPC server is created, giving the callback the ability to
 		// modify the SP's interceptors, server options, or prevent the
 		// server from starting by returning a non-nil error.
-		BeforeServe: func(
-			ctx context.Context,
-			sp *gocsi.StoragePlugin,
-			lis net.Listener) error {
+		BeforeServe: svc.BeforeServe,
 
-			log.WithField("service", service.Name).Debug("BeforeServe")
-			return nil
-		},
+		// Assign the Mock SP's default middleware.
+		Middleware: []gocsi.ServerMiddleware{
+			// Enable request ID injection.
+			&requestid.Middleware{},
 
-		EnvVars: []string{
-			// Enable serial volume access.
-			gocsi.EnvVarSerialVolAccess + "=true",
+			// Enable logging of gRPC request and response data.
+			&logging.Middleware{
+				RequestWriter:  os.Stdout,
+				ResponseWriter: os.Stdout,
+			},
 
-			// Enable request and response validation.
-			gocsi.EnvVarSpecValidation + "=true",
+			// Enable validation of request or response data using the CSI
+			// specification.
+			&specvalidator.Middleware{
 
-			// Treat the following fields as required:
-			//    * ControllerPublishVolumeRequest.NodeId
-			//    * NodeGetNodeIdResponse.NodeId
-			gocsi.EnvVarRequireNodeID + "=true",
+				// Enable validation of request data.
+				RequestValidation: true,
 
-			// Treat the following fields as required:
-			//    * ControllerPublishVolumeResponse.PublishInfo
-			//    * NodePublishVolumeRequest.PublishInfo
-			gocsi.EnvVarRequirePubVolInfo + "=true",
+				// Enable validation of response data.
+				ResponseValidation: true,
+
+				// Treat the following fields as required:
+				//    * ControllerPublishVolumeRequest.NodeId
+				//    * NodeGetIdResponse.NodeId
+				RequireNodeID: true,
+
+				// Treat the following fields as required:
+				//    * ControllerPublishVolumeResponse.PublishInfo
+				//    * NodeStageVolumeRequest.PublishInfo
+				//    * NodePublishVolumeRequest.PublishInfo
+				RequirePublishInfo: true,
+			},
+
+			// Enable the runtime assignment of the SP's GetPluginInfo data.
+			&plugininfo.Middleware{},
+
+			// Enable serial access to volume resources.
+			&serialvolume.Middleware{
+				LockProvider: newLockProvider(),
+			},
 		},
 	}
 }

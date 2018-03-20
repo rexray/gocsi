@@ -130,7 +130,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		// Add interceptors to the client if any are configured.
-		if o := getClientInterceptorsDialOpt(); o != nil {
+		if o := getClientMiddleware(); o != nil {
 			opts = append(opts, o)
 		}
 

@@ -3,8 +3,10 @@ package requestid
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"sync/atomic"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -12,34 +14,43 @@ import (
 	csictx "github.com/rexray/gocsi/context"
 )
 
-type interceptor struct {
+// Middleware injects a unique ID into outgoing requests and reads the
+// ID from incoming requests.
+type Middleware struct {
+	sync.Once
 	id uint64
 }
 
-// NewServerRequestIDInjector returns a new UnaryServerInterceptor
+// Init is available to explicitly initialize the middleware.
+func (s *Middleware) Init(ctx context.Context) (err error) {
+	return s.initOnce(ctx)
+}
+
+func (s *Middleware) initOnce(ctx context.Context) (err error) {
+	s.Once.Do(func() {
+		err = s.init(ctx)
+	})
+	return
+}
+
+func (s *Middleware) init(ctx context.Context) error {
+	log.Info("middleware: request id injection")
+	return nil
+}
+
+// HandleServer is a UnaryServerInterceptor
 // that reads a unique request ID from the incoming context's gRPC
 // metadata. If the incoming context does not contain gRPC metadata or
 // a request ID, then a new request ID is generated.
-func NewServerRequestIDInjector() grpc.UnaryServerInterceptor {
-	return newRequestIDInjector().handleServer
-}
-
-// NewClientRequestIDInjector provides a UnaryClientInterceptor
-// that injects the outgoing context with gRPC metadata that contains
-// a unique ID.
-func NewClientRequestIDInjector() grpc.UnaryClientInterceptor {
-	return newRequestIDInjector().handleClient
-}
-
-func newRequestIDInjector() *interceptor {
-	return &interceptor{}
-}
-
-func (s *interceptor) handleServer(
+func (s *Middleware) HandleServer(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
+
+	if err := s.initOnce(ctx); err != nil {
+		return nil, err
+	}
 
 	// storeID is a flag that indicates whether or not the request ID
 	// should be atomically stored in the interceptor's id field at
@@ -83,7 +94,10 @@ func (s *interceptor) handleServer(
 	return handler(ctx, req)
 }
 
-func (s *interceptor) handleClient(
+// HandleClient is a UnaryClientInterceptor
+// that injects the outgoing context with gRPC metadata that contains
+// a unique ID.
+func (s *Middleware) HandleClient(
 	ctx context.Context,
 	method string,
 	req, rep interface{},
@@ -105,4 +119,14 @@ func (s *interceptor) handleClient(
 	}
 
 	return invoker(ctx, method, req, rep, cc, opts...)
+}
+
+// Usage returns the middleware's usage string.
+func (s *Middleware) Usage() string {
+	return `REQUEST ID INJECTION
+    X_CSI_REQ_ID_INJECTION
+        A flag that enables request ID injection. The ID is parsed from
+        the incoming request's metadata with a key of "csi.requestid".
+        If no value for that key is found then a new request ID is
+        generated using an atomic sequence counter.`
 }
