@@ -11,9 +11,10 @@ import (
 )
 
 var controllerPublishVolume struct {
-	nodeID  string
-	caps    volumeCapabilitySliceArg
-	attribs mapOfStringArg
+	nodeID   string
+	caps     volumeCapabilitySliceArg
+	attribs  mapOfStringArg
+	readOnly bool
 }
 
 var controllerPublishVolumeCmd = &cobra.Command{
@@ -32,6 +33,7 @@ USAGE
 			NodeId: controllerPublishVolume.nodeID,
 			ControllerPublishSecrets: root.secrets,
 			VolumeAttributes:         controllerPublishVolume.attribs.data,
+			Readonly:                 controllerPublishVolume.readOnly,
 		}
 
 		if len(controllerPublishVolume.caps.data) > 0 {
@@ -77,6 +79,12 @@ func init() {
 		false,
 		`Marks the request's NodeId field as required.
         Enabling this option also enables --with-spec-validation.`)
+
+	controllerPublishVolumeCmd.Flags().BoolVar(
+		&controllerPublishVolume.readOnly,
+		"read-only",
+		false,
+		"Mark the volume as read-only")
 
 	controllerPublishVolumeCmd.Flags().BoolVar(
 		&root.withRequiresPubVolInfo,
