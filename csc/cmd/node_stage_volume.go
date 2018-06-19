@@ -15,7 +15,6 @@ var nodeStageVolume struct {
 	stagingTargetPath string
 	pubInfo           mapOfStringArg
 	attribs           mapOfStringArg
-	readOnly          bool
 	caps              volumeCapabilitySliceArg
 }
 
@@ -77,12 +76,6 @@ func init() {
         the request as its PublishInfo field:
 
                 --pub-info key1=val1,key2=val2 --pub-infoparams=key3=val3`)
-
-	nodeStageVolumeCmd.Flags().BoolVar(
-		&nodeStageVolume.readOnly,
-		"read-only",
-		false,
-		"Mark the volume as read-only")
 
 	nodeStageVolumeCmd.Flags().BoolVar(
 		&root.withRequiresPubVolInfo,
