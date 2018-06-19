@@ -102,4 +102,14 @@ var _ = Describe("Identity", func() {
 			Ω(svc.Type).Should(Equal(csi.PluginCapability_Service_CONTROLLER_SERVICE))
 		})
 	})
+
+	Describe("Probe", func() {
+		It("Should Be Ready", func() {
+			rep, err := client.Probe(
+				ctx, &csi.ProbeRequest{})
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(rep).ShouldNot(BeNil())
+			Ω(rep.GetReady().GetValue()).To(Equal(true))
+		})
+	})
 })

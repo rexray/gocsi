@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"golang.org/x/net/context"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -11,7 +12,9 @@ func (s *service) Probe(
 	req *csi.ProbeRequest) (
 	*csi.ProbeResponse, error) {
 
-	return &csi.ProbeResponse{}, nil
+	return &csi.ProbeResponse{
+		Ready: &wrappers.BoolValue{Value: true},
+	}, nil
 }
 
 func (s *service) GetPluginInfo(
