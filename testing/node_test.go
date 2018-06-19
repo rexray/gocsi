@@ -69,6 +69,24 @@ var _ = Describe("Node", func() {
 		})
 	})
 
+	Describe("NodeGetInfo", func() {
+		var nodeID string
+		var maxVolsPerNode int64
+		BeforeEach(func() {
+			res, err := client.NodeGetInfo(
+				ctx,
+				&csi.NodeGetInfoRequest{})
+			Ω(err).ShouldNot(HaveOccurred())
+			nodeID = res.GetNodeId()
+			maxVolsPerNode = res.GetMaxVolumesPerNode()
+		})
+		It("Should Be Valid", func() {
+			Ω(nodeID).ShouldNot(BeEmpty())
+			Ω(nodeID).Should(Equal(service.Name))
+			Ω(maxVolsPerNode).Should(Equal(int64(0)))
+		})
+	})
+
 	Describe("Publication", func() {
 
 		device := "/dev/mock"

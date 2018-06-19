@@ -34,3 +34,7 @@ const pluginCapsFormat = `{{range $v := .Capabilities}}` +
 	`{{end}}{{end}}` +
 	`{{end}}` +
 	`{{end}}`
+
+// probeFormat is the default Go template for emitting a
+// csi.Probe
+const probeFormat = `{{printf "%t\n" .Ready.Value}}`
