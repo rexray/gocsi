@@ -90,6 +90,8 @@ var RootCmd = &cobra.Command{
 				root.format = pluginInfoFormat
 			case pluginCapsCmd.Name():
 				root.format = pluginCapsFormat
+			case probeCmd.Name():
+				root.format = probeFormat
 			}
 		}
 		if root.format != "" {

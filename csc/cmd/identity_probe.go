@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -16,13 +17,14 @@ var probeCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(root.ctx, root.timeout)
 		defer cancel()
 
-		if _, err := identity.client.Probe(
+		rep, err := identity.client.Probe(
 			ctx,
-			&csi.ProbeRequest{}); err != nil {
+			&csi.ProbeRequest{})
+		if err != nil {
 			return err
 		}
 
-		return nil
+		return root.tpl.Execute(os.Stdout, rep)
 	},
 }
 
