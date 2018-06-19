@@ -196,6 +196,30 @@ func (s *service) ControllerGetCapabilities(
 
 	return nil, nil
 }
+
+func (s *service) CreateSnapshot(
+	ctx context.Context,
+	req *csi.CreateSnapshotRequest) (
+	*csi.CreateSnapshotResponse, error) {
+
+	return nil, nil
+}
+
+func (s *service) DeleteSnapshot(
+	ctx context.Context,
+	req *csi.DeleteSnapshotRequest) (
+	*csi.DeleteSnapshotResponse, error) {
+
+	return nil, nil
+}
+
+func (s *service) ListSnapshots(
+	ctx context.Context,
+	req *csi.ListSnapshotsRequest) (
+	*csi.ListSnapshotsResponse, error) {
+
+	return nil, nil
+}
 EOF
 
 echo "  $SP_DIR/service/identity.go"
@@ -279,6 +303,14 @@ func (s *service) NodeGetId(
 	ctx context.Context,
 	req *csi.NodeGetIdRequest) (
 	*csi.NodeGetIdResponse, error) {
+
+	return nil, nil
+}
+
+func (s *service) NodeGetInfo(
+	ctx context.Context,
+	req *csi.NodeGetInfoRequest) (
+	*csi.NodeGetInfoResponse, error) {
 
 	return nil, nil
 }
