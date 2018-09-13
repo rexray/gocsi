@@ -7,6 +7,11 @@ const volumeInfoFormat = `{{printf "%q\t%d" .Id .CapacityBytes}}` +
 	`{{range $k, $v := .Attributes}}{{printf "%q=%q\t" $k $v}}{{end}}` +
 	`{{end}}{{"\n"}}`
 
+// volumeInfoFormat is the default Go template format for emitting a
+// csi.SnapshotInfo
+const snapshotInfoFormat = `{{printf "%q\t%d\t%s\t%d\t%s"}}` +
+	`{{.Id .SizeBytes .SourceVolumeId .CreatedAt .Status}}`
+
 // listVolumesFormat is the default Go template format for emitting a
 // ListVolumesResponse
 const listVolumesFormat = `{{range $k, $v := .Entries}}` +

@@ -84,6 +84,8 @@ var RootCmd = &cobra.Command{
 				} else {
 					root.format = listVolumesFormat
 				}
+			case createSnapshotCmd.Name():
+				root.format = snapshotInfoFormat
 			case createVolumeCmd.Name():
 				root.format = volumeInfoFormat
 			case pluginInfoCmd.Name():
