@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -44,6 +45,9 @@ CREATING MULTIPLE SNAPSHOTS
 
 			// Set the volume name for the current request.
 			req.Name = args[i]
+			if createSnapshot.sourceVol == "" {
+				return fmt.Errorf("--source-volume MUST be provided")
+			}
 
 			log.WithField("request", req).Debug("creating snapshot")
 			rep, err := controller.client.CreateSnapshot(ctx, &req)
