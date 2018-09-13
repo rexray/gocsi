@@ -25,8 +25,11 @@ var _ = Describe("Controller", func() {
 		client   csi.ControllerClient
 
 		vol       *csi.Volume
+		snap      *csi.Snapshot
 		volID     string
+		snapID    string
 		volName   string
+		snapName  string
 		reqBytes  int64
 		limBytes  int64
 		fsType    string
@@ -38,7 +41,9 @@ var _ = Describe("Controller", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		volID = "4"
+		snapID = "12"
 		volName = "Test Volume"
+		snapName = "Test Snap"
 		reqBytes = 1.074e+10 //  10GiB
 		limBytes = 1.074e+11 // 100GiB
 		fsType = "ext4"
@@ -61,6 +66,7 @@ var _ = Describe("Controller", func() {
 		vol = nil
 		volID = ""
 		volName = ""
+		snapName = ""
 		reqBytes = 0
 		limBytes = 0
 		fsType = ""
@@ -110,6 +116,23 @@ var _ = Describe("Controller", func() {
 		return res.Volume, err
 	}
 
+	createNewSnapshotWithResult := func() (*csi.Snapshot, error) {
+		req := &csi.CreateSnapshotRequest{
+			Name:           snapName,
+			SourceVolumeId: volID,
+			Parameters:     params,
+		}
+		res, err := client.CreateSnapshot(ctx, req)
+		if res == nil {
+			return nil, err
+		}
+		return res.Snapshot, err
+	}
+
+	createNewSnapshot := func() {
+		snap, err = createNewSnapshotWithResult()
+	}
+
 	createNewVolume := func() {
 		vol, err = createNewVolumeWithResult()
 	}
@@ -130,9 +153,38 @@ var _ = Describe("Controller", func() {
 		return false
 	}
 
+	validateNewSnapshotResult := func(
+		snap *csi.Snapshot,
+		err error) bool {
+
+		if err != nil {
+			Ω(err).Should(ΣCM(codes.Aborted, "pending"))
+			return true
+		}
+
+		Ω(snap).ShouldNot(BeNil())
+		Ω(snap.Id).Should(Equal(snapID))
+		Ω(snap.SourceVolumeId).Should(Equal(volID))
+		return false
+	}
+
+	validateNewSnapshot := func() {
+		validateNewSnapshotResult(snap, err)
+	}
+
 	validateNewVolume := func() {
 		validateNewVolumeResult(vol, err)
 	}
+
+	Describe("CreateSnapshot", func() {
+		JustBeforeEach(func() {
+			vol, err = createNewVolumeWithResult()
+			createNewSnapshot()
+		})
+		Context("Normal Create Volume Call", func() {
+			It("Should Be Valid", validateNewSnapshot)
+		})
+	})
 
 	Describe("CreateVolume", func() {
 		JustBeforeEach(func() {

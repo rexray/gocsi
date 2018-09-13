@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"golang.org/x/net/context"
@@ -32,10 +33,11 @@ type Service interface {
 
 type service struct {
 	sync.Mutex
-	nodeID  string
-	vols    []csi.Volume
-	volsRWL sync.RWMutex
-	volsNID uint64
+	nodeID   string
+	vols     []csi.Volume
+	volsRWL  sync.RWMutex
+	volsNID  uint64
+	snapsNID uint64
 }
 
 // New returns a new Service.
@@ -63,6 +65,21 @@ func (s *service) newVolume(name string, capcity int64) csi.Volume {
 		Id:            fmt.Sprintf("%d", atomic.AddUint64(&s.volsNID, 1)),
 		Attributes:    map[string]string{"name": name},
 		CapacityBytes: capcity,
+	}
+}
+
+func (s *service) newSnapshot(name string, size int64) csi.Snapshot {
+	return csi.Snapshot{
+		// We set the id to "<volume-id>:<snapshot-id>" since during delete requests
+		// we are not given the parent volume id
+		Id:             "12",
+		SourceVolumeId: "4",
+		SizeBytes:      size,
+		CreatedAt:      time.Now().Unix(),
+		Status: &csi.SnapshotStatus{
+			Type:    csi.SnapshotStatus_READY,
+			Details: "some description",
+		},
 	}
 }
 

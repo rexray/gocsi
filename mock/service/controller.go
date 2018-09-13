@@ -276,7 +276,11 @@ func (s *service) CreateSnapshot(
 	req *csi.CreateSnapshotRequest) (
 	*csi.CreateSnapshotResponse, error) {
 
-	return nil, status.Error(codes.Unimplemented, "snapshot unsupported")
+	// return nil, status.Error(codes.Unimplemented, "snapshot unsupported")
+	snap := s.newSnapshot(req.Name, tib)
+	return &csi.CreateSnapshotResponse{
+		Snapshot: &snap,
+	}, nil
 }
 
 func (s *service) DeleteSnapshot(
