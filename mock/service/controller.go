@@ -267,6 +267,13 @@ func (s *service) ControllerGetCapabilities(
 					},
 				},
 			},
+			{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
+					},
+				},
+			},
 		},
 	}, nil
 }
@@ -276,7 +283,6 @@ func (s *service) CreateSnapshot(
 	req *csi.CreateSnapshotRequest) (
 	*csi.CreateSnapshotResponse, error) {
 
-	// return nil, status.Error(codes.Unimplemented, "snapshot unsupported")
 	snap := s.newSnapshot(req.Name, tib)
 	return &csi.CreateSnapshotResponse{
 		Snapshot: &snap,
@@ -287,8 +293,11 @@ func (s *service) DeleteSnapshot(
 	ctx context.Context,
 	req *csi.DeleteSnapshotRequest) (
 	*csi.DeleteSnapshotResponse, error) {
+	if req.SnapshotId == "" {
+		return nil, status.Error(codes.InvalidArgument, "required: SnapshotID")
+	}
 
-	return nil, status.Error(codes.Unimplemented, "snapshot unsupported")
+	return &csi.DeleteSnapshotResponse{}, nil
 }
 
 func (s *service) ListSnapshots(
