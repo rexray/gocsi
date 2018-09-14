@@ -432,6 +432,65 @@ var _ = Describe("Controller", func() {
 		})
 	})
 
+	Describe("DeleteSnapshot", func() {
+		var snapID string
+		BeforeEach(func() {
+			snapID = CTest().ComponentTexts[2]
+		})
+		AfterEach(func() {
+			snapID = ""
+		})
+		deleteSnapshot := func() {
+			_, err = client.DeleteSnapshot(
+				ctx,
+				&csi.DeleteSnapshotRequest{
+					SnapshotId: snapID,
+				})
+		}
+		JustBeforeEach(func() {
+			deleteSnapshot()
+		})
+		Context("1", func() {
+			It("Should Be Valid", func() {
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+		})
+		Context("2", func() {
+			It("Should Be Valid", func() {
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+		})
+		Context("3", func() {
+			It("Should Be Valid", func() {
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+		})
+		Context("Missing Snapshot ID", func() {
+			BeforeEach(func() {
+				snapID = ""
+			})
+			It("Should Not Be Valid", func() {
+				Ω(err).Should(HaveOccurred())
+				Ω(err).Should(ΣCM(codes.InvalidArgument, "required: SnapshotID"))
+			})
+		})
+		Context("Not Found", func() {
+			BeforeEach(func() {
+				snapID = "5"
+			})
+
+			It("Should Be Valid", func() {
+				Ω(err).ShouldNot(HaveOccurred())
+				deleteSnapshot()
+				Ω(err).ShouldNot(HaveOccurred())
+				deleteSnapshot()
+				Ω(err).ShouldNot(HaveOccurred())
+				deleteSnapshot()
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+		})
+	})
+
 	Describe("ListVolumes", func() {
 		var vols []csi.Volume
 		AfterEach(func() {
