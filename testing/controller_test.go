@@ -96,6 +96,27 @@ var _ = Describe("Controller", func() {
 		}
 	}
 
+	listSnapshots := func() (snaps []csi.Snapshot, err error) {
+		csnap, cerr := utils.PageSnapshots(
+			ctx,
+			client,
+			csi.ListSnapshotsRequest{})
+		for {
+			select {
+			case s, ok := <-csnap:
+				if !ok {
+					return
+				}
+				snaps = append(snaps, s)
+			case e, ok := <-cerr:
+				if !ok {
+					return
+				}
+				err = e
+			}
+		}
+	}
+
 	createNewVolumeWithResult := func() (*csi.Volume, error) {
 		req := &csi.CreateVolumeRequest{
 			Name: volName,
@@ -516,6 +537,36 @@ var _ = Describe("Controller", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).ShouldNot(BeNil())
 				Ω(vols).Should(HaveLen(4))
+			})
+		})
+	})
+
+	Describe("ListSnapshots", func() {
+		var snaps []csi.Snapshot
+		AfterEach(func() {
+			snaps = nil
+		})
+		JustBeforeEach(func() {
+			snaps, err = listSnapshots()
+		})
+		Context("Normal List Snapshots Call", func() {
+			It("Should Be Valid", func() {
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(snaps).Should(BeNil())
+			})
+		})
+		Context("Create five Snapshots Then List", func() {
+			JustBeforeEach(func() {
+				for i := 0; i < 5; i++ {
+					createNewSnapshot()
+					validateNewSnapshot()
+				}
+				snaps, err = listSnapshots()
+			})
+			It("Should Be Valid", func() {
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(snaps).ShouldNot(BeNil())
+				Ω(snaps).Should(HaveLen(5))
 			})
 		})
 	})

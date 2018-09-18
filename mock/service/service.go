@@ -35,7 +35,9 @@ type service struct {
 	sync.Mutex
 	nodeID   string
 	vols     []csi.Volume
+	snaps    []csi.Snapshot
 	volsRWL  sync.RWMutex
+	snapsRWL sync.RWMutex
 	volsNID  uint64
 	snapsNID uint64
 }
