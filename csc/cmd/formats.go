@@ -50,3 +50,10 @@ const pluginCapsFormat = `{{range $v := .Capabilities}}` +
 // probeFormat is the default Go template for emitting a
 // csi.Probe
 const probeFormat = `{{printf "%t\n" .Ready.Value}}`
+
+// statsFormat is the default Go template for emitting a
+// csi.NodeGetVolumeStats
+const statsFormat = `{{printf "%s\t%s\t" .Name .Path}}` +
+	`{{range .Resp.Usage}}` +
+	`{{printf "%d\t%d\t%d\t%s\n" .Available .Total .Used .Unit}}` +
+	`{{end}}`
