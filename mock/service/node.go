@@ -126,3 +126,11 @@ func (s *service) NodeGetCapabilities(
 
 	return &csi.NodeGetCapabilitiesResponse{}, nil
 }
+
+func (s *service) NodeGetVolumeStats(
+	ctx context.Context,
+	req *csi.NodeGetVolumeStatsRequest) (
+	*csi.NodeGetVolumeStatsResponse, error) {
+
+	return nil, status.Error(codes.Unimplemented, "")
+}
