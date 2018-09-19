@@ -409,6 +409,113 @@ func PageVolumes(
 	return cvol, cerr
 }
 
+// PageSnapshots issues one or more ListSnapshots requests to retrieve
+// all available snaphsots, returning them over a Go channel.
+func PageSnapshots(
+	ctx context.Context,
+	client csi.ControllerClient,
+	req csi.ListSnapshotsRequest,
+	opts ...grpc.CallOption) (<-chan csi.Snapshot, <-chan error) {
+
+	var (
+		csnap = make(chan csi.Snapshot)
+		cerr  = make(chan error)
+	)
+
+	// Execute the RPC in a goroutine, looping until there are no
+	// more snaphsots available.
+	go func() {
+		var (
+			wg     sync.WaitGroup
+			pages  int
+			cancel context.CancelFunc
+		)
+
+		// Get a cancellation context used to control the interaction
+		// between returning snaphsots and the possibility of an error.
+		ctx, cancel = context.WithCancel(ctx)
+
+		// waitAndClose closes the snaphsot and error channels after all
+		// channel-dependent goroutines have completed their work
+		defer func() {
+			wg.Wait()
+			close(cerr)
+			close(csnap)
+			log.WithField("pages", pages).Debug("PageAllSnapshots: exit")
+		}()
+
+		sendSnapshots := func(res csi.ListSnapshotsResponse) {
+			// Loop over the snaphsot entries until they're all gone
+			// or the context is cancelled.
+			var i int
+			for i = 0; i < len(res.Entries) && ctx.Err() == nil; i++ {
+
+				// Send the snaphsot over the channel.
+				csnap <- *res.Entries[i].Snapshot
+
+				// Let the wait group know that this worker has completed
+				// its task.
+				wg.Done()
+			}
+			// If not all snaphsots have been sent over the channel then
+			// deduct the remaining number from the wait group.
+			if i != len(res.Entries) {
+				rem := len(res.Entries) - i
+				log.WithFields(map[string]interface{}{
+					"cancel":    ctx.Err(),
+					"remaining": rem,
+				}).Warn("PageAllSnapshots: cancelled w unprocessed results")
+				wg.Add(-rem)
+			}
+		}
+
+		// listSnapshots returns true if there are more snaphsots to list.
+		listSnapshots := func() bool {
+
+			// The wait group "wg" is blocked during the execution of
+			// this function.
+			wg.Add(1)
+			defer wg.Done()
+
+			res, err := client.ListSnapshots(ctx, &req, opts...)
+			if err != nil {
+				cerr <- err
+
+				// Invoke the cancellation context function to
+				// ensure that work wraps up as quickly as possible.
+				cancel()
+
+				return false
+			}
+
+			// Add to the number of workers
+			wg.Add(len(res.Entries))
+
+			// Process the retrieved snaphsots.
+			go sendSnapshots(*res)
+
+			// Set the request's starting token to the response's
+			// next token.
+			req.StartingToken = res.NextToken
+			return req.StartingToken != ""
+		}
+
+		// List snaphsots until there are no more snaphsots or the context
+		// is cancelled.
+		for {
+			if ctx.Err() != nil {
+				break
+			}
+			if !listSnapshots() {
+				break
+			}
+			pages++
+		}
+	}()
+
+	return csnap, cerr
+}
+
 // IsSuccess returns nil if the provided error is an RPC error with an error
 // code that is OK (0) or matches one of the additional, provided successful
 // error codes. Otherwise the original error is returned.

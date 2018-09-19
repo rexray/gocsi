@@ -84,6 +84,12 @@ var RootCmd = &cobra.Command{
 				} else {
 					root.format = listVolumesFormat
 				}
+			case listSnapshotsCmd.Name():
+				if listSnapshots.paging {
+					root.format = snapshotInfoFormat
+				} else {
+					root.format = listSnapshotsFormat
+				}
 			case createSnapshotCmd.Name():
 				root.format = snapshotInfoFormat
 			case createVolumeCmd.Name():

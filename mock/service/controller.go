@@ -284,6 +284,10 @@ func (s *service) CreateSnapshot(
 	*csi.CreateSnapshotResponse, error) {
 
 	snap := s.newSnapshot(req.Name, tib)
+	s.snapsRWL.Lock()
+	defer s.snapsRWL.Unlock()
+	s.snaps = append(s.snaps, snap)
+
 	return &csi.CreateSnapshotResponse{
 		Snapshot: &snap,
 	}, nil
@@ -305,5 +309,75 @@ func (s *service) ListSnapshots(
 	req *csi.ListSnapshotsRequest) (
 	*csi.ListSnapshotsResponse, error) {
 
-	return nil, status.Error(codes.Unimplemented, "snapshot unsupported")
+	// Copy the mock snapshots into a new slice in order to avoid
+	// locking the service's snapshot slice for the duration of the
+	// ListSnapshots RPC.
+	var snaps []csi.Snapshot
+	func() {
+		s.snapsRWL.RLock()
+		defer s.snapsRWL.RUnlock()
+		snaps = make([]csi.Snapshot, len(s.snaps))
+		copy(snaps, s.snaps)
+	}()
+
+	var (
+		ulensnaps     = int32(len(snaps))
+		maxEntries    = req.MaxEntries
+		startingToken int32
+	)
+
+	if s := req.StartingToken; s != "" {
+		i, err := strconv.ParseUint(s, 10, 32)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"startingToken=%d !< int32=%d",
+				startingToken, math.MaxUint32)
+		}
+		startingToken = int32(i)
+	}
+
+	if startingToken > ulensnaps {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"startingToken=%d > len(snaps)=%d",
+			startingToken, ulensnaps)
+	}
+
+	// Discern the number of remaining entries.
+	rem := ulensnaps - startingToken
+
+	// If maxEntries is 0 or greater than the number of remaining entries then
+	// set maxEntries to the number of remaining entries.
+	if maxEntries == 0 || maxEntries > rem {
+		maxEntries = rem
+	}
+
+	var (
+		i       int
+		j       = startingToken
+		entries = make(
+			[]*csi.ListSnapshotsResponse_Entry,
+			maxEntries)
+	)
+
+	log.WithField("entries", entries).WithField("rem", rem).WithField("maxEntries", maxEntries).Debug("KEK")
+	for i = 0; i < len(entries); i++ {
+		log.WithField("i", i).WithField("j", j).WithField("maxEntries", maxEntries).Debugf("rem: %d\n", rem)
+		entries[i] = &csi.ListSnapshotsResponse_Entry{
+			Snapshot: &snaps[j],
+		}
+		j++
+	}
+
+	var nextToken string
+	if n := startingToken + int32(i); n < ulensnaps {
+		nextToken = fmt.Sprintf("%d", n)
+	}
+
+	log.WithField("nextToken", nextToken).Debugf("Entries: %#v\n", entries)
+	return &csi.ListSnapshotsResponse{
+		Entries:   entries,
+		NextToken: nextToken,
+	}, nil
 }
