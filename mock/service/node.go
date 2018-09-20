@@ -132,5 +132,24 @@ func (s *service) NodeGetVolumeStats(
 	req *csi.NodeGetVolumeStatsRequest) (
 	*csi.NodeGetVolumeStatsResponse, error) {
 
-	return nil, status.Error(codes.Unimplemented, "")
+	var f *csi.Volume
+	for _, v := range s.vols {
+		if v.Id == req.VolumeId {
+			f = &v
+		}
+	}
+	if f == nil {
+		return nil, status.Errorf(codes.NotFound, "No volume found with id %s", req.VolumeId)
+	}
+
+	return &csi.NodeGetVolumeStatsResponse{
+		Usage: []*csi.VolumeUsage{
+			&csi.VolumeUsage{
+				Available: int64(float64(f.CapacityBytes) * 0.6),
+				Total:     f.CapacityBytes,
+				Used:      int64(float64(f.CapacityBytes) * 0.4),
+				Unit:      csi.VolumeUsage_BYTES,
+			},
+		},
+	}, nil
 }

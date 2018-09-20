@@ -11,6 +11,15 @@ import (
 	"github.com/rexray/gocsi/utils"
 )
 
+const (
+	kib    int64 = 1024
+	mib    int64 = kib * 1024
+	gib    int64 = mib * 1024
+	gib100 int64 = gib * 100
+	tib    int64 = gib * 1024
+	tib100 int64 = tib * 100
+)
+
 var _ = Describe("Node", func() {
 	var (
 		err      error
@@ -53,6 +62,26 @@ var _ = Describe("Node", func() {
 			}
 		}
 	}
+
+	Describe("NodeGetVolumeStats", func() {
+		var (
+			volID   = "Mock Volume 2"
+			volPath = "/root/mock-vol"
+		)
+		BeforeEach(func() {
+			resp, err := client.NodeGetVolumeStats(
+				ctx,
+				&csi.NodeGetVolumeStatsRequest{
+					VolumeId:   volID,
+					VolumePath: volPath,
+				})
+			usage := resp.Usage[0]
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(usage.Total).Should(Equal(gib100))
+			Ω(usage.Used).Should(Equal(int64(float64(gib100) * 0.4)))
+			Ω(usage.Available).Should(Equal(int64(float64(gib100) * 0.6)))
+		})
+	})
 
 	Describe("NodeGetId", func() {
 		var nodeID string

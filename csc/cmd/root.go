@@ -100,6 +100,8 @@ var RootCmd = &cobra.Command{
 				root.format = pluginCapsFormat
 			case probeCmd.Name():
 				root.format = probeFormat
+			case nodeGetVolumeStatsCmd.Name():
+				root.format = statsFormat
 			}
 		}
 		if root.format != "" {
