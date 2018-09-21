@@ -57,3 +57,5 @@ const statsFormat = `{{printf "%s\t%s\t" .Name .Path}}` +
 	`{{range .Resp.Usage}}` +
 	`{{printf "%d\t%d\t%d\t%s\n" .Available .Total .Used .Unit}}` +
 	`{{end}}`
+
+const nodeInfoFormat = `{{printf "%s\t%d\t%#v\n" .NodeId .MaxVolumesPerNode .AccessibleTopology}}`
