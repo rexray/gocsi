@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	"github.com/rexray/gocsi/utils"
 )
@@ -387,8 +387,8 @@ func (s *interceptor) validateResponse(
 	//
 	// Node Service
 	//
-	case *csi.NodeGetIdResponse:
-		return s.validateNodeGetIdResponse(ctx, *tobj)
+	case *csi.NodeGetInfoResponse:
+		return s.validateNodeGetInfoResponse(ctx, *tobj)
 	case *csi.NodeGetCapabilitiesResponse:
 		return s.validateNodeGetCapabilitiesResponse(ctx, *tobj)
 	}
@@ -405,7 +405,7 @@ func (s *interceptor) validateCreateVolumeRequest(
 			codes.InvalidArgument, "required: Name")
 	}
 	if s.opts.requiresCtlrNewVolSecrets {
-		if len(req.ControllerCreateSecrets) == 0 {
+		if len(req.Secrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: ControllerCreateSecrets")
 		}
@@ -419,7 +419,7 @@ func (s *interceptor) validateDeleteVolumeRequest(
 	req csi.DeleteVolumeRequest) error {
 
 	if s.opts.requiresCtlrDelVolSecrets {
-		if len(req.ControllerDeleteSecrets) == 0 {
+		if len(req.Secrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: ControllerDeleteSecrets")
 		}
@@ -433,7 +433,7 @@ func (s *interceptor) validateControllerPublishVolumeRequest(
 	req csi.ControllerPublishVolumeRequest) error {
 
 	if s.opts.requiresCtlrPubVolSecrets {
-		if len(req.ControllerPublishSecrets) == 0 {
+		if len(req.Secrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: ControllerPublishSecrets")
 		}
@@ -447,7 +447,7 @@ func (s *interceptor) validateControllerUnpublishVolumeRequest(
 	req csi.ControllerUnpublishVolumeRequest) error {
 
 	if s.opts.requiresCtlrUnpubVolSecrets {
-		if len(req.ControllerUnpublishSecrets) == 0 {
+		if len(req.Secrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: ControllerUnpublishSecrets")
 		}
@@ -479,13 +479,13 @@ func (s *interceptor) validateNodeStageVolumeRequest(
 			codes.InvalidArgument, "required: StagingTargetPath")
 	}
 
-	if s.opts.requiresPubVolInfo && len(req.PublishInfo) == 0 {
+	if s.opts.requiresPubVolInfo && len(req.PublishContext) == 0 {
 		return status.Error(
-			codes.InvalidArgument, "required: PublishInfo")
+			codes.InvalidArgument, "required: PublishContext")
 	}
 
 	if s.opts.requiresNodeStgVolSecrets {
-		if len(req.NodeStageSecrets) == 0 {
+		if len(req.Secrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: NodeStageSecrets")
 		}
@@ -508,13 +508,13 @@ func (s *interceptor) validateNodePublishVolumeRequest(
 			codes.InvalidArgument, "required: TargetPath")
 	}
 
-	if s.opts.requiresPubVolInfo && len(req.PublishInfo) == 0 {
+	if s.opts.requiresPubVolInfo && len(req.PublishContext) == 0 {
 		return status.Error(
-			codes.InvalidArgument, "required: PublishInfo")
+			codes.InvalidArgument, "required: PublishContext")
 	}
 
 	if s.opts.requiresNodePubVolSecrets {
-		if len(req.NodePublishSecrets) == 0 {
+		if len(req.Secrets) == 0 {
 			return status.Error(
 				codes.InvalidArgument, "required: NodePublishSecrets")
 		}
@@ -543,11 +543,11 @@ func (s *interceptor) validateCreateVolumeResponse(
 		return status.Error(codes.Internal, "nil: Volume")
 	}
 
-	if rep.Volume.Id == "" {
+	if rep.Volume.VolumeId == "" {
 		return status.Error(codes.Internal, "empty: Volume.Id")
 	}
 
-	if s.opts.requiresVolAttribs && len(rep.Volume.Attributes) == 0 {
+	if s.opts.requiresVolAttribs && len(rep.Volume.VolumeContext) == 0 {
 		return status.Error(
 			codes.Internal, "non-nil, empty: Volume.Attributes")
 	}
@@ -559,8 +559,8 @@ func (s *interceptor) validateControllerPublishVolumeResponse(
 	ctx context.Context,
 	rep csi.ControllerPublishVolumeResponse) error {
 
-	if s.opts.requiresPubVolInfo && len(rep.PublishInfo) == 0 {
-		return status.Error(codes.Internal, "empty: PublishInfo")
+	if s.opts.requiresPubVolInfo && len(rep.PublishContext) == 0 {
+		return status.Error(codes.Internal, "empty: PublishContext")
 	}
 	return nil
 }
@@ -576,15 +576,15 @@ func (s *interceptor) validateListVolumesResponse(
 				codes.Internal,
 				"nil: Entries[%d].Volume", i)
 		}
-		if vol.Id == "" {
+		if vol.VolumeId == "" {
 			return status.Errorf(
 				codes.Internal,
 				"empty: Entries[%d].Volume.Id", i)
 		}
-		if vol.Attributes != nil && len(vol.Attributes) == 0 {
+		if vol.VolumeContext != nil && len(vol.VolumeContext) == 0 {
 			return status.Errorf(
 				codes.Internal,
-				"non-nil, empty: Entries[%d].Volume.Attributes", i)
+				"non-nil, empty: Entries[%d].Volume.VolumeContext", i)
 		}
 	}
 
@@ -649,10 +649,9 @@ func (s *interceptor) validateGetPluginInfoResponse(
 	return nil
 }
 
-func (s *interceptor) validateNodeGetIdResponse(
+func (s *interceptor) validateNodeGetInfoResponse(
 	ctx context.Context,
-	rep csi.NodeGetIdResponse) error {
-
+	rep csi.NodeGetInfoResponse) error {
 	if s.opts.requiresNodeID && rep.NodeId == "" {
 		return status.Error(codes.Internal, "empty: NodeID")
 	}

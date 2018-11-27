@@ -97,7 +97,7 @@ cat << EOF > "service/service.go"
 package service
 
 import (
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 const (
@@ -130,7 +130,7 @@ package service
 import (
 	"golang.org/x/net/context"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func (s *service) CreateVolume(
@@ -229,7 +229,7 @@ package service
 import (
 	"golang.org/x/net/context"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func (s *service) Probe(
@@ -264,7 +264,7 @@ package service
 import (
 	"golang.org/x/net/context"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func (s *service) NodeStageVolume(
@@ -299,14 +299,6 @@ func (s *service) NodeUnpublishVolume(
 	return nil, nil
 }
 
-func (s *service) NodeGetId(
-	ctx context.Context,
-	req *csi.NodeGetIdRequest) (
-	*csi.NodeGetIdResponse, error) {
-
-	return nil, nil
-}
-
 func (s *service) NodeGetInfo(
 	ctx context.Context,
 	req *csi.NodeGetInfoRequest) (
@@ -319,6 +311,14 @@ func (s *service) NodeGetCapabilities(
 	ctx context.Context,
 	req *csi.NodeGetCapabilitiesRequest) (
 	*csi.NodeGetCapabilitiesResponse, error) {
+
+	return nil, nil
+}
+
+func (s *service) NodeGetVolumeStats(
+	ctx context.Context,
+	req *csi.NodeGetVolumeStatsRequest) (
+	*csi.NodeGetVolumeStatsResponse, error) {
 
 	return nil, nil
 }

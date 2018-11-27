@@ -5,9 +5,10 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/golang/protobuf/ptypes"
+
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"golang.org/x/net/context"
 )
 
@@ -64,8 +65,8 @@ const (
 
 func (s *service) newVolume(name string, capcity int64) csi.Volume {
 	return csi.Volume{
-		Id:            fmt.Sprintf("%d", atomic.AddUint64(&s.volsNID, 1)),
-		Attributes:    map[string]string{"name": name},
+		VolumeId:      fmt.Sprintf("%d", atomic.AddUint64(&s.volsNID, 1)),
+		VolumeContext: map[string]string{"name": name},
 		CapacityBytes: capcity,
 	}
 }
@@ -74,14 +75,11 @@ func (s *service) newSnapshot(name string, size int64) csi.Snapshot {
 	return csi.Snapshot{
 		// We set the id to "<volume-id>:<snapshot-id>" since during delete requests
 		// we are not given the parent volume id
-		Id:             "12",
+		SnapshotId:     "12",
 		SourceVolumeId: "4",
 		SizeBytes:      size,
-		CreatedAt:      time.Now().Unix(),
-		Status: &csi.SnapshotStatus{
-			Type:    csi.SnapshotStatus_READY,
-			Details: "some description",
-		},
+		CreationTime:   ptypes.TimestampNow(),
+		ReadyToUse:     true,
 	}
 }
 
@@ -97,11 +95,11 @@ func (s *service) findVolNoLock(k, v string) (volIdx int, volInfo csi.Volume) {
 	for i, vi := range s.vols {
 		switch k {
 		case "id":
-			if strings.EqualFold(v, vi.Id) {
+			if strings.EqualFold(v, vi.VolumeId) {
 				return i, vi
 			}
 		case "name":
-			if n, ok := vi.Attributes["name"]; ok && strings.EqualFold(v, n) {
+			if n, ok := vi.VolumeContext["name"]; ok && strings.EqualFold(v, n) {
 				return i, vi
 			}
 		}

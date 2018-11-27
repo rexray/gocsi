@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 var valVolCaps struct {
@@ -28,7 +28,7 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ValidateVolumeCapabilitiesRequest{
-			VolumeAttributes:   valVolCaps.attribs.data,
+			VolumeContext:      valVolCaps.attribs.data,
 			VolumeCapabilities: valVolCaps.caps.data,
 		}
 
@@ -44,7 +44,7 @@ USAGE
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%q\t%v", args[i], rep.Supported)
+			fmt.Printf("%q\t%v", args[i], rep.Confirmed)
 			if rep.Message != "" {
 				fmt.Printf("\t%q", rep.Message)
 			}

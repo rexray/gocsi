@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 var createSnapshot struct {
@@ -34,9 +34,9 @@ CREATING MULTIPLE SNAPSHOTS
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.CreateSnapshotRequest{
-			SourceVolumeId:        createSnapshot.sourceVol,
-			Parameters:            createSnapshot.params.data,
-			CreateSnapshotSecrets: root.secrets,
+			SourceVolumeId: createSnapshot.sourceVol,
+			Parameters:     createSnapshot.params.data,
+			Secrets:        root.secrets,
 		}
 
 		for i := range args {

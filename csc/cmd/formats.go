@@ -2,15 +2,15 @@ package cmd
 
 // volumeInfoFormat is the default Go template format for emitting a
 // csi.VolumeInfo
-const volumeInfoFormat = `{{printf "%q\t%d" .Id .CapacityBytes}}` +
-	`{{if .Attributes}}{{"\t"}}` +
-	`{{range $k, $v := .Attributes}}{{printf "%q=%q\t" $k $v}}{{end}}` +
+const volumeInfoFormat = `{{printf "%q\t%d" .VolumeId .CapacityBytes}}` +
+	`{{if .VolumeContext}}{{"\t"}}` +
+	`{{range $k, $v := .VolumeContext}}{{printf "%q=%q\t" $k $v}}{{end}}` +
 	`{{end}}{{"\n"}}`
 
 // volumeInfoFormat is the default Go template format for emitting a
 // csi.SnapshotInfo
 const snapshotInfoFormat = `{{printf "%q\t%d\t%s\t%d\t%s\n" ` +
-	`.Id .SizeBytes .SourceVolumeId .CreatedAt .Status}}`
+	`.SnapshotId .SizeBytes .SourceVolumeId .CreatedAt .Status}}`
 
 // listVolumesFormat is the default Go template format for emitting a
 // ListVolumesResponse

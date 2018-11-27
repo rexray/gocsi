@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 // CSIEndpoint is the name of the environment variable that
@@ -652,10 +652,10 @@ func EqualVolume(a, b *csi.Volume) bool {
 // negative number if a < b, a positive number if a > b, and zero if
 // a == b.
 func CompareVolume(a, b csi.Volume) int {
-	if a.Id < b.Id {
+	if a.VolumeId < b.VolumeId {
 		return -1
 	}
-	if a.Id > b.Id {
+	if a.VolumeId > b.VolumeId {
 		return 1
 	}
 	if a.CapacityBytes < b.CapacityBytes {
@@ -664,17 +664,17 @@ func CompareVolume(a, b csi.Volume) int {
 	if a.CapacityBytes > b.CapacityBytes {
 		return 1
 	}
-	if len(a.Attributes) < len(b.Attributes) {
+	if len(a.VolumeContext) < len(b.VolumeContext) {
 		return -1
 	}
-	if len(a.Attributes) > len(b.Attributes) {
+	if len(a.VolumeContext) > len(b.VolumeContext) {
 		return 1
 	}
-	for k, v := range a.Attributes {
-		if v < b.Attributes[k] {
+	for k, v := range a.VolumeContext {
+		if v < b.VolumeContext[k] {
 			return -1
 		}
-		if v > b.Attributes[k] {
+		if v > b.VolumeContext[k] {
 			return 1
 		}
 	}

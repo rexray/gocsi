@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/rexray/gocsi/mock/service"
 	"github.com/rexray/gocsi/utils"
 )
@@ -83,21 +83,6 @@ var _ = Describe("Node", func() {
 		})
 	})
 
-	Describe("NodeGetId", func() {
-		var nodeID string
-		BeforeEach(func() {
-			res, err := client.NodeGetId(
-				ctx,
-				&csi.NodeGetIdRequest{})
-			Ω(err).ShouldNot(HaveOccurred())
-			nodeID = res.NodeId
-		})
-		It("Should Be Valid", func() {
-			Ω(nodeID).ShouldNot(BeEmpty())
-			Ω(nodeID).Should(Equal(service.Name))
-		})
-	})
-
 	Describe("NodeGetInfo", func() {
 		var nodeID string
 		var maxVolsPerNode int64
@@ -124,8 +109,8 @@ var _ = Describe("Node", func() {
 
 		publishVolume := func() {
 			req := &csi.NodePublishVolumeRequest{
-				VolumeId:    "1",
-				PublishInfo: map[string]string{"device": device},
+				VolumeId:       "1",
+				PublishContext: map[string]string{"device": device},
 				VolumeCapability: utils.NewMountCapability(
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					"mock"),
@@ -143,7 +128,7 @@ var _ = Describe("Node", func() {
 				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).Should(HaveLen(3))
-				Ω(vols[0].Attributes[mntPathKey]).Should(Equal(device))
+				Ω(vols[0].VolumeContext[mntPathKey]).Should(Equal(device))
 			})
 		})
 
@@ -161,7 +146,7 @@ var _ = Describe("Node", func() {
 				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).Should(HaveLen(3))
-				_, ok := vols[0].Attributes[mntPathKey]
+				_, ok := vols[0].VolumeContext[mntPathKey]
 				Ω(ok).Should(BeFalse())
 			})
 		})

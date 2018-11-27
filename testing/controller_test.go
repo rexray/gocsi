@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	"github.com/rexray/gocsi/mock/service"
 	"github.com/rexray/gocsi/utils"
@@ -24,19 +24,19 @@ var _ = Describe("Controller", func() {
 		gclient  *grpc.ClientConn
 		client   csi.ControllerClient
 
-		vol       *csi.Volume
-		snap      *csi.Snapshot
-		volID     string
-		snapID    string
-		volName   string
-		snapName  string
-		reqBytes  int64
-		limBytes  int64
-		fsType    string
-		mntFlags  []string
-		params    map[string]string
-		userCreds map[string]string
-		pubInfo   map[string]string
+		vol      *csi.Volume
+		snap     *csi.Snapshot
+		volID    string
+		snapID   string
+		volName  string
+		snapName string
+		reqBytes int64
+		limBytes int64
+		fsType   string
+		mntFlags []string
+		params   map[string]string
+		// userCreds map[string]string
+		pubInfo map[string]string
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -49,7 +49,7 @@ var _ = Describe("Controller", func() {
 		fsType = "ext4"
 		mntFlags = []string{"-o noexec"}
 		params = map[string]string{"tag": "gold"}
-		userCreds = map[string]string{"beour": "guest"}
+		// userCreds = map[string]string{"beour": "guest"}
 	})
 	JustBeforeEach(func() {
 		gclient, stopMock, err = startMockServer(ctx)
@@ -169,8 +169,8 @@ var _ = Describe("Controller", func() {
 
 		Ω(vol).ShouldNot(BeNil())
 		Ω(vol.CapacityBytes).Should(Equal(limBytes))
-		Ω(vol.Id).Should(Equal(volID))
-		Ω(vol.Attributes["name"]).Should(Equal(volName))
+		Ω(vol.VolumeId).Should(Equal(volID))
+		Ω(vol.VolumeContext["name"]).Should(Equal(volName))
 		return false
 	}
 
@@ -184,7 +184,7 @@ var _ = Describe("Controller", func() {
 		}
 
 		Ω(snap).ShouldNot(BeNil())
-		Ω(snap.Id).Should(Equal(snapID))
+		Ω(snap.SnapshotId).Should(Equal(snapID))
 		Ω(snap.SourceVolumeId).Should(Equal(volID))
 		return false
 	}
@@ -276,7 +276,7 @@ var _ = Describe("Controller", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vol).ShouldNot(BeNil())
 				Ω(vol.CapacityBytes).Should(Equal(reqBytes))
-				Ω(vol.Attributes["name"]).Should(Equal(volName))
+				Ω(vol.VolumeContext["name"]).Should(Equal(volName))
 			})
 		})
 		Context("Missing Name", func() {
@@ -586,7 +586,7 @@ var _ = Describe("Controller", func() {
 			}
 			res, err := client.ControllerPublishVolume(ctx, req)
 			Ω(err).ShouldNot(HaveOccurred())
-			pubInfo = res.PublishInfo
+			pubInfo = res.PublishContext
 		}
 
 		shouldBePublished := func() {
@@ -604,7 +604,7 @@ var _ = Describe("Controller", func() {
 				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).Should(HaveLen(3))
-				Ω(vols[0].Attributes[devPathKey]).Should(Equal("/dev/mock"))
+				Ω(vols[0].VolumeContext[devPathKey]).Should(Equal("/dev/mock"))
 			})
 		})
 
@@ -623,7 +623,7 @@ var _ = Describe("Controller", func() {
 				vols, err := listVolumes()
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(vols).Should(HaveLen(3))
-				_, ok := vols[0].Attributes[devPathKey]
+				_, ok := vols[0].VolumeContext[devPathKey]
 				Ω(ok).Should(BeFalse())
 			})
 		})

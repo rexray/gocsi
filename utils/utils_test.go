@@ -6,7 +6,7 @@ import (
 	"math"
 	"os"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/rexray/gocsi/utils"
 )
 
@@ -294,44 +294,44 @@ var _ = Describe("ParseMap", func() {
 
 var _ = Describe("CompareVolume", func() {
 	It("a == b", func() {
-		a := csi.Volume{Id: "0"}
-		b := csi.Volume{Id: "0"}
+		a := csi.Volume{VolumeId: "0"}
+		b := csi.Volume{VolumeId: "0"}
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		a.CapacityBytes = 1
 		b.CapacityBytes = 1
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
-		a.Attributes = map[string]string{"key": "val"}
-		b.Attributes = map[string]string{"key": "val"}
+		a.VolumeContext = map[string]string{"key": "val"}
+		b.VolumeContext = map[string]string{"key": "val"}
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 	})
 	It("a > b", func() {
-		a := csi.Volume{Id: "0"}
+		a := csi.Volume{VolumeId: "0"}
 		b := csi.Volume{}
 		Ω(utils.CompareVolume(a, b)).Should(Equal(1))
-		b.Id = "0"
+		b.VolumeId = "0"
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		a.CapacityBytes = 1
 		Ω(utils.CompareVolume(a, b)).Should(Equal(1))
 		b.CapacityBytes = 1
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
-		a.Attributes = map[string]string{"key": "val"}
+		a.VolumeContext = map[string]string{"key": "val"}
 		Ω(utils.CompareVolume(a, b)).Should(Equal(1))
-		b.Attributes = map[string]string{"key": "val"}
+		b.VolumeContext = map[string]string{"key": "val"}
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 	})
 	It("a < b", func() {
-		b := csi.Volume{Id: "0"}
+		b := csi.Volume{VolumeId: "0"}
 		a := csi.Volume{}
 		Ω(utils.CompareVolume(a, b)).Should(Equal(-1))
-		a.Id = "0"
+		a.VolumeId = "0"
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 		b.CapacityBytes = 1
 		Ω(utils.CompareVolume(a, b)).Should(Equal(-1))
 		a.CapacityBytes = 1
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
-		b.Attributes = map[string]string{"key": "val"}
+		b.VolumeContext = map[string]string{"key": "val"}
 		Ω(utils.CompareVolume(a, b)).Should(Equal(-1))
-		a.Attributes = map[string]string{"key": "val"}
+		a.VolumeContext = map[string]string{"key": "val"}
 		Ω(utils.CompareVolume(a, b)).Should(Equal(0))
 	})
 })
