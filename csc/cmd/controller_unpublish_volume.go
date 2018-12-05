@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 var controllerUnpublishVolume struct {
@@ -27,8 +27,8 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ControllerUnpublishVolumeRequest{
-			NodeId: controllerUnpublishVolume.nodeID,
-			ControllerUnpublishSecrets: root.secrets,
+			NodeId:  controllerUnpublishVolume.nodeID,
+			Secrets: root.secrets,
 		}
 
 		for i := range args {

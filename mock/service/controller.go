@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func (s *service) CreateVolume(
@@ -87,9 +87,9 @@ func (s *service) ControllerPublishVolume(
 	devPathKey := path.Join(req.NodeId, "dev")
 
 	// Check to see if the volume is already published.
-	if device := v.Attributes[devPathKey]; device != "" {
+	if device := v.VolumeContext[devPathKey]; device != "" {
 		return &csi.ControllerPublishVolumeResponse{
-			PublishInfo: map[string]string{
+			PublishContext: map[string]string{
 				"device": device,
 			},
 		}, nil
@@ -97,11 +97,11 @@ func (s *service) ControllerPublishVolume(
 
 	// Publish the volume.
 	device := "/dev/mock"
-	v.Attributes[devPathKey] = device
+	v.VolumeContext[devPathKey] = device
 	s.vols[i] = v
 
 	return &csi.ControllerPublishVolumeResponse{
-		PublishInfo: map[string]string{
+		PublishContext: map[string]string{
 			"device": device,
 		},
 	}, nil
@@ -126,12 +126,12 @@ func (s *service) ControllerUnpublishVolume(
 	devPathKey := path.Join(req.NodeId, "dev")
 
 	// Check to see if the volume is already unpublished.
-	if v.Attributes[devPathKey] == "" {
+	if v.VolumeContext[devPathKey] == "" {
 		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}
 
 	// Unpublish the volume.
-	delete(v.Attributes, devPathKey)
+	delete(v.VolumeContext, devPathKey)
 	s.vols[i] = v
 
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
@@ -143,7 +143,11 @@ func (s *service) ValidateVolumeCapabilities(
 	*csi.ValidateVolumeCapabilitiesResponse, error) {
 
 	return &csi.ValidateVolumeCapabilitiesResponse{
-		Supported: true,
+		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
+			VolumeContext:      req.GetVolumeContext(),
+			VolumeCapabilities: req.GetVolumeCapabilities(),
+			Parameters:         req.GetParameters(),
+		},
 	}, nil
 }
 

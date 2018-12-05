@@ -40,7 +40,7 @@ dep-ensure: | $(DEP)
 ##                               CSI SPEC                             ##
 ########################################################################
 CSI_SPEC :=  vendor/github.com/container-storage-interface/spec
-CSI_GOSRC := $(CSI_SPEC)/lib/go/csi/v0/csi.pb.go
+CSI_GOSRC := $(CSI_SPEC)/lib/go/csi/csi.pb.go
 
 
 ########################################################################

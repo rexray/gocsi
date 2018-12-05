@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/rexray/gocsi"
 	csictx "github.com/rexray/gocsi/context"
 	"github.com/rexray/gocsi/mock/service"
@@ -42,7 +42,7 @@ var _ = Describe("Identity", func() {
 			name          string
 			vendorVersion string
 			manifest      map[string]string
-			reqVersion    string
+			// reqVersion    string
 		)
 		JustBeforeEach(func() {
 			var res *csi.GetPluginInfoResponse
@@ -68,7 +68,7 @@ var _ = Describe("Identity", func() {
 
 		Context("With Invalid Plug-in Name Error", func() {
 			BeforeEach(func() {
-				reqVersion = "0.2.0"
+				// reqVersion = "0.2.0"
 				ctx = csictx.WithEnviron(ctx,
 					[]string{
 						gocsi.EnvVarPluginInfo + "=Mock,v1.0.0",

@@ -4,7 +4,7 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"golang.org/x/net/context"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func (s *service) Probe(

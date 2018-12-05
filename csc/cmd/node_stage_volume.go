@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 var nodeStageVolume struct {
@@ -31,9 +31,9 @@ USAGE
 
 		req := csi.NodeStageVolumeRequest{
 			StagingTargetPath: nodeStageVolume.stagingTargetPath,
-			PublishInfo:       nodeStageVolume.pubInfo.data,
-			NodeStageSecrets:  root.secrets,
-			VolumeAttributes:  nodeStageVolume.attribs.data,
+			PublishContext:    nodeStageVolume.pubInfo.data,
+			Secrets:           root.secrets,
+			VolumeContext:     nodeStageVolume.attribs.data,
 		}
 
 		if len(nodeStageVolume.caps.data) > 0 {
