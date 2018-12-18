@@ -47,7 +47,7 @@ func New() gocsi.StoragePluginProvider {
 			// Treat the following fields as required:
 			//    * ControllerPublishVolumeResponse.PublishInfo
 			//    * NodePublishVolumeRequest.PublishInfo
-			gocsi.EnvVarRequirePubVolInfo + "=true",
+			gocsi.EnvVarRequirePubVolContext + "=true",
 		},
 	}
 }

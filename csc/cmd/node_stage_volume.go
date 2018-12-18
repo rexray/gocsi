@@ -13,7 +13,7 @@ import (
 var nodeStageVolume struct {
 	nodeID            string
 	stagingTargetPath string
-	pubInfo           mapOfStringArg
+	pubCtx            mapOfStringArg
 	attribs           mapOfStringArg
 	caps              volumeCapabilitySliceArg
 }
@@ -31,7 +31,7 @@ USAGE
 
 		req := csi.NodeStageVolumeRequest{
 			StagingTargetPath: nodeStageVolume.stagingTargetPath,
-			PublishContext:    nodeStageVolume.pubInfo.data,
+			PublishContext:    nodeStageVolume.pubCtx.data,
 			Secrets:           root.secrets,
 			VolumeContext:     nodeStageVolume.attribs.data,
 		}
@@ -70,18 +70,18 @@ func init() {
 		"The path to which to stage the volume")
 
 	nodeStageVolumeCmd.Flags().Var(
-		&nodeStageVolume.pubInfo,
-		"pub-info",
+		&nodeStageVolume.pubCtx,
+		"pub-context",
 		`One or more key/value pairs may be specified to send with
-        the request as its PublishInfo field:
+        the request as its PublishContext field:
 
-                --pub-info key1=val1,key2=val2 --pub-infoparams=key3=val3`)
+                --pub-context key1=val1,key2=val2`)
 
 	nodeStageVolumeCmd.Flags().BoolVar(
-		&root.withRequiresPubVolInfo,
-		"with-requires-pub-info",
+		&root.withRequiresPubVolContext,
+		"with-requires-pub-context",
 		false,
-		`Marks the request's PublishInfo field as required.
+		`Marks the request's PublisContext field as required.
         Enabling this option also enables --with-spec-validation.`)
 
 	flagVolumeAttributes(

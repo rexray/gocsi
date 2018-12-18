@@ -125,11 +125,11 @@ const (
 	// StagingTargetPath is required.
 	EnvVarRequireStagingTargetPath = "X_CSI_REQUIRE_STAGING_TARGET_PATH"
 
-	// EnvVarRequirePubVolInfo is the name of the environment variable used
-	// to determine whether or not publish volume info is required for
+	// EnvVarRequirePubVolContext is the name of the environment variable used
+	// to determine whether or not publish volume context is required for
 	// requests that accept it and responses that return it such as
 	// NodePublishVolume and ControllerPublishVolume.
-	EnvVarRequirePubVolInfo = "X_CSI_REQUIRE_PUB_VOL_INFO"
+	EnvVarRequirePubVolContext = "X_CSI_REQUIRE_PUB_VOL_CONTEXT"
 
 	// EnvVarRequireVolAttribs is the name of the environment variable used
 	// to determine whether or not volume attributes are required for
