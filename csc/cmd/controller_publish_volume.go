@@ -87,10 +87,10 @@ func init() {
 		"Mark the volume as read-only")
 
 	controllerPublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresPubVolInfo,
-		"with-requires-pub-info",
+		&root.withRequiresPubVolContext,
+		"with-requires-pub-context",
 		false,
-		`Marks the response's PublishVolumeInfo field as required.
+		`Marks the response's PublishVolumeContext field as required.
         Enabling this option also enables --with-spec-validation.`)
 
 	flagVolumeAttributes(

@@ -29,7 +29,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withSpec               = sp.getEnvBool(ctx, EnvVarSpecValidation)
 		withStgTgtPath         = sp.getEnvBool(ctx, EnvVarRequireStagingTargetPath)
 		withNodeID             = sp.getEnvBool(ctx, EnvVarRequireNodeID)
-		withPubVolInfo         = sp.getEnvBool(ctx, EnvVarRequirePubVolInfo)
+		withPubVolContext      = sp.getEnvBool(ctx, EnvVarRequirePubVolContext)
 		withVolAttribs         = sp.getEnvBool(ctx, EnvVarRequireVolAttribs)
 		withCreds              = sp.getEnvBool(ctx, EnvVarCreds)
 		withCredsNewVol        = sp.getEnvBool(ctx, EnvVarCredsCreateVol)
@@ -63,7 +63,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withSpecReq = withCreds ||
 			withStgTgtPath ||
 			withNodeID ||
-			withPubVolInfo ||
+			withPubVolContext ||
 			withVolAttribs
 		log.WithField("withSpecReq", withSpecReq).Debug(
 			"init implicit req validation")
@@ -167,9 +167,9 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 				specvalidator.WithRequiresNodeID())
 			log.Debug("enabled spec validator opt: requires node ID")
 		}
-		if withPubVolInfo {
+		if withPubVolContext {
 			specOpts = append(specOpts,
-				specvalidator.WithRequiresPublishInfo())
+				specvalidator.WithRequiresPublishContext())
 			log.Debug("enabled spec validator opt: requires pub info")
 		}
 		if withVolAttribs {

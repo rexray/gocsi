@@ -40,7 +40,7 @@ var root struct {
 	withSpecValidator            bool
 	withRequiresCreds            bool
 	withRequiresNodeID           bool
-	withRequiresPubVolInfo       bool
+	withRequiresPubVolContext    bool
 	withRequiresVolumeAttributes bool
 }
 

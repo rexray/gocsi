@@ -13,7 +13,7 @@ import (
 var nodePublishVolume struct {
 	targetPath        string
 	stagingTargetPath string
-	pubInfo           mapOfStringArg
+	pubCtx            mapOfStringArg
 	attribs           mapOfStringArg
 	readOnly          bool
 	caps              volumeCapabilitySliceArg
@@ -34,7 +34,7 @@ USAGE
 		req := csi.NodePublishVolumeRequest{
 			StagingTargetPath: nodePublishVolume.stagingTargetPath,
 			TargetPath:        nodePublishVolume.targetPath,
-			PublishContext:    nodePublishVolume.pubInfo.data,
+			PublishContext:    nodePublishVolume.pubCtx.data,
 			Readonly:          nodePublishVolume.readOnly,
 			Secrets:           root.secrets,
 			VolumeContext:     nodePublishVolume.attribs.data,
@@ -80,12 +80,12 @@ func init() {
 		"The path to which to mount the volume")
 
 	nodePublishVolumeCmd.Flags().Var(
-		&nodePublishVolume.pubInfo,
-		"pub-info",
+		&nodePublishVolume.pubCtx,
+		"pub-context",
 		`One or more key/value pairs may be specified to send with
-        the request as its PublishVolumeInfo field:
+        the request as its PublishContext field:
 
-                --pub-info key1=val1,key2=val2 --pub-infoparams=key3=val3`)
+                --pub-context key1=val1,key2=val2`)
 
 	nodePublishVolumeCmd.Flags().BoolVar(
 		&nodePublishVolume.readOnly,
@@ -94,10 +94,10 @@ func init() {
 		"Mark the volume as read-only")
 
 	nodePublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresPubVolInfo,
+		&root.withRequiresPubVolContext,
 		"with-requires-pub-info",
 		false,
-		`Marks the request's PublishInfo field as required.
+		`Marks the request's PublishContext field as required.
         Enabling this option also enables --with-spec-validation.`)
 
 	flagVolumeAttributes(

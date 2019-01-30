@@ -259,12 +259,12 @@ environment variables:
       </td>
     </tr>
     <tr>
-      <td><code>X_CSI_REQUIRE_PUB_VOL_INFO</code></td>
+      <td><code>X_CSI_REQUIRE_PUB_VOL_CONTEXT</code></td>
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul>
-          <li><code>ControllerPublishVolumeResponse.PublishVolumeInfo</code></li>
-          <li><code>NodePublishVolumeRequest.PublishVolumeInfo</code></li>
+          <li><code>ControllerPublishVolumeResponse.PublishVolumeContext</code></li>
+          <li><code>NodePublishVolumeRequest.PublishVolumeContext</code></li>
         </ul>
         <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>

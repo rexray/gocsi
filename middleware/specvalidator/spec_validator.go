@@ -26,7 +26,7 @@ type opts struct {
 	repValidation               bool
 	requiresStagingTargetPath   bool
 	requiresNodeID              bool
-	requiresPubVolInfo          bool
+	requiresPubVolContext       bool
 	requiresVolAttribs          bool
 	requiresCtlrNewVolSecrets   bool
 	requiresCtlrDelVolSecrets   bool
@@ -71,9 +71,9 @@ func WithRequiresStagingTargetPath() Option {
 // WithRequiresPublishInfo is a Option that indicates
 // ControllerPublishVolume responses and NodePublishVolume requests must
 // contain non-empty publish volume info data.
-func WithRequiresPublishInfo() Option {
+func WithRequiresPublishContext() Option {
 	return func(o *opts) {
-		o.requiresPubVolInfo = true
+		o.requiresPubVolContext = true
 	}
 }
 
@@ -479,7 +479,7 @@ func (s *interceptor) validateNodeStageVolumeRequest(
 			codes.InvalidArgument, "required: StagingTargetPath")
 	}
 
-	if s.opts.requiresPubVolInfo && len(req.PublishContext) == 0 {
+	if s.opts.requiresPubVolContext && len(req.PublishContext) == 0 {
 		return status.Error(
 			codes.InvalidArgument, "required: PublishContext")
 	}
@@ -508,7 +508,7 @@ func (s *interceptor) validateNodePublishVolumeRequest(
 			codes.InvalidArgument, "required: TargetPath")
 	}
 
-	if s.opts.requiresPubVolInfo && len(req.PublishContext) == 0 {
+	if s.opts.requiresPubVolContext && len(req.PublishContext) == 0 {
 		return status.Error(
 			codes.InvalidArgument, "required: PublishContext")
 	}
@@ -559,7 +559,7 @@ func (s *interceptor) validateControllerPublishVolumeResponse(
 	ctx context.Context,
 	rep csi.ControllerPublishVolumeResponse) error {
 
-	if s.opts.requiresPubVolInfo && len(rep.PublishContext) == 0 {
+	if s.opts.requiresPubVolContext && len(rep.PublishContext) == 0 {
 		return status.Error(codes.Internal, "empty: PublishContext")
 	}
 	return nil
