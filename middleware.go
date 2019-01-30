@@ -65,8 +65,8 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			withNodeID ||
 			withPubVolInfo ||
 			withVolAttribs
-		log.WithField("withSpecRep", withSpecRep).Debug(
-			"init implicit rep validation")
+		log.WithField("withSpecReq", withSpecReq).Debug(
+			"init implicit req validation")
 	}
 
 	// Check to see if spec request or response validation are overridden.
