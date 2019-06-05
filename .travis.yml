@@ -9,7 +9,7 @@ dist: trusty
 
 # Select Go as the language used to run the buid.
 language: go
-go: 1.9.4
+go: 1.12
 go_import_path: github.com/rexray/gocsi
 
 jobs:

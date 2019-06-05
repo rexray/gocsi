@@ -86,6 +86,8 @@ GOCSI_SH_ENV += GOCSI_DEP_SOURCE=https://github.com/$(TRAVIS_REPO_SLUG)
 GOCSI_SH_ENV += GOCSI_DEP_REVISION=$(TRAVIS_COMMIT)
 endif
 $(CSI_SP): | $(DEP)
+	mkdir -p $(CSI_SP_DIR)
+	cp Gopkg.toml $(CSI_SP_DIR)
 	DEP=$(abspath $(DEP)) $(GOCSI_SH_ENV) ./gocsi.sh $(CSI_SP_IMPORT)
 
 csi-sp: $(CSI_SP_LOG)

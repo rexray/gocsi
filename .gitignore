@@ -12,6 +12,9 @@
 /etcd.log
 default.etcd
 
+# The csi-sp test log file
+csi-sp.log
+
 # The archives built from this package.
 /*.a
 /middleware/*.a
