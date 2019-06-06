@@ -324,75 +324,9 @@ func (s *service) NodeGetVolumeStats(
 }
 EOF
 
-# get dep if necessary and then execute "dep init"
-dep_init() {
-  DEP=${DEP:-$(which dep 2> /dev/null)}
-  DEP_LOG=${DEP_LOG:-.dep.log}
-  if [ "$DEP" = "" ]; then
-    if [ "$GOHOSTOS" = "" ] || [ "$GOHOSTARCH" = "" ]; then
-      GOVERSION=${GO_VERSION:-$(go version | awk '{print $4}')}
-      GOHOSTOS=${GOHOSTOS:-$(echo "$GOVERSION" | awk -F/ '{print $1}')}
-      GOHOSTARCH=${GOHOSTARCH:-$(echo "$GOVERSION" | awk -F/ '{print $2}')}
-    fi
-    DEP=./dep
-    DEP_VER=${DEP_VER:-0.4.1}
-    DEP_BIN=${DEP_BIN:-dep-$GOHOSTOS-$GOHOSTARCH}
-    DEP_URL=https://github.com/golang/dep/releases/download/v$DEP_VER/$DEP_BIN
-    echo "  downloading golang/dep@v$DEP_VER"
-    curl -sSLO "$DEP_URL"
-    chmod 0755 "$DEP_BIN"
-    mv -f "$DEP_BIN" "$DEP"
-  fi
-  if [ ! -e Gopkg.toml ]; then
-    cat << EOF > Gopkg.toml
-# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
-# for detailed Gopkg.toml documentation.
-#
-# Refer to https://github.com/toml-lang/toml for detailed TOML docs.
-
-[[constraint]]
-  name = "github.com/rexray/gocsi"
-EOF
-
-    if [ "$GOCSI_DEP_BRANCH" != "" ]; then
-      echo "  branch = \"$GOCSI_DEP_BRANCH\"" >> Gopkg.toml
-    elif [ "$GOCSI_DEP_REVISION" != "" ]; then
-      echo "  revision = \"$GOCSI_DEP_REVISION\"" >> Gopkg.toml
-    elif [ "$GOCSI_DEP_VERSION" != "" ]; then
-      echo "  version = \"$GOCSI_DEP_VERSION\"" >> Gopkg.toml
-    else
-      echo "  branch = \"master\"" >> Gopkg.toml
-    fi
-
-    if [ "$GOCSI_DEP_SOURCE" != "" ]; then
-      echo "  source = \"$GOCSI_DEP_SOURCE\"" >> Gopkg.toml
-    fi
-
-  fi
-
-  echo "  executing dep ensure"
-  if ! "$DEP" ensure > "$DEP_LOG" 2>&1; then cat "$DEP_LOG"; fi
-  rm -f "$DEP_LOG"
-}
-
-if [ "$USE_DEP" = "true" ]; then
-  echo "using golang/dep:"
-  dep_init
-else
-  while true; do
-    printf "use golang/dep? Enter yes (default) or no and press [ENTER]: "
-    read -r A
-    if [ "$A" = "" ] || echo "$A" | grep -iq 'y\(es\)\{0,\}'; then
-      dep_init
-      break
-    fi
-    if echo "$A" | grep -iq 'n\(o\)\{0,\}'; then
-      break
-    fi
-  done
-fi
 
 echo "building $SP_NAME:"
+go mod download && go mod verify
 go build .
 BUILD_RESULT=$?
 

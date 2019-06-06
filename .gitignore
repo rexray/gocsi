@@ -1,16 +1,10 @@
-# The dep binary and temp directory used to
-# download the dep binary.
-/dep
-/.dep/
-/vendor/github.com/golang/dep
-
-# The ginkgo test binary
-/ginkgo
-
 # The etcd binary, log, and default data directory
 /etcd
 /etcd.log
 default.etcd
+
+# The vendor dir
+/vendor
 
 # The csi-sp test log file
 csi-sp.log
@@ -37,9 +31,6 @@ csi-sp.log
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
-# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
-.glide/
 
 # A macOS metadata file
 .DS_Store
