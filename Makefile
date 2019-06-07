@@ -1,47 +1,35 @@
 all: build
 
 ################################################################################
-##                                 HOME                                       ##
+##                             VERIFY GO VERSION                              ##
 ################################################################################
-HOME ?= /tmp/gocsi
-export HOME
-
-
-################################################################################
-##                                GOPATH                                      ##
-################################################################################
-# Ensure GOPATH is set and that it contains only a single element.
-GOPATH ?= $(HOME)/go
-GOPATH := $(word 1,$(subst :, ,$(GOPATH)))
-export GOPATH
-
+# Go 1.11+ required for Go modules.
+GO_VERSION_EXP := "go1.11"
+GO_VERSION_ACT := $(shell a="$$(go version | awk '{print $$3}')" && test $$(printf '%s\n%s' "$${a}" "$(GO_VERSION_EXP)" | sort | tail -n 1) = "$${a}" && printf '%s' "$${a}")
+ifndef GO_VERSION_ACT
+$(error Requires Go $(GO_VERSION_EXP)+ for Go module support)
+endif
+MOD_NAME := $(shell head -n 1 <go.mod | awk '{print $$2}')
 
 ################################################################################
-##                                   DEP                                      ##
+##                             VERIFY BUILD PATH                              ##
 ################################################################################
-DEP ?= ./dep
-DEP_DIR := ./vendor/github.com/golang/dep
-
-$(DEP):
-	@rm -fr $(DEP_DIR)
-	git clone https://github.com/akutz/dep $(DEP_DIR)
-	git -C $(DEP_DIR) checkout feature/fetch-gh-pulls
-	go build -o $@ $(DEP_DIR)/cmd/dep
-
-ifneq (./dep,$(DEP))
-dep: $(DEP)
+GOPATH := $(shell go env GOPATH)
+ifneq (on,$(GO111MODULE))
+export GO111MODULE := on
+# should not be cloned inside the GOPATH.
+ifeq (/src/$(MOD_NAME),$(subst $(GOPATH),,$(PWD)))
+$(warning This project uses Go modules and should not be cloned into the GOPATH)
+endif
 endif
 
-dep-ensure: | $(DEP)
-	$(DEP) ensure -v
-
-
-########################################################################
-##                               CSI SPEC                             ##
-########################################################################
-CSI_SPEC :=  vendor/github.com/container-storage-interface/spec
-CSI_GOSRC := $(CSI_SPEC)/lib/go/csi/csi.pb.go
-
+################################################################################
+##                                DEPENDENCIES                                ##
+################################################################################
+# Verify the dependencies are in place.
+.PHONY: deps
+deps:
+	go mod download && go mod verify
 
 ########################################################################
 ##                               GOCSI                                ##
@@ -79,16 +67,11 @@ CSI_SP_DIR := $(GOPATH)/src/$(CSI_SP_IMPORT)
 CSI_SP := $(CSI_SP_DIR)/csi-sp
 CSI_SP_SOCK := $(notdir $(CSI_SP)).sock
 CSI_SP_LOG := $(notdir $(CSI_SP)).log
-GOCSI_SH_ENV := USE_DEP=true
-GOCSI_SH_ENV += DEP_GIT_REFSPECS=+refs/pull/*:refs/pull/origin/*
-ifeq (true,$(TRAVIS))
-GOCSI_SH_ENV += GOCSI_DEP_SOURCE=https://github.com/$(TRAVIS_REPO_SLUG)
-GOCSI_SH_ENV += GOCSI_DEP_REVISION=$(TRAVIS_COMMIT)
-endif
-$(CSI_SP): | $(DEP)
+$(CSI_SP):
 	mkdir -p $(CSI_SP_DIR)
-	cp Gopkg.toml $(CSI_SP_DIR)
-	DEP=$(abspath $(DEP)) $(GOCSI_SH_ENV) ./gocsi.sh $(CSI_SP_IMPORT)
+	echo "module $(CSI_SP_IMPORT)" >> $(CSI_SP_DIR)/go.mod
+	cat go.mod | grep -v ^module >> $(CSI_SP_DIR)/go.mod
+	./gocsi.sh $(CSI_SP_IMPORT)
 
 csi-sp: $(CSI_SP_LOG)
 $(CSI_SP_LOG): $(CSI_SP)
@@ -132,15 +115,11 @@ csi-sp-clean:
 ########################################################################
 ##                               TEST                                 ##
 ########################################################################
-GINKGO := ./ginkgo
-GINKGO_PKG := ./vendor/github.com/onsi/ginkgo/ginkgo
 GINKGO_SECS := 20
 ifeq (true,$(TRAVIS))
 GINKGO_SECS := 30
 endif
-GINKGO_RUN_OPTS := --slowSpecThreshold=$(GINKGO_SECS) -randomizeAllSpecs -p
-$(GINKGO): | $(GINKGO_PKG)
-	go build -o "$@" "./$|"
+GINKGO_RUN_OPTS := -ginkgo.slowSpecThreshold=$(GINKGO_SECS) -ginkgo.randomizeAllSpecs
 
 ETCD := ./etcd
 $(ETCD):
@@ -167,27 +146,27 @@ export X_CSI_SERIAL_VOL_ACCESS_TIMEOUT=3s
 endif
 ETCD_ENDPOINT := X_CSI_SERIAL_VOL_ACCESS_ETCD_ENDPOINTS=127.0.0.1:2379
 
-test-serialvolume-etcd: | $(GINKGO) $(ETCD)
+test-serialvolume-etcd: | $(ETCD)
 	@rm -fr default.etcd etcd.log
 	./etcd > etcd.log 2>&1 &
-	$(ETCD_ENDPOINT) $(GINKGO) $(GINKGO_RUN_OPTS) \
-	  ./middleware/serialvolume/etcd || test "$$?" -eq "197"
+	$(ETCD_ENDPOINT) go test \
+	  $(MOD_NAME)/middleware/serialvolume/etcd || test "$$?" -eq "197"
 	pkill etcd
 
-test-etcd: | $(GINKGO) $(ETCD)
+test-etcd: | $(ETCD)
 	@rm -fr default.etcd etcd.log
 	./etcd > etcd.log 2>&1 &
-	$(ETCD_ENDPOINT) $(GINKGO) $(GINKGO_RUN_OPTS) \
-	  -skip "Idempotent Create" \
-	  ./testing || test "$$?" -eq "197"
+	$(ETCD_ENDPOINT) go test $(MOD_NAME)/testing \
+	  -ginkgo.skip "Idempotent Create" \
+	  $(GINKGO_RUN_OPTS) || test "$$?" -eq "197"
 	pkill etcd
 
-test-idempotent: | $(GINKGO)
-	$(GINKGO) $(GINKGO_RUN_OPTS) -focus "Idempotent Create" \
-	  ./testing || test "$$?" -eq "197"
+test-idempotent:
+	go test $(MOD_NAME)/testing \
+	$(GINKGO_RUN_OPTS) -ginkgo.focus "Idempotent Create" || test "$$?" -eq "197"
 
-test-utils: | $(GINKGO)
-	$(GINKGO) $(GINKGO_RUN_OPTS) ./utils || test "$$?" -eq "197"
+test-utils:
+	go test $(MOD_NAME)/utils $(GINKGO_RUN_OPTS)  || test "$$?" -eq "197"
 
 test:
 	$(MAKE) test-utils
@@ -206,7 +185,7 @@ test:
 ##                               BUILD                                ##
 ########################################################################
 
-build: $(GOCSI_A)
+build: deps $(GOCSI_A)
 	$(MAKE) -C csc $@
 	$(MAKE) -C mock $@
 

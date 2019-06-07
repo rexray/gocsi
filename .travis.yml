@@ -25,25 +25,21 @@ jobs:
       # Test the utils package.
       - stage:   test
         env:     JOB=test-utils
-        install: make ginkgo
         script:  make $JOB
 
       # Test the Mock SP's idempotent behavior.
       - stage:   test
         env:     JOB=test-idempotent
-        install: make ginkgo
         script:  make $JOB
 
       # Test GoCSI with the Mock SP and etcd as the distributed lock
       # provider.
       - stage:   test
         env:     JOB=test-etcd
-        install: make ginkgo
         script:  make $JOB
 
       # Test the serial volume middleware's etcd distributed lock
       # provider.
       - stage:   test
         env:     JOB=test-serialvolume-etcd
-        install: make ginkgo
         script:  make $JOB
