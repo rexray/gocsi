@@ -20,7 +20,7 @@ func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {
 
 	// Create a new Mock SP instance and serve it with a piped connection.
 	sp := provider.New()
-	lis, err := memconn.Listen("csi-test")
+	lis, err := memconn.Listen("memu", "csi-test")
 	Ω(err).Should(BeNil())
 	go func() {
 		defer GinkgoRecover()
@@ -32,7 +32,7 @@ func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {
 	clientOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithDialer(func(string, time.Duration) (net.Conn, error) {
-			return memconn.Dial("csi-test")
+			return memconn.Dial("memu", "csi-test")
 		}),
 	}
 
