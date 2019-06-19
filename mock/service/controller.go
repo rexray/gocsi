@@ -278,6 +278,13 @@ func (s *service) ControllerGetCapabilities(
 					},
 				},
 			},
+			{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
+					},
+				},
+			},
 		},
 	}, nil
 }
@@ -383,5 +390,41 @@ func (s *service) ListSnapshots(
 	return &csi.ListSnapshotsResponse{
 		Entries:   entries,
 		NextToken: nextToken,
+	}, nil
+}
+
+func (s *service) ControllerExpandVolume(
+	ctx context.Context,
+	req *csi.ControllerExpandVolumeRequest) (
+	*csi.ControllerExpandVolumeResponse, error) {
+
+	s.volsRWL.Lock()
+	defer s.volsRWL.Unlock()
+
+	i, v := s.findVolNoLock("id", req.VolumeId)
+	if i < 0 {
+		return nil, status.Error(codes.NotFound, req.VolumeId)
+	}
+
+	var capacity int64
+
+	if cr := req.CapacityRange; cr != nil {
+		if rb := cr.RequiredBytes; rb > 0 {
+			capacity = rb
+		}
+		if lb := cr.LimitBytes; lb > 0 {
+			capacity = lb
+		}
+	}
+
+	if capacity < v.CapacityBytes {
+		return nil, status.Error(codes.OutOfRange, "requested new capacity smaller than existing")
+	}
+
+	v.CapacityBytes = capacity
+
+	return &csi.ControllerExpandVolumeResponse{
+		CapacityBytes:         v.CapacityBytes,
+		NodeExpansionRequired: false,
 	}, nil
 }

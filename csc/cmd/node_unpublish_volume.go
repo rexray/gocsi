@@ -53,9 +53,6 @@ USAGE
 func init() {
 	nodeCmd.AddCommand(nodeUnpublishVolumeCmd)
 
-	nodeUnpublishVolumeCmd.Flags().StringVar(
-		&nodeUnpublishVolume.targetPath,
-		"target-path",
-		"",
-		"The path from which to unmount the volume")
+	flagTargetPath(
+		nodeUnpublishVolumeCmd.Flags(), &nodeUnpublishVolume.targetPath)
 }

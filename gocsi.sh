@@ -220,6 +220,15 @@ func (s *service) ListSnapshots(
 
 	return nil, nil
 }
+
+func (s *service) ControllerExpandVolume(
+	ctx context.Context,
+	req *csi.ControllerExpandVolumeRequest) (
+	*csi.ControllerExpandVolumeResponse, error) {
+
+	return nil, nil
+}
+
 EOF
 
 echo "  $SP_DIR/service/identity.go"
@@ -231,14 +240,6 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
-
-func (s *service) Probe(
-	ctx context.Context,
-	req *csi.ProbeRequest) (
-	*csi.ProbeResponse, error) {
-
-	return nil, nil
-}
 
 func (s *service) GetPluginInfo(
 	ctx context.Context,
@@ -252,6 +253,14 @@ func (s *service) GetPluginCapabilities(
 	ctx context.Context,
 	req *csi.GetPluginCapabilitiesRequest) (
 	*csi.GetPluginCapabilitiesResponse, error) {
+
+	return nil, nil
+}
+
+func (s *service) Probe(
+	ctx context.Context,
+	req *csi.ProbeRequest) (
+	*csi.ProbeResponse, error) {
 
 	return nil, nil
 }
@@ -299,10 +308,18 @@ func (s *service) NodeUnpublishVolume(
 	return nil, nil
 }
 
-func (s *service) NodeGetInfo(
+func (s *service) NodeGetVolumeStats(
 	ctx context.Context,
-	req *csi.NodeGetInfoRequest) (
-	*csi.NodeGetInfoResponse, error) {
+	req *csi.NodeGetVolumeStatsRequest) (
+	*csi.NodeGetVolumeStatsResponse, error) {
+
+	return nil, nil
+}
+
+func (s *service) NodeExpandVolume(
+	ctx context.Context,
+	req *csi.NodeExpandVolumeRequest) (
+	*csi.NodeExpandVolumeResponse, error) {
 
 	return nil, nil
 }
@@ -315,10 +332,10 @@ func (s *service) NodeGetCapabilities(
 	return nil, nil
 }
 
-func (s *service) NodeGetVolumeStats(
+func (s *service) NodeGetInfo(
 	ctx context.Context,
-	req *csi.NodeGetVolumeStatsRequest) (
-	*csi.NodeGetVolumeStatsResponse, error) {
+	req *csi.NodeGetInfoRequest) (
+	*csi.NodeGetInfoResponse, error) {
 
 	return nil, nil
 }

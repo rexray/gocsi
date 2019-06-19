@@ -14,6 +14,7 @@ var nodePublishVolume struct {
 	targetPath        string
 	stagingTargetPath string
 	pubCtx            mapOfStringArg
+	volCtx            mapOfStringArg
 	attribs           mapOfStringArg
 	readOnly          bool
 	caps              volumeCapabilitySliceArg
@@ -37,7 +38,7 @@ USAGE
 			PublishContext:    nodePublishVolume.pubCtx.data,
 			Readonly:          nodePublishVolume.readOnly,
 			Secrets:           root.secrets,
-			VolumeContext:     nodePublishVolume.attribs.data,
+			VolumeContext:     nodePublishVolume.volCtx.data,
 		}
 
 		if len(nodePublishVolume.caps.data) > 0 {
@@ -67,48 +68,28 @@ USAGE
 func init() {
 	nodeCmd.AddCommand(nodePublishVolumeCmd)
 
-	nodePublishVolumeCmd.Flags().StringVar(
-		&nodePublishVolume.stagingTargetPath,
-		"staging-target-path",
-		"",
-		"The path from which to bind mount the volume")
+	flagStagingTargetPath(
+		nodePublishVolumeCmd.Flags(), &nodePublishVolume.stagingTargetPath)
 
-	nodePublishVolumeCmd.Flags().StringVar(
-		&nodePublishVolume.targetPath,
-		"target-path",
-		"",
-		"The path to which to mount the volume")
+	flagTargetPath(
+		nodePublishVolumeCmd.Flags(), &nodePublishVolume.targetPath)
 
-	nodePublishVolumeCmd.Flags().Var(
-		&nodePublishVolume.pubCtx,
-		"pub-context",
-		`One or more key/value pairs may be specified to send with
-        the request as its PublishContext field:
+	flagReadOnly(
+		nodePublishVolumeCmd.Flags(), &nodePublishVolume.readOnly)
 
-                --pub-context key1=val1,key2=val2`)
+	flagVolumeContext(nodePublishVolumeCmd.Flags(), &nodePublishVolume.volCtx)
 
-	nodePublishVolumeCmd.Flags().BoolVar(
-		&nodePublishVolume.readOnly,
-		"read-only",
-		false,
-		"Mark the volume as read-only")
-
-	nodePublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresPubVolContext,
-		"with-requires-pub-info",
-		false,
-		`Marks the request's PublishContext field as required.
-        Enabling this option also enables --with-spec-validation.`)
-
-	flagVolumeAttributes(
-		nodePublishVolumeCmd.Flags(), &nodePublishVolume.attribs)
+	flagPublishContext(nodePublishVolumeCmd.Flags(), &nodePublishVolume.pubCtx)
 
 	flagVolumeCapability(
 		nodePublishVolumeCmd.Flags(), &nodePublishVolume.caps)
 
+	flagWithRequiresVolContext(
+		nodePublishVolumeCmd.Flags(), &root.withRequiresVolContext, false)
+
+	flagWithRequiresPubContext(
+		nodePublishVolumeCmd.Flags(), &root.withRequiresPubContext, false)
+
 	flagWithRequiresCreds(
 		nodePublishVolumeCmd.Flags(), &root.withRequiresCreds, "")
-
-	flagWithRequiresAttribs(
-		nodePublishVolumeCmd.Flags(), &root.withRequiresVolumeAttributes, "")
 }

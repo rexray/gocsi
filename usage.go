@@ -131,18 +131,21 @@ GLOBAL OPTIONS
 
         Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
-    X_CSI_REQUIRE_PUB_VOL_CONTEXT
+    X_CSI_REQUIRE_VOL_CONTEXT
         A flag that enables treating the following fields as required:
-            * ControllerPublishVolumeResponse.PublishVolumeContext
-            * NodePublishVolumeRequest.PublishVolumeContext
+            * ControllerPublishVolumeRequest.VolumeContext
+            * ValidateVolumeCapabilitiesRequest.VolumeContext
+            * ValidateVolumeCapabilitiesResponse.VolumeContext
+            * NodeStageVolumeRequest.VolumeContext
+            * NodePublishVolumeRequest.VolumeContext
 
         Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 
-    X_CSI_REQUIRE_VOL_ATTRIBS
+    X_CSI_REQUIRE_PUB_CONTEXT
         A flag that enables treating the following fields as required:
-            * ControllerPublishVolumeRequest.VolumeAttributes
-            * ValidateVolumeCapabilitiesRequest.VolumeAttributes
-            * NodePublishVolumeRequest.VolumeAttributes
+            * ControllerPublishVolumeResponse.PublishContext
+            * NodeStageVolumeRequest.PublishContext
+            * NodePublishVolumeRequest.PublishContext
 
         Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
 

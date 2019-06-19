@@ -15,7 +15,6 @@ var createVolume struct {
 	limBytes int64
 	caps     volumeCapabilitySliceArg
 	params   mapOfStringArg
-	reqCreds bool
 }
 
 var createVolumeCmd = &cobra.Command{
@@ -77,35 +76,21 @@ CREATING MULTIPLE VOLUMES
 func init() {
 	controllerCmd.AddCommand(createVolumeCmd)
 
-	createVolumeCmd.Flags().Int64Var(
-		&createVolume.reqBytes,
-		"req-bytes",
-		0,
-		"The required size of the volume in bytes")
+	flagRequiredBytes(createVolumeCmd.Flags(), &createVolume.reqBytes)
 
-	createVolumeCmd.Flags().Int64Var(
-		&createVolume.limBytes,
-		"lim-bytes",
-		0,
-		"The limit to the size of the volume in bytes")
+	flagLimitBytes(createVolumeCmd.Flags(), &createVolume.limBytes)
 
-	createVolumeCmd.Flags().Var(
-		&createVolume.params,
-		"params",
-		`One or more key/value pairs may be specified to send with
-        the request as its Parameters field:
-
-            --params key1=val1,key2=val2 --params=key3=val3`)
+	flagParameters(createVolumeCmd.Flags(), &createVolume.params)
 
 	flagVolumeCapabilities(createVolumeCmd.Flags(), &createVolume.caps)
+
+	flagWithRequiresVolContext(
+		createVolumeCmd.Flags(),
+		&root.withRequiresVolContext,
+		false)
 
 	flagWithRequiresCreds(
 		createVolumeCmd.Flags(),
 		&root.withRequiresCreds,
-		"")
-
-	flagWithRequiresAttribs(
-		createVolumeCmd.Flags(),
-		&root.withRequiresVolumeAttributes,
 		"")
 }

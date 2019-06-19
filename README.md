@@ -259,24 +259,27 @@ environment variables:
       </td>
     </tr>
     <tr>
-      <td><code>X_CSI_REQUIRE_PUB_VOL_CONTEXT</code></td>
+      <td><code>X_CSI_REQUIRE_VOL_CONTEXT</code></td>
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul>
-          <li><code>ControllerPublishVolumeResponse.PublishVolumeContext</code></li>
-          <li><code>NodePublishVolumeRequest.PublishVolumeContext</code></li>
+          <li><code>ControllerPublishVolumeRequest.VolumeContext</code></li>
+          <li><code>ValidateVolumeCapabilitiesRequest.VolumeContext</code></li>
+          <li><code>ValidateVolumeCapabilitiesResponse.VolumeContext</code></li>
+          <li><code>NodeStageVolumeRequest.VolumeContext</code></li>
+          <li><code>NodePublishVolumeRequest.VolumeContext</code></li>
         </ul>
         <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>
     </tr>
     <tr>
-      <td><code>X_CSI_REQUIRE_VOL_ATTRIBS</code></td>
+      <td><code>X_CSI_REQUIRE_PUB_CONTEXT</code></td>
       <td>
         <p>A flag that enables treating the following fields as required:</p>
         <ul>
-          <li><code>ControllerPublishVolumeRequest.VolumeAttributes</code></li>
-          <li><code>ValidateVolumeCapabilitiesRequest.VolumeAttributes</code></li>
-          <li><code>NodePublishVolumeRequest.VolumeAttributes</code></li>
+          <li><code>ControllerPublishVolumeResponse.PublishContext</code></li>
+          <li><code>NodeStageVolumeRequest.PublishContext</code></li>
+          <li><code>NodePublishVolumeRequest.PublishContext</code></li>
         </ul>
         <p>Enabling this option sets <code>X_CSI_SPEC_REQ_VALIDATION=true</code></p>
       </td>

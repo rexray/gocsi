@@ -14,7 +14,7 @@ var nodeStageVolume struct {
 	nodeID            string
 	stagingTargetPath string
 	pubCtx            mapOfStringArg
-	attribs           mapOfStringArg
+	volCtx            mapOfStringArg
 	caps              volumeCapabilitySliceArg
 }
 
@@ -33,7 +33,7 @@ USAGE
 			StagingTargetPath: nodeStageVolume.stagingTargetPath,
 			PublishContext:    nodeStageVolume.pubCtx.data,
 			Secrets:           root.secrets,
-			VolumeContext:     nodeStageVolume.attribs.data,
+			VolumeContext:     nodeStageVolume.volCtx.data,
 		}
 
 		if len(nodeStageVolume.caps.data) > 0 {
@@ -63,36 +63,22 @@ USAGE
 func init() {
 	nodeCmd.AddCommand(nodeStageVolumeCmd)
 
-	nodeStageVolumeCmd.Flags().StringVar(
-		&nodeStageVolume.stagingTargetPath,
-		"staging-target-path",
-		"",
-		"The path to which to stage the volume")
-
-	nodeStageVolumeCmd.Flags().Var(
-		&nodeStageVolume.pubCtx,
-		"pub-context",
-		`One or more key/value pairs may be specified to send with
-        the request as its PublishContext field:
-
-                --pub-context key1=val1,key2=val2`)
-
-	nodeStageVolumeCmd.Flags().BoolVar(
-		&root.withRequiresPubVolContext,
-		"with-requires-pub-context",
-		false,
-		`Marks the request's PublisContext field as required.
-        Enabling this option also enables --with-spec-validation.`)
-
-	flagVolumeAttributes(
-		nodeStageVolumeCmd.Flags(), &nodeStageVolume.attribs)
+	flagStagingTargetPath(
+		nodeStageVolumeCmd.Flags(), &nodeStageVolume.stagingTargetPath)
 
 	flagVolumeCapability(
 		nodeStageVolumeCmd.Flags(), &nodeStageVolume.caps)
 
+	flagVolumeContext(nodeStageVolumeCmd.Flags(), &nodeStageVolume.volCtx)
+
+	flagPublishContext(nodeStageVolumeCmd.Flags(), &nodeStageVolume.pubCtx)
+
 	flagWithRequiresCreds(
 		nodeStageVolumeCmd.Flags(), &root.withRequiresCreds, "")
 
-	flagWithRequiresAttribs(
-		nodeStageVolumeCmd.Flags(), &root.withRequiresVolumeAttributes, "")
+	flagWithRequiresVolContext(
+		nodeStageVolumeCmd.Flags(), &root.withRequiresVolContext, false)
+
+	flagWithRequiresPubContext(
+		nodeStageVolumeCmd.Flags(), &root.withRequiresPubContext, false)
 }

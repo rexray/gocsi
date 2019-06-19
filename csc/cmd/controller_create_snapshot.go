@@ -14,7 +14,6 @@ import (
 var createSnapshot struct {
 	sourceVol string
 	params    mapOfStringArg
-	reqCreds  bool
 }
 
 var createSnapshotCmd = &cobra.Command{
@@ -72,21 +71,10 @@ func init() {
 		"",
 		"The source volume to snapshot")
 
-	createSnapshotCmd.Flags().Var(
-		&createSnapshot.params,
-		"params",
-		`One or more key/value pairs may be specified to send with
-        the request as its Parameters field:
-
-            --params key1=val1,key2=val2 --params=key3=val3`)
+	flagParameters(createSnapshotCmd.Flags(), &createSnapshot.params)
 
 	flagWithRequiresCreds(
 		createSnapshotCmd.Flags(),
 		&root.withRequiresCreds,
-		"")
-
-	flagWithRequiresAttribs(
-		createSnapshotCmd.Flags(),
-		&root.withRequiresVolumeAttributes,
 		"")
 }

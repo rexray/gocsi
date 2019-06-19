@@ -11,8 +11,9 @@ import (
 )
 
 var valVolCaps struct {
-	attribs mapOfStringArg
-	caps    volumeCapabilitySliceArg
+	volCtx mapOfStringArg
+	params mapOfStringArg
+	caps   volumeCapabilitySliceArg
 }
 
 var valVolCapsCmd = &cobra.Command{
@@ -28,8 +29,9 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ValidateVolumeCapabilitiesRequest{
-			VolumeContext:      valVolCaps.attribs.data,
+			VolumeContext:      valVolCaps.volCtx.data,
 			VolumeCapabilities: valVolCaps.caps.data,
+			Parameters:         valVolCaps.params.data,
 		}
 
 		for i := range args {
@@ -58,12 +60,12 @@ USAGE
 func init() {
 	controllerCmd.AddCommand(valVolCapsCmd)
 
-	flagVolumeAttributes(valVolCapsCmd.Flags(), &valVolCaps.attribs)
+	flagParameters(valVolCapsCmd.Flags(), &valVolCaps.params)
 
 	flagVolumeCapabilities(valVolCapsCmd.Flags(), &valVolCaps.caps)
 
-	flagWithRequiresAttribs(
-		valVolCapsCmd.Flags(),
-		&root.withRequiresVolumeAttributes,
-		"")
+	flagVolumeContext(valVolCapsCmd.Flags(), &valVolCaps.volCtx)
+
+	flagWithRequiresVolContext(
+		valVolCapsCmd.Flags(), &root.withRequiresVolContext, false)
 }

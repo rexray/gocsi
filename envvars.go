@@ -125,17 +125,17 @@ const (
 	// StagingTargetPath is required.
 	EnvVarRequireStagingTargetPath = "X_CSI_REQUIRE_STAGING_TARGET_PATH"
 
-	// EnvVarRequirePubVolContext is the name of the environment variable used
-	// to determine whether or not publish volume context is required for
+	// EnvVarRequireVolContext is the name of the environment variable used
+	// to determine whether or not volume context is required for
 	// requests that accept it and responses that return it such as
 	// NodePublishVolume and ControllerPublishVolume.
-	EnvVarRequirePubVolContext = "X_CSI_REQUIRE_PUB_VOL_CONTEXT"
+	EnvVarRequireVolContext = "X_CSI_REQUIRE_VOL_CONTEXT"
 
-	// EnvVarRequireVolAttribs is the name of the environment variable used
-	// to determine whether or not volume attributes are required for
-	// requests that accept them and responses that return them such as
-	// ControllerPublishVolume and CreateVolume.
-	EnvVarRequireVolAttribs = "X_CSI_REQUIRE_VOL_ATTRIBS"
+	// EnvVarRequirePubContext is the name of the environment variable used
+	// to determine whether or not publish context is required for
+	// requests that accept it and responses that return it such as
+	// NodePublishVolume and ControllerPublishVolume.
+	EnvVarRequirePubContext = "X_CSI_REQUIRE_PUB_CONTEXT"
 
 	// EnvVarCreds is the name of the environment variable
 	// used to determine whether or not user credentials are required for

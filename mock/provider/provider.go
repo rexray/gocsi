@@ -45,9 +45,10 @@ func New() gocsi.StoragePluginProvider {
 			gocsi.EnvVarRequireNodeID + "=true",
 
 			// Treat the following fields as required:
-			//    * ControllerPublishVolumeResponse.PublishInfo
-			//    * NodePublishVolumeRequest.PublishInfo
-			gocsi.EnvVarRequirePubVolContext + "=true",
+			//   * ControllerPublishVolumeResponse.PublishContext
+			//   * NodeStageVolumeRequest.PublishContext
+			//   * NodePublishVolumeRequest.PublishContext
+			gocsi.EnvVarRequirePubContext + "=true",
 		},
 	}
 }

@@ -52,9 +52,6 @@ USAGE
 func init() {
 	nodeCmd.AddCommand(nodeUnstageVolumeCmd)
 
-	nodeUnstageVolumeCmd.Flags().StringVar(
-		&nodeUnstageVolume.stagingTargetPath,
-		"staging-target-path",
-		"",
-		"The path from which to unstage the volume")
+	flagStagingTargetPath(
+		nodeUnstageVolumeCmd.Flags(), &nodeUnstageVolume.stagingTargetPath)
 }
