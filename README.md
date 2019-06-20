@@ -238,6 +238,10 @@ environment variables:
       of <code>Internal</code>.</td>
     </tr>
     <tr>
+      <td><code>X_CSI_SPEC_DISABLE_LEN_CHECK</code></td>
+      <td>A flag that disables validation of CSI message field lengths.</td>
+    </tr>
+    <tr>
       <td><code>X_CSI_REQUIRE_STAGING_TARGET_PATH</code></td>
       <td>
         <p>A flag that enables treating the following fields as required:</p>

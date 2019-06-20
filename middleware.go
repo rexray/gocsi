@@ -37,6 +37,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withCredsCtrlrUnpubVol = sp.getEnvBool(ctx, EnvVarCredsCtrlrUnpubVol)
 		withCredsNodeStgVol    = sp.getEnvBool(ctx, EnvVarCredsNodeStgVol)
 		withCredsNodePubVol    = sp.getEnvBool(ctx, EnvVarCredsNodePubVol)
+		withDisableFieldLen    = sp.getEnvBool(ctx, EnvVarDisableFieldLen)
 	)
 
 	// Enable all cred requirements if the general option is enabled.
@@ -169,6 +170,11 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			specOpts = append(specOpts,
 				specvalidator.WithRequiresPublishContext())
 			log.Debug("enabled spec validator opt: requires pub context")
+		}
+		if withDisableFieldLen {
+			specOpts = append(specOpts,
+				specvalidator.WithDisableFieldLenCheck())
+			log.Debug("disabled spec validator opt: field length check")
 		}
 		sp.Interceptors = append(sp.Interceptors,
 			specvalidator.NewServerSpecValidator(specOpts...))
