@@ -39,7 +39,6 @@ var root struct {
 
 	withSpecValidator      bool
 	withRequiresCreds      bool
-	withRequiresNodeID     bool
 	withRequiresVolContext bool
 	withRequiresPubContext bool
 }

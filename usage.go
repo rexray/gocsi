@@ -124,13 +124,6 @@ GLOBAL OPTIONS
         A flag that enables treating the following fields as required:
             * NodePublishVolumeRequest.StagingTargetPath
 
-    X_CSI_REQUIRE_NODE_ID
-        A flag that enables treating the following fields as required:
-            * ControllerPublishVolumeRequest.NodeId
-            * NodeGetIdResponse.NodeId
-
-        Enabling this option sets X_CSI_SPEC_REQ_VALIDATION=true.
-
     X_CSI_REQUIRE_VOL_CONTEXT
         A flag that enables treating the following fields as required:
             * ControllerPublishVolumeRequest.VolumeContext

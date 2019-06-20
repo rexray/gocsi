@@ -36,18 +36,6 @@ func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {
 		}),
 	}
 
-	// Create a client-side CSI spec validator.
-	/*
-		clientSpecValidator := gocsi.NewClientSpecValidator(
-			gocsi.WithSuccessDeleteVolumeNotFound(),
-			gocsi.WithSuccessCreateVolumeAlreadyExists(),
-			gocsi.WithRequiresNodeID(),
-			gocsi.WithRequiresPublishVolumeInfo(),
-		)
-		clientOpts = append(
-			clientOpts, grpc.WithUnaryInterceptor(clientSpecValidator))
-	*/
-
 	// Create a client for the piped connection.
 	client, err := grpc.DialContext(ctx, "", clientOpts...)
 	Ω(err).ShouldNot(HaveOccurred())

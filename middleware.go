@@ -28,7 +28,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withSerialVol          = sp.getEnvBool(ctx, EnvVarSerialVolAccess)
 		withSpec               = sp.getEnvBool(ctx, EnvVarSpecValidation)
 		withStgTgtPath         = sp.getEnvBool(ctx, EnvVarRequireStagingTargetPath)
-		withNodeID             = sp.getEnvBool(ctx, EnvVarRequireNodeID)
 		withVolContext         = sp.getEnvBool(ctx, EnvVarRequireVolContext)
 		withPubContext         = sp.getEnvBool(ctx, EnvVarRequirePubContext)
 		withCreds              = sp.getEnvBool(ctx, EnvVarCreds)
@@ -62,7 +61,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 	if !withSpecReq {
 		withSpecReq = withCreds ||
 			withStgTgtPath ||
-			withNodeID ||
 			withVolContext ||
 			withPubContext
 		log.WithField("withSpecReq", withSpecReq).Debug(
@@ -161,11 +159,6 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 				specvalidator.WithRequiresStagingTargetPath())
 			log.Debug("enabled spec validator opt: " +
 				"requires starging target path")
-		}
-		if withNodeID {
-			specOpts = append(specOpts,
-				specvalidator.WithRequiresNodeID())
-			log.Debug("enabled spec validator opt: requires node ID")
 		}
 		if withVolContext {
 			specOpts = append(specOpts,

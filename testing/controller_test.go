@@ -39,6 +39,7 @@ var _ = Describe("Controller", func() {
 		params   map[string]string
 		// userCreds map[string]string
 		pubInfo map[string]string
+		nodeId  string
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -53,6 +54,7 @@ var _ = Describe("Controller", func() {
 		mntFlags = []string{"-o noexec"}
 		params = map[string]string{"tag": "gold"}
 		// userCreds = map[string]string{"beour": "guest"}
+		nodeId = service.Name
 	})
 	JustBeforeEach(func() {
 		gclient, stopMock, err = startMockServer(ctx)
@@ -78,6 +80,7 @@ var _ = Describe("Controller", func() {
 		mntFlags = nil
 		params = nil
 		pubInfo = nil
+		nodeId = ""
 	})
 
 	listVolumes := func() (vols []csi.Volume, err error) {
@@ -614,58 +617,99 @@ var _ = Describe("Controller", func() {
 
 	Describe("Publication", func() {
 
+		var (
+			res *csi.ControllerPublishVolumeResponse
+			err error
+		)
+
 		devPathKey := path.Join(service.Name, "dev")
 
 		publishVolume := func() {
 			req := &csi.ControllerPublishVolumeRequest{
 				VolumeId: "1",
-				NodeId:   service.Name,
+				NodeId:   nodeId,
 				Readonly: true,
 				VolumeCapability: utils.NewMountCapability(
 					csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					"mock"),
 			}
-			res, err := client.ControllerPublishVolume(ctx, req)
-			Ω(err).ShouldNot(HaveOccurred())
-			pubInfo = res.PublishContext
+			res, err = client.ControllerPublishVolume(ctx, req)
 		}
 
 		shouldBePublished := func() {
+			Ω(err).ShouldNot(HaveOccurred())
+			pubInfo = res.PublishContext
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(pubInfo).ShouldNot(BeNil())
 			Ω(pubInfo["device"]).Should(Equal("/dev/mock"))
 		}
 
+		unpublishVolume := func() {
+			_, err := client.ControllerUnpublishVolume(
+				ctx,
+				&csi.ControllerUnpublishVolumeRequest{
+					VolumeId: "1",
+					NodeId:   nodeId,
+				})
+			Ω(err).ShouldNot(HaveOccurred())
+		}
+
 		JustBeforeEach(func() {
 			publishVolume()
 		})
+
 		Context("PublishVolume", func() {
-			It("Should Be Valid", func() {
-				shouldBePublished()
-				vols, err := listVolumes()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(vols).Should(HaveLen(3))
-				Ω(vols[0].VolumeContext[devPathKey]).Should(Equal("/dev/mock"))
+
+			Context("Valid Node ID", func() {
+				It("Should Be Valid", func() {
+					shouldBePublished()
+					vols, err := listVolumes()
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(vols).Should(HaveLen(3))
+					Ω(vols[0].VolumeContext[devPathKey]).Should(Equal("/dev/mock"))
+				})
 			})
+
+			Context("Invalid Node ID", func() {
+
+				BeforeEach(func() {
+					nodeId = ""
+				})
+
+				It("Should Error", func() {
+					Ω(err).Should(HaveOccurred())
+					Ω(err).Should(ΣCM(codes.InvalidArgument, "required: NodeID"))
+				})
+			})
+
 		})
 
 		Context("UnpublishVolume", func() {
 			JustBeforeEach(func() {
 				shouldBePublished()
-				_, err := client.ControllerUnpublishVolume(
-					ctx,
-					&csi.ControllerUnpublishVolumeRequest{
-						VolumeId: "1",
-						NodeId:   service.Name,
-					})
-				Ω(err).ShouldNot(HaveOccurred())
 			})
-			It("Should Be Unpublished", func() {
-				vols, err := listVolumes()
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(vols).Should(HaveLen(3))
-				_, ok := vols[0].VolumeContext[devPathKey]
-				Ω(ok).Should(BeFalse())
+
+			Context("Valid NodeID", func() {
+				It("Should Be Unpublished", func() {
+					unpublishVolume()
+					vols, err := listVolumes()
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(vols).Should(HaveLen(3))
+					_, ok := vols[0].VolumeContext[devPathKey]
+					Ω(ok).Should(BeFalse())
+				})
+			})
+
+			Context("No NodeID", func() {
+				It("Should Still Be Unpublished", func() {
+					nodeId = ""
+					unpublishVolume()
+					vols, err := listVolumes()
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(vols).Should(HaveLen(3))
+					_, ok := vols[0].VolumeContext[devPathKey]
+					Ω(ok).Should(BeFalse())
+				})
 			})
 		})
 	})
