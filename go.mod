@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/akutz/gosync v0.1.0
 	github.com/akutz/memconn v0.1.0
-	github.com/container-storage-interface/spec v1.0.0
+	github.com/container-storage-interface/spec v1.1.0
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/coreos/etcd v3.3.13+incompatible
 	github.com/coreos/go-semver v0.3.0 // indirect

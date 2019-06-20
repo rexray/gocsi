@@ -13,7 +13,7 @@ import (
 var controllerPublishVolume struct {
 	nodeID   string
 	caps     volumeCapabilitySliceArg
-	attribs  mapOfStringArg
+	volCtx   mapOfStringArg
 	readOnly bool
 }
 
@@ -32,7 +32,7 @@ USAGE
 		req := csi.ControllerPublishVolumeRequest{
 			NodeId:        controllerPublishVolume.nodeID,
 			Secrets:       root.secrets,
-			VolumeContext: controllerPublishVolume.attribs.data,
+			VolumeContext: controllerPublishVolume.volCtx.data,
 			Readonly:      controllerPublishVolume.readOnly,
 		}
 
@@ -80,21 +80,11 @@ func init() {
 		`Marks the request's NodeId field as required.
         Enabling this option also enables --with-spec-validation.`)
 
-	controllerPublishVolumeCmd.Flags().BoolVar(
-		&controllerPublishVolume.readOnly,
-		"read-only",
-		false,
-		"Mark the volume as read-only")
+	flagReadOnly(
+		controllerPublishVolumeCmd.Flags(), &controllerPublishVolume.readOnly)
 
-	controllerPublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresPubVolContext,
-		"with-requires-pub-context",
-		false,
-		`Marks the response's PublishVolumeContext field as required.
-        Enabling this option also enables --with-spec-validation.`)
-
-	flagVolumeAttributes(
-		controllerPublishVolumeCmd.Flags(), &controllerPublishVolume.attribs)
+	flagVolumeContext(
+		controllerPublishVolumeCmd.Flags(), &controllerPublishVolume.volCtx)
 
 	flagVolumeCapability(
 		controllerPublishVolumeCmd.Flags(), &controllerPublishVolume.caps)
@@ -104,8 +94,9 @@ func init() {
 		&root.withRequiresCreds,
 		"")
 
-	flagWithRequiresAttribs(
-		controllerPublishVolumeCmd.Flags(),
-		&root.withRequiresVolumeAttributes,
-		"")
+	flagWithRequiresVolContext(
+		controllerPublishVolumeCmd.Flags(), &root.withRequiresVolContext, false)
+
+	flagWithRequiresPubContext(
+		controllerPublishVolumeCmd.Flags(), &root.withRequiresPubContext, false)
 }

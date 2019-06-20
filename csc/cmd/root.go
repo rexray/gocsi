@@ -37,11 +37,11 @@ var root struct {
 	withReqLogging bool
 	withRepLogging bool
 
-	withSpecValidator            bool
-	withRequiresCreds            bool
-	withRequiresNodeID           bool
-	withRequiresPubVolContext    bool
-	withRequiresVolumeAttributes bool
+	withSpecValidator      bool
+	withRequiresCreds      bool
+	withRequiresNodeID     bool
+	withRequiresVolContext bool
+	withRequiresPubContext bool
 }
 
 var (

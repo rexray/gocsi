@@ -32,6 +32,8 @@ var _ = Describe("Controller", func() {
 		snapName string
 		reqBytes int64
 		limBytes int64
+		expBytes int64
+		capBytes int64
 		fsType   string
 		mntFlags []string
 		params   map[string]string
@@ -46,6 +48,7 @@ var _ = Describe("Controller", func() {
 		snapName = "Test Snap"
 		reqBytes = 1.074e+10 //  10GiB
 		limBytes = 1.074e+11 // 100GiB
+		expBytes = 1.074e+12 //   1TiB
 		fsType = "ext4"
 		mntFlags = []string{"-o noexec"}
 		params = map[string]string{"tag": "gold"}
@@ -69,6 +72,8 @@ var _ = Describe("Controller", func() {
 		snapName = ""
 		reqBytes = 0
 		limBytes = 0
+		expBytes = 0
+		capBytes = 0
 		fsType = ""
 		mntFlags = nil
 		params = nil
@@ -150,12 +155,31 @@ var _ = Describe("Controller", func() {
 		return res.Snapshot, err
 	}
 
+	expandVolumeWithResult := func() (int64, error) {
+		req := &csi.ControllerExpandVolumeRequest{
+			VolumeId: volID,
+			CapacityRange: &csi.CapacityRange{
+				RequiredBytes: limBytes,
+				LimitBytes:    expBytes,
+			},
+		}
+		res, err := client.ControllerExpandVolume(ctx, req)
+		if res == nil {
+			return 0, err
+		}
+		return res.CapacityBytes, err
+	}
+
 	createNewSnapshot := func() {
 		snap, err = createNewSnapshotWithResult()
 	}
 
 	createNewVolume := func() {
 		vol, err = createNewVolumeWithResult()
+	}
+
+	expandVolume := func() {
+		capBytes, err = expandVolumeWithResult()
 	}
 
 	validateNewVolumeResult := func(
@@ -189,12 +213,29 @@ var _ = Describe("Controller", func() {
 		return false
 	}
 
+	validateVolumeExpandResult := func(
+		bytes int64,
+		err error) bool {
+
+		if err != nil {
+			Ω(err).Should(ΣCM(codes.Aborted, "pending"))
+			return true
+		}
+
+		Ω(bytes).Should(Equal(expBytes))
+		return false
+	}
+
 	validateNewSnapshot := func() {
 		validateNewSnapshotResult(snap, err)
 	}
 
 	validateNewVolume := func() {
 		validateNewVolumeResult(vol, err)
+	}
+
+	validateVolumeExpand := func() {
+		validateVolumeExpandResult(capBytes, err)
 	}
 
 	Describe("CreateSnapshot", func() {
@@ -626,6 +667,16 @@ var _ = Describe("Controller", func() {
 				_, ok := vols[0].VolumeContext[devPathKey]
 				Ω(ok).Should(BeFalse())
 			})
+		})
+	})
+
+	Describe("Expand Volume", func() {
+		JustBeforeEach(func() {
+			createNewVolume()
+			expandVolume()
+		})
+		Context("ExpandVolume", func() {
+			It("Should be expanded", validateVolumeExpand)
 		})
 	})
 })

@@ -29,8 +29,8 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withSpec               = sp.getEnvBool(ctx, EnvVarSpecValidation)
 		withStgTgtPath         = sp.getEnvBool(ctx, EnvVarRequireStagingTargetPath)
 		withNodeID             = sp.getEnvBool(ctx, EnvVarRequireNodeID)
-		withPubVolContext      = sp.getEnvBool(ctx, EnvVarRequirePubVolContext)
-		withVolAttribs         = sp.getEnvBool(ctx, EnvVarRequireVolAttribs)
+		withVolContext         = sp.getEnvBool(ctx, EnvVarRequireVolContext)
+		withPubContext         = sp.getEnvBool(ctx, EnvVarRequirePubContext)
 		withCreds              = sp.getEnvBool(ctx, EnvVarCreds)
 		withCredsNewVol        = sp.getEnvBool(ctx, EnvVarCredsCreateVol)
 		withCredsDelVol        = sp.getEnvBool(ctx, EnvVarCredsDeleteVol)
@@ -63,8 +63,8 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 		withSpecReq = withCreds ||
 			withStgTgtPath ||
 			withNodeID ||
-			withPubVolContext ||
-			withVolAttribs
+			withVolContext ||
+			withPubContext
 		log.WithField("withSpecReq", withSpecReq).Debug(
 			"init implicit req validation")
 	}
@@ -167,15 +167,15 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 				specvalidator.WithRequiresNodeID())
 			log.Debug("enabled spec validator opt: requires node ID")
 		}
-		if withPubVolContext {
+		if withVolContext {
+			specOpts = append(specOpts,
+				specvalidator.WithRequiresVolumeContext())
+			log.Debug("enabled spec validator opt: requires vol context")
+		}
+		if withPubContext {
 			specOpts = append(specOpts,
 				specvalidator.WithRequiresPublishContext())
-			log.Debug("enabled spec validator opt: requires pub info")
-		}
-		if withVolAttribs {
-			specOpts = append(specOpts,
-				specvalidator.WithRequiresVolumeAttributes())
-			log.Debug("enabled spec validator opt: requires vol attribs")
+			log.Debug("enabled spec validator opt: requires pub context")
 		}
 		sp.Interceptors = append(sp.Interceptors,
 			specvalidator.NewServerSpecValidator(specOpts...))

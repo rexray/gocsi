@@ -41,12 +41,5 @@ var getCapacityCmd = &cobra.Command{
 func init() {
 	controllerCmd.AddCommand(getCapacityCmd)
 	flagVolumeCapabilities(getCapacityCmd.Flags(), &getCapacity.caps)
-	getCapacityCmd.Flags().Var(
-		&getCapacity.params,
-		"params",
-		`One or more key/value pairs may be specified to send with
-        the request as its Parameters field:
-
-            --params key1=val1,key2=val2 --params=key3=val3`)
-
+	flagParameters(getCapacityCmd.Flags(), &getCapacity.params)
 }

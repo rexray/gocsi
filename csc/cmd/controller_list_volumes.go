@@ -86,9 +86,4 @@ func init() {
 		"format",
 		"",
 		"The Go template format used to emit the results")
-
-	flagWithRequiresAttribs(
-		listVolumesCmd.Flags(),
-		&root.withRequiresVolumeAttributes,
-		"")
 }

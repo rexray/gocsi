@@ -94,14 +94,25 @@ func flagWithRequiresCreds(fs *flag.FlagSet, addr *bool, def string) {
         Enabling this option also enables --with-spec-validation.`)
 }
 
-// flagWithRequiresAttribs adds the flag --with-requires-attribs
-// to the provided flagset.
-func flagWithRequiresAttribs(fs *flag.FlagSet, addr *bool, def string) {
+// flagWithRequiresVolContext adds the flag --with-requires-vol-context
+// to the provided flagset
+func flagWithRequiresVolContext(fs *flag.FlagSet, addr *bool, def bool) {
 	fs.BoolVar(
 		addr,
-		"with-requires-attribs",
-		defBool(def),
-		`Marks a request's and repsonse's VolumeAttributes field as required.
+		"with-requires-vol-context",
+		def,
+		`Marks a request's and repsonse's VolumeContext field as required.
+        Enabling this option also enables --with-spec-validation.`)
+}
+
+// flagWithRequiresPubContext adds the flag --with-requires-pub-context
+// to the provided flagset
+func flagWithRequiresPubContext(fs *flag.FlagSet, addr *bool, def bool) {
+	fs.BoolVar(
+		addr,
+		"with-requires-pub-context",
+		def,
+		`Marks a request's and repsonse's PublishContext field as required.
         Enabling this option also enables --with-spec-validation.`)
 }
 
@@ -146,15 +157,83 @@ func flagVolumeCapability(fs *flag.FlagSet, addr *volumeCapabilitySliceArg) {
 `+flagVolumeCapabilityDescSuffix)
 }
 
-// flagVolumeAttributes adds the --attrib flag to the specified flagset.
-func flagVolumeAttributes(fs *flag.FlagSet, addr *mapOfStringArg) {
+// flagVolumeContext adds the --vol-context flag to the specified flagset.
+func flagVolumeContext(fs *flag.FlagSet, addr *mapOfStringArg) {
 	fs.Var(
 		addr,
-		"attrib",
+		"vol-context",
 		`One or more key/value pairs may be specified to send with
-        the request as its VolumeAttributes field:
+        the request as its VolumeContext field:
 
-            --attrib key1=val1,key2=val2 --attrib=key3=val3`)
+            --vol-context key1=val1,key2=val2 --vol-context=key3=val3`)
+}
+
+// flagPublishContext adds the --pub-context flag to the specified flagset.
+func flagPublishContext(fs *flag.FlagSet, addr *mapOfStringArg) {
+	fs.Var(
+		addr,
+		"pub-context",
+		`One or more key/value pairs may be specified to send with
+        the request as its PublishContext field:
+
+            --pub-context key1=val1,key2=val2 --pub-context=key3=val3`)
+}
+
+// flagParameters adds the --params flag to the specified flagset.
+func flagParameters(fs *flag.FlagSet, addr *mapOfStringArg) {
+	fs.Var(
+		addr,
+		"params",
+		`One or more key/value pairs may be specified to send with
+        the request as its Parameters field:
+
+            --params key1=val1,key2=val2 --params=key3=val3`)
+}
+
+// flagStagingTargetPath adds the --staging-target-path flag to the specified
+// flagset.
+func flagStagingTargetPath(fs *flag.FlagSet, addr *string) {
+	fs.StringVar(
+		addr,
+		"staging-target-path",
+		"",
+		"The path to which to stage or unstage the volume")
+}
+
+// flagTargetPath adds the --target-path flag to the specified flagset.
+func flagTargetPath(fs *flag.FlagSet, addr *string) {
+	fs.StringVar(
+		addr,
+		"target-path",
+		"",
+		"The path to which to mount or unmount the volume")
+}
+
+// flagReadOnly adds the --read-only flag to the specified flagset
+func flagReadOnly(fs *flag.FlagSet, addr *bool) {
+	fs.BoolVar(
+		addr,
+		"read-only",
+		false,
+		"Mark the volume as read-only")
+}
+
+// flagRequiredBytes adds the --req-bytes flag to the specified flagset
+func flagRequiredBytes(fs *flag.FlagSet, addr *int64) {
+	fs.Int64Var(
+		addr,
+		"req-bytes",
+		0,
+		"The required size of the volume in bytes")
+}
+
+// flagLimitBytes adds the --lim-bytes flag to the specified flagset
+func flagLimitBytes(fs *flag.FlagSet, addr *int64) {
+	fs.Int64Var(
+		addr,
+		"lim-bytes",
+		0,
+		"The limit to the size of the volume in bytes")
 }
 
 // flagVolumeCapabilities adds the --cap flag to the specified flagset.
