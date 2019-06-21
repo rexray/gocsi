@@ -37,10 +37,6 @@ values:
 
 | Name | Value |
 |------|---------|
-| `X_CSI_IDEMP` | `true` |
-| `X_CSI_IDEMP_REQUIRE_VOL` | `true` |
-| `X_CSI_REQUIRE_NODE_ID` | `true` |
-| `X_CSI_REQUIRE_PUB_VOL_INFO` | `true` |
-| `X_CSI_CREATE_VOL_ALREADY_EXISTS` | `true` |
-| `X_CSI_DELETE_VOL_NOT_FOUND` | `true` |
-| `X_CSI_SUPPORTED_VERSIONS` | `0.2.0 1.0.0 1.1.0` |
+| `X_CSI_REQUIRE_PUB_CONTEXT` | `true` |
+| `X_CSI_SERIAL_VOL_ACCESS` | `true` |
+| `X_CSI_SPEC_VALIDATION` | `true` |

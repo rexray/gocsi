@@ -14,10 +14,10 @@ import (
 
 const (
 	// Name is the name of the CSI plug-in.
-	Name = "com.rexray.mock"
+	Name = "mock.gocsi.rexray.com"
 
 	// VendorVersion is the version returned by GetPluginInfo.
-	VendorVersion = "0.2.0"
+	VendorVersion = "1.1.0"
 )
 
 // Manifest is the SP's manifest.
