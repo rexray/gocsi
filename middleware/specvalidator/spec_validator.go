@@ -25,7 +25,6 @@ type opts struct {
 	reqValidation               bool
 	repValidation               bool
 	requiresStagingTargetPath   bool
-	requiresNodeID              bool
 	requiresVolContext          bool
 	requiresPubContext          bool
 	requiresCtlrNewVolSecrets   bool
@@ -47,15 +46,6 @@ func WithRequestValidation() Option {
 func WithResponseValidation() Option {
 	return func(o *opts) {
 		o.repValidation = true
-	}
-}
-
-// WithRequiresNodeID is a Option that indicates
-// ControllerPublishVolume requests and NodeGetInfo responses must
-// contain non-empty node ID data.
-func WithRequiresNodeID() Option {
-	return func(o *opts) {
-		o.requiresNodeID = true
 	}
 }
 
@@ -264,9 +254,6 @@ func (s *interceptor) handle(
 type interceptorHasVolumeID interface {
 	GetVolumeId() string
 }
-type interceptorHasNodeID interface {
-	NodeGetId() string
-}
 type interceptorHasUserCredentials interface {
 	GetUserCredentials() map[string]string
 }
@@ -299,17 +286,6 @@ func (s *interceptor) validateRequest(
 		if treq.GetVolumeId() == "" {
 			return status.Error(
 				codes.InvalidArgument, "required: VolumeID")
-		}
-	}
-
-	// Check to see if the request has a node ID and if it is set.
-	// If the node ID is not set then return an error.
-	if s.opts.requiresNodeID {
-		if treq, ok := req.(interceptorHasNodeID); ok {
-			if treq.NodeGetId() == "" {
-				return status.Error(
-					codes.InvalidArgument, "required: NodeID")
-			}
 		}
 	}
 
@@ -457,6 +433,11 @@ func (s *interceptor) validateControllerPublishVolumeRequest(
 			return status.Error(
 				codes.InvalidArgument, "required: Secrets")
 		}
+	}
+
+	if req.NodeId == "" {
+		return status.Error(
+			codes.InvalidArgument, "required: NodeID")
 	}
 
 	return validateVolumeCapabilityArg(req.VolumeCapability, true)
@@ -674,9 +655,10 @@ func (s *interceptor) validateGetPluginInfoResponse(
 func (s *interceptor) validateNodeGetInfoResponse(
 	ctx context.Context,
 	rep csi.NodeGetInfoResponse) error {
-	if s.opts.requiresNodeID && rep.NodeId == "" {
+	if rep.NodeId == "" {
 		return status.Error(codes.Internal, "empty: NodeID")
 	}
+
 	return nil
 }
 

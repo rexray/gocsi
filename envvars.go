@@ -114,12 +114,6 @@ const (
 	// a code of "Internal."
 	EnvVarSpecRepValidation = "X_CSI_SPEC_REP_VALIDATION"
 
-	// EnvVarRequireNodeID is the name of the environment variable used
-	// to determine whether or not the node ID value is required for
-	// requests that accept it and responses that return it such as
-	// ControllerPublishVolume and GetNodeId.
-	EnvVarRequireNodeID = "X_CSI_REQUIRE_NODE_ID"
-
 	// EnvVarRequireStagingTargetPath is the name of the environment variable
 	// used to determine whether or not the NodePublishVolume request field
 	// StagingTargetPath is required.

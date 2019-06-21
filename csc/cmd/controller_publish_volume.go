@@ -73,13 +73,6 @@ func init() {
 		"",
 		"The ID of the node to which to publish the volume")
 
-	controllerPublishVolumeCmd.Flags().BoolVar(
-		&root.withRequiresNodeID,
-		"with-requires-node-id",
-		false,
-		`Marks the request's NodeId field as required.
-        Enabling this option also enables --with-spec-validation.`)
-
 	flagReadOnly(
 		controllerPublishVolumeCmd.Flags(), &controllerPublishVolume.readOnly)
 

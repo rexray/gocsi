@@ -5,6 +5,7 @@ import (
 	"math"
 	"path"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -125,13 +126,24 @@ func (s *service) ControllerUnpublishVolume(
 	// to the specified node.
 	devPathKey := path.Join(req.NodeId, "dev")
 
-	// Check to see if the volume is already unpublished.
-	if v.VolumeContext[devPathKey] == "" {
-		return &csi.ControllerUnpublishVolumeResponse{}, nil
-	}
+	// if NodeID is not blank, unpublish from just that node
+	if req.NodeId != "" {
+		// Check to see if the volume is already unpublished.
+		if v.VolumeContext[devPathKey] == "" {
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
 
-	// Unpublish the volume.
-	delete(v.VolumeContext, devPathKey)
+		// Unpublish the volume.
+		delete(v.VolumeContext, devPathKey)
+	} else {
+		// NodeID is blank, unpublish from all nodes, which can be identified by
+		// ending with "/dev"
+		for k, _ := range v.VolumeContext {
+			if strings.HasSuffix(k, devPathKey) {
+				delete(v.VolumeContext, k)
+			}
+		}
+	}
 	s.vols[i] = v
 
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
