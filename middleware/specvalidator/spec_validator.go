@@ -33,6 +33,7 @@ type opts struct {
 	requiresCtlrUnpubVolSecrets bool
 	requiresNodeStgVolSecrets   bool
 	requiresNodePubVolSecrets   bool
+	disableFieldLenCheck        bool
 }
 
 // WithRequestValidation is a Option that enables request validation.
@@ -128,6 +129,14 @@ func WithRequiresNodeStageVolumeSecrets() Option {
 func WithRequiresNodePublishVolumeSecrets() Option {
 	return func(o *opts) {
 		o.requiresNodePubVolSecrets = true
+	}
+}
+
+// WithDisableFieldLenCheck is a Option
+// that indicates that the length of fields should not be validated
+func WithDisableFieldLenCheck() Option {
+	return func(o *opts) {
+		o.disableFieldLenCheck = true
 	}
 }
 
@@ -276,8 +285,10 @@ func (s *interceptor) validateRequest(
 	}
 
 	// Validate field sizes.
-	if err := validateFieldSizes(req); err != nil {
-		return err
+	if !s.opts.disableFieldLenCheck {
+		if err := validateFieldSizes(req); err != nil {
+			return err
+		}
 	}
 
 	// Check to see if the request has a volume ID and if it is set.
@@ -359,8 +370,10 @@ func (s *interceptor) validateResponse(
 	}
 
 	// Validate the field sizes.
-	if err := validateFieldSizes(rep); err != nil {
-		return err
+	if !s.opts.disableFieldLenCheck {
+		if err := validateFieldSizes(rep); err != nil {
+			return err
+		}
 	}
 
 	switch tobj := rep.(type) {

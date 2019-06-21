@@ -114,6 +114,11 @@ const (
 	// a code of "Internal."
 	EnvVarSpecRepValidation = "X_CSI_SPEC_REP_VALIDATION"
 
+	// EnvVarDisableFieldLen is the name of the environment variable used
+	// to determine whether or not to disable validation of CSI request and
+	// response field lengths against the permitted lenghts defined in the spec
+	EnvVarDisableFieldLen = "X_CSI_SPEC_DISABLE_LEN_CHECK"
+
 	// EnvVarRequireStagingTargetPath is the name of the environment variable
 	// used to determine whether or not the NodePublishVolume request field
 	// StagingTargetPath is required.

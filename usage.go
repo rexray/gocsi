@@ -120,6 +120,9 @@ GLOBAL OPTIONS
         Invalid responses are marshalled into a gRPC error with a code
         of "Internal."
 
+    X_CSI_SPEC_DISABLE_LEN_CHECK
+        A flag that disables validation of CSI message field lengths.
+
     X_CSI_REQUIRE_STAGING_TARGET_PATH
         A flag that enables treating the following fields as required:
             * NodePublishVolumeRequest.StagingTargetPath
