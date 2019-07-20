@@ -12,11 +12,11 @@ import (
 )
 
 var listSnapshots struct {
-	maxEntries    int32
-	startingToken string
+	maxEntries     int32
+	startingToken  string
 	sourceVolumeId string
 	SnapshotId     string
-	paging        bool
+	paging         bool
 }
 
 var listSnapshotsCmd = &cobra.Command{
@@ -28,9 +28,9 @@ var listSnapshotsCmd = &cobra.Command{
 		defer cancel()
 
 		req := csi.ListSnapshotsRequest{
-			MaxEntries:    listSnapshots.maxEntries,
-			StartingToken: listSnapshots.startingToken,
-			SnapshotId:listSnapshots.SnapshotId,
+			MaxEntries:     listSnapshots.maxEntries,
+			StartingToken:  listSnapshots.startingToken,
+			SnapshotId:     listSnapshots.SnapshotId,
 			SourceVolumeId: listSnapshots.sourceVolumeId,
 		}
 
@@ -83,13 +83,13 @@ func init() {
 		&listSnapshots.sourceVolumeId,
 		"source-volume-id",
 		"",
-		"The starting token used to retrieve source-volume id")
+		"ID of volume to list snapshots for")
 
 	listSnapshotsCmd.Flags().StringVar(
 		&listSnapshots.SnapshotId,
 		"snapshot-id",
 		"",
-		"The starting token used to retrieve snapshot id")
+		"ID of snapshot to retrieve specific snapshot")
 
 	listSnapshotsCmd.Flags().BoolVar(
 		&listSnapshots.paging,
