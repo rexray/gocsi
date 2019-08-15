@@ -101,6 +101,11 @@ GLOBAL OPTIONS
 
         Enabling this option sets X_CSI_REQ_ID_INJECTION=true.
 
+    X_CSI_LOG_DISABLE_VOL_CTX
+        A flag that disables the logging of the VolumeContext field.
+
+        Only takes effect if Request or Reply logging is enabled.
+
     X_CSI_REQ_ID_INJECTION
         A flag that enables request ID injection. The ID is parsed from
         the incoming request's metadata with a key of "csi.requestid".

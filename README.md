@@ -211,6 +211,12 @@ environment variables:
       </td>
     </tr>
     <tr>
+      <td><code>X_CSI_LOG_DISABLE_VOL_CTX</code></td>
+      <td><p>A flag that disables the logging of the VolumeContext field.</p>
+      <p>Only takes effect if Request or Reply logging is enabled.</p>
+      </td>
+    </tr>
+    <tr>
       <td><code>X_CSI_REQ_ID_INJECTION</code></td>
       <td>A flag that enables request ID injection. The ID is parsed from
       the incoming request's metadata with a key of
