@@ -17,3 +17,9 @@ AVAILABLE COMMANDS
 
 Use "csc -h,--help" for more information
 ```
+
+## Installation
+
+```bash
+$ GO111MODULE=off go get -u github.com/rexray/gocsi/csc
+```
