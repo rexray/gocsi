@@ -209,6 +209,24 @@ func flagTargetPath(fs *flag.FlagSet, addr *string) {
 		"The path to which to mount or unmount the volume")
 }
 
+// flagVolumeSrc adds the --from-volume flag to specified flagset
+func flagVolumeSrc(fs *flag.FlagSet, vname *string) {
+	fs.StringVar(
+		vname,
+		"volume-src",
+		"",
+		"The name of the source volume")
+}
+
+// flagSnapshotSrc adds the --from-snapshot flag to specified flagset
+func flagSnapshotSrc(fs *flag.FlagSet, sname *string) {
+	fs.StringVar(
+		sname,
+		"snapshot-src",
+		"",
+		"The name of the source snapshot")
+}
+
 // flagReadOnly adds the --read-only flag to the specified flagset
 func flagReadOnly(fs *flag.FlagSet, addr *bool) {
 	fs.BoolVar(

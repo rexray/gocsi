@@ -15,6 +15,8 @@ var createVolume struct {
 	limBytes int64
 	caps     volumeCapabilitySliceArg
 	params   mapOfStringArg
+        volumeSrc   string
+        snapshotSrc string
 }
 
 var createVolumeCmd = &cobra.Command{
@@ -29,8 +31,10 @@ CREATING MULTIPLE VOLUMES
             csc controller new --endpoint /csi/server.sock
                                --cap 1,block \
                                --cap MULTI_NODE_MULTI_WRITER,mount,xfs,uid=500 \
-                               --params region=us,zone=texas
-                               --params disabled=false
+                               --volume-src MyOldVolume1 \
+                               --snapshot-src MyOldSnapshot1 \
+                               --params region=us,zone=texas \
+                               --params disabled=false \
                                MyNewVolume1 MyNewVolume2
 `,
 	Args: cobra.MinimumNArgs(1),
@@ -51,6 +55,31 @@ CREATING MULTIPLE VOLUMES
 				req.CapacityRange.LimitBytes = v
 			}
 		}
+
+                if  len(createVolume.volumeSrc) > 0 {
+                    volumeSource := csi.VolumeContentSource_Volume{
+                        Volume: &csi.VolumeContentSource_VolumeSource{
+                            VolumeId: createVolume.volumeSrc,
+                        },
+                    }
+
+                    volumeContentSource := &csi.VolumeContentSource{
+                        Type: &volumeSource,
+                    }
+                    req.VolumeContentSource = volumeContentSource
+                } else if len(createVolume.snapshotSrc) > 0 {
+                    snapshotSource := csi.VolumeContentSource_Snapshot{
+                        Snapshot: &csi.VolumeContentSource_SnapshotSource{
+                            SnapshotId: createVolume.snapshotSrc,
+                        },
+                    }
+
+                    snapshotContentSource := &csi.VolumeContentSource{
+                        Type: &snapshotSource,
+                    }
+                    req.VolumeContentSource = snapshotContentSource
+
+                }
 
 		for i := range args {
 			ctx, cancel := context.WithTimeout(root.ctx, root.timeout)
@@ -83,6 +112,10 @@ func init() {
 	flagParameters(createVolumeCmd.Flags(), &createVolume.params)
 
 	flagVolumeCapabilities(createVolumeCmd.Flags(), &createVolume.caps)
+
+        flagVolumeSrc(createVolumeCmd.Flags(), &createVolume.volumeSrc)
+
+        flagSnapshotSrc(createSnapshotCmd.Flags(), &createVolume.snapshotSrc)
 
 	flagWithRequiresVolContext(
 		createVolumeCmd.Flags(),
