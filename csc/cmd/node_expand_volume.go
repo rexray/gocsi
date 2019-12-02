@@ -23,13 +23,15 @@ var nodeExpandVolumeCmd = &cobra.Command{
 	Example: `
 USAGE
 
-    csc node expand [flags] VOLUME_ID
+    csc node expand [flags] VOLUME_ID VOLUME_PATH
 `,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 
+		// Set the volume name and path for the current request.
 		req := csi.NodeExpandVolumeRequest{
-			VolumePath: nodeExpandVolume.volPath,
+			VolumeId:   args[0],
+			VolumePath: args[1],
 		}
 
 		if nodeExpandVolume.reqBytes > 0 || nodeExpandVolume.limBytes > 0 {
@@ -45,9 +47,6 @@ USAGE
 		ctx, cancel := context.WithTimeout(root.ctx, root.timeout)
 		defer cancel()
 
-		// Set the volume name for the current request.
-		req.VolumeId = args[0]
-
 		log.WithField("request", req).Debug("expanding volume")
 		rep, err := node.client.NodeExpandVolume(ctx, &req)
 		if err != nil {
@@ -61,7 +60,7 @@ USAGE
 }
 
 func init() {
-	controllerCmd.AddCommand(expandVolumeCmd)
+	nodeCmd.AddCommand(nodeExpandVolumeCmd)
 
 	flagRequiredBytes(nodeExpandVolumeCmd.Flags(), &nodeExpandVolume.reqBytes)
 
