@@ -44,6 +44,9 @@ const pluginCapsFormat = `{{range $v := .Capabilities}}` +
 	`{{if isa $t "*csi.PluginCapability_Service_"}}{{if $t.Service}}` +
 	`{{printf "%s\n" $t.Service.Type}}` +
 	`{{end}}{{end}}` +
+	`{{if isa $t "*csi.PluginCapability_VolumeExpansion_"}}{{if $t.VolumeExpansion}}` +
+	`{{printf "%s\n" $t.VolumeExpansion.Type}}` +
+	`{{end}}{{end}}` +
 	`{{end}}` +
 	`{{end}}`
 
