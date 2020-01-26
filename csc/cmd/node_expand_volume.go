@@ -11,9 +11,10 @@ import (
 )
 
 var nodeExpandVolume struct {
-	reqBytes int64
-	limBytes int64
-	volPath  string
+	reqBytes    int64
+	limBytes    int64
+	stagingPath string
+	volCap      *volumeCapabilitySliceArg
 }
 
 var nodeExpandVolumeCmd = &cobra.Command{
@@ -30,8 +31,10 @@ USAGE
 
 		// Set the volume name and path for the current request.
 		req := csi.NodeExpandVolumeRequest{
-			VolumeId:   args[0],
-			VolumePath: args[1],
+			VolumeId:          args[0],
+			VolumePath:        args[1],
+			StagingTargetPath: nodeExpandVolume.stagingPath,
+			VolumeCapability:  nodeExpandVolume.volCap.data[0],
 		}
 
 		if nodeExpandVolume.reqBytes > 0 || nodeExpandVolume.limBytes > 0 {
@@ -66,4 +69,7 @@ func init() {
 
 	flagLimitBytes(nodeExpandVolumeCmd.Flags(), &nodeExpandVolume.limBytes)
 
+	flagStagingTargetPath(nodeExpandVolumeCmd.Flags(), &nodeExpandVolume.stagingPath)
+
+	flagVolumeCapability(nodeExpandVolumeCmd.Flags(), nodeExpandVolume.volCap)
 }

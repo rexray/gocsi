@@ -11,21 +11,13 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
-var nodeGetVolumeStats struct {
-	nodeID            string
-	stagingTargetPath string
-	pubInfo           mapOfStringArg
-	attribs           mapOfStringArg
-	caps              volumeCapabilitySliceArg
-}
-
 var nodeGetVolumeStatsCmd = &cobra.Command{
 	Use:   "stats",
 	Short: `invokes the rpc "NodeGetVolumeStats"`,
 	Example: `
 USAGE
 
-	csc node stats VOLUME_ID:VOLUME_PATH [VOLUME_ID:VOLUME_PATh...]
+	csc node stats VOLUME_ID:VOLUME_PATH:STAGING_PATH [VOLUME_ID:VOLUME_PATH:STAGING_PATH...]
 `,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -39,6 +31,9 @@ USAGE
 			// Set the volume ID and volume path for the current request.
 			split := strings.Split(args[i], ":")
 			req.VolumeId, req.VolumePath = split[0], split[1]
+			if len(split) > 2 {
+				req.StagingTargetPath = split[2]
+			}
 
 			log.WithField("request", req).Debug("staging volume")
 			rep, err := node.client.NodeGetVolumeStats(ctx, &req)

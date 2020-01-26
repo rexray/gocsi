@@ -32,6 +32,7 @@ var listSnapshotsCmd = &cobra.Command{
 			StartingToken:  listSnapshots.startingToken,
 			SnapshotId:     listSnapshots.SnapshotId,
 			SourceVolumeId: listSnapshots.sourceVolumeId,
+			Secrets:        root.secrets,
 		}
 
 		// If auto-paging is not enabled then send a normal request.
