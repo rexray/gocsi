@@ -20,8 +20,9 @@ import (
 type Option func(*opts)
 
 type opts struct {
-	reqw io.Writer
-	repw io.Writer
+	reqw             io.Writer
+	repw             io.Writer
+	disableLogVolCtx bool
 }
 
 // WithRequestLogging is a Option that enables request logging
@@ -43,6 +44,14 @@ func WithResponseLogging(w io.Writer) Option {
 			w = os.Stdout
 		}
 		o.repw = w
+	}
+}
+
+// WithDisableLogVolumeContext is an Option that disables logging the VolumeContext
+// field in the logging interceptor
+func WithDisableLogVolumeContext() Option {
+	return func(o *opts) {
+		o.disableLogVolCtx = true
 	}
 }
 
@@ -120,7 +129,7 @@ func (s *interceptor) handle(
 		if reqIDOK {
 			fmt.Fprintf(w, "REQ %04d", reqID)
 		}
-		rprintReqOrRep(w, req)
+		s.rprintReqOrRep(w, req)
 		fmt.Fprintln(s.opts.reqw, w.String())
 	}
 
@@ -147,7 +156,7 @@ func (s *interceptor) handle(
 
 	// Print the response data if it is set.
 	if !utils.IsNilResponse(rep) {
-		rprintReqOrRep(w, rep)
+		s.rprintReqOrRep(w, rep)
 	}
 	fmt.Fprintln(s.opts.repw, w.String())
 
@@ -159,7 +168,7 @@ var emptyValRX = regexp.MustCompile(
 
 // rprintReqOrRep is used by the server-side interceptors that log
 // requests and responses.
-func rprintReqOrRep(w io.Writer, obj interface{}) {
+func (s *interceptor) rprintReqOrRep(w io.Writer, obj interface{}) {
 	rv := reflect.ValueOf(obj).Elem()
 	tv := rv.Type()
 	nf := tv.NumField()
@@ -168,6 +177,9 @@ func rprintReqOrRep(w io.Writer, obj interface{}) {
 	for i := 0; i < nf; i++ {
 		name := tv.Field(i).Name
 		if strings.Contains(name, "Secrets") {
+			continue
+		}
+		if s.opts.disableLogVolCtx && strings.Contains(name, "VolumeContext") {
 			continue
 		}
 		sv := fmt.Sprintf("%v", rv.Field(i).Interface())

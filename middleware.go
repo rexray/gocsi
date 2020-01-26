@@ -25,6 +25,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 	var (
 		withReqLogging         = sp.getEnvBool(ctx, EnvVarReqLogging)
 		withRepLogging         = sp.getEnvBool(ctx, EnvVarRepLogging)
+		withDisableLogVolCtx   = sp.getEnvBool(ctx, EnvVarLoggingDisableVolCtx)
 		withSerialVol          = sp.getEnvBool(ctx, EnvVarSerialVolAccess)
 		withSpec               = sp.getEnvBool(ctx, EnvVarSpecValidation)
 		withStgTgtPath         = sp.getEnvBool(ctx, EnvVarRequireStagingTargetPath)
@@ -90,6 +91,11 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 			loggingOpts []logging.Option
 			w           = newLogger(log.Debugf)
 		)
+
+		if withDisableLogVolCtx {
+			loggingOpts = append(loggingOpts, logging.WithDisableLogVolumeContext())
+			log.Debug("disabled logging of VolumeContext field")
+		}
 
 		if withReqLogging {
 			loggingOpts = append(loggingOpts, logging.WithRequestLogging(w))

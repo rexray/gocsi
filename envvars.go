@@ -92,6 +92,14 @@ const (
 	// response logging to STDOUT.
 	EnvVarRepLogging = "X_CSI_REP_LOGGING"
 
+	// EnvVarLoggingDisableVolCtx is the name of the environment variable
+	// used to disable the logging of the VolumeContext field when request or
+	// response logging is enabled.
+	//
+	// Setting this environment variable to a truthy value disables the logging
+	// of the VolumeContext field
+	EnvVarLoggingDisableVolCtx = "X_CSI_LOG_DISABLE_VOL_CTX"
+
 	// EnvVarReqIDInjection is the name of the environment variable
 	// used to determine whether or not to enable request ID injection.
 	EnvVarReqIDInjection = "X_CSI_REQ_ID_INJECTION"
