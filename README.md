@@ -127,7 +127,7 @@ environment variables:
       </td>
     </tr>
     <tr>
-      <td><code>CSI_MODE</code></td>
+      <td><code>X_CSI_MODE</code></td>
       <td>
         <p>Specifies the service mode of the storage plug-in. Valid
         values are:</p>
