@@ -320,7 +320,9 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 // errors.
 func (sp *StoragePlugin) Stop(ctx context.Context) {
 	sp.stopOnce.Do(func() {
-		sp.server.Stop()
+		if sp.server != nil {
+			sp.server.Stop()
+		}
 		log.Info("stopped")
 	})
 }
@@ -330,7 +332,9 @@ func (sp *StoragePlugin) Stop(ctx context.Context) {
 // pending RPCs are finished.
 func (sp *StoragePlugin) GracefulStop(ctx context.Context) {
 	sp.stopOnce.Do(func() {
-		sp.server.GracefulStop()
+		if sp.server != nil {
+			sp.server.GracefulStop()
+		}
 		log.Info("gracefully stopped")
 	})
 }
