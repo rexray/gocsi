@@ -29,8 +29,11 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ControllerExpandVolumeRequest{
-			Secrets:          root.secrets,
-			VolumeCapability: expandVolume.volCap.data[0],
+			Secrets: root.secrets,
+		}
+
+		if len(expandVolume.volCap.data) > 0 {
+			req.VolumeCapability = expandVolume.volCap.data[0]
 		}
 
 		if expandVolume.reqBytes > 0 || expandVolume.limBytes > 0 {

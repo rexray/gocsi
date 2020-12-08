@@ -34,7 +34,10 @@ USAGE
 			VolumeId:          args[0],
 			VolumePath:        args[1],
 			StagingTargetPath: nodeExpandVolume.stagingPath,
-			VolumeCapability:  nodeExpandVolume.volCap.data[0],
+		}
+
+		if len(nodeExpandVolume.volCap.data) > 0 {
+			req.VolumeCapability = expandVolume.volCap.data[0]
 		}
 
 		if nodeExpandVolume.reqBytes > 0 || nodeExpandVolume.limBytes > 0 {
