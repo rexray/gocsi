@@ -13,7 +13,7 @@ import (
 var expandVolume struct {
 	reqBytes int64
 	limBytes int64
-	volCap   *volumeCapabilitySliceArg
+	volCap   volumeCapabilitySliceArg
 }
 
 var expandVolumeCmd = &cobra.Command{
@@ -70,7 +70,7 @@ func init() {
 
 	flagLimitBytes(expandVolumeCmd.Flags(), &expandVolume.limBytes)
 
-	flagVolumeCapability(expandVolumeCmd.Flags(), expandVolume.volCap)
+	flagVolumeCapability(expandVolumeCmd.Flags(), &expandVolume.volCap)
 
 	flagWithRequiresCreds(
 		expandVolumeCmd.Flags(),

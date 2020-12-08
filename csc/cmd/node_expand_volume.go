@@ -14,7 +14,7 @@ var nodeExpandVolume struct {
 	reqBytes    int64
 	limBytes    int64
 	stagingPath string
-	volCap      *volumeCapabilitySliceArg
+	volCap      volumeCapabilitySliceArg
 }
 
 var nodeExpandVolumeCmd = &cobra.Command{
@@ -71,5 +71,5 @@ func init() {
 
 	flagStagingTargetPath(nodeExpandVolumeCmd.Flags(), &nodeExpandVolume.stagingPath)
 
-	flagVolumeCapability(nodeExpandVolumeCmd.Flags(), nodeExpandVolume.volCap)
+	flagVolumeCapability(nodeExpandVolumeCmd.Flags(), &nodeExpandVolume.volCap)
 }
