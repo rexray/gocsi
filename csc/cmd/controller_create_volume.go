@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -11,10 +12,12 @@ import (
 )
 
 var createVolume struct {
-	reqBytes int64
-	limBytes int64
-	caps     volumeCapabilitySliceArg
-	params   mapOfStringArg
+	reqBytes   int64
+	limBytes   int64
+	caps       volumeCapabilitySliceArg
+	params     mapOfStringArg
+	sourceVol  string
+	sourceSnap string
 }
 
 var createVolumeCmd = &cobra.Command{
@@ -52,6 +55,28 @@ CREATING MULTIPLE VOLUMES
 			}
 		}
 
+		if createVolume.sourceVol != "" && createVolume.sourceSnap != "" {
+			return errors.New(
+				"--source-volume and --source-snapshot are mutually exclusive")
+		}
+		if createVolume.sourceVol != "" {
+			req.VolumeContentSource = &csi.VolumeContentSource{
+				Type: &csi.VolumeContentSource_Volume{
+					Volume: &csi.VolumeContentSource_VolumeSource{
+						VolumeId: createVolume.sourceVol,
+					},
+				},
+			}
+		} else if createVolume.sourceSnap != "" {
+			req.VolumeContentSource = &csi.VolumeContentSource{
+				Type: &csi.VolumeContentSource_Snapshot{
+					Snapshot: &csi.VolumeContentSource_SnapshotSource{
+						SnapshotId: createVolume.sourceSnap,
+					},
+				},
+			}
+		}
+
 		for i := range args {
 			ctx, cancel := context.WithTimeout(root.ctx, root.timeout)
 			defer cancel()
@@ -83,6 +108,18 @@ func init() {
 	flagParameters(createVolumeCmd.Flags(), &createVolume.params)
 
 	flagVolumeCapabilities(createVolumeCmd.Flags(), &createVolume.caps)
+
+	createVolumeCmd.Flags().StringVar(
+		&createVolume.sourceVol,
+		"source-volume",
+		"",
+		"Pre-populate data using a source volume")
+
+	createVolumeCmd.Flags().StringVar(
+		&createVolume.sourceSnap,
+		"source-snapshot",
+		"",
+		"Pre-populate data using a source snapshot")
 
 	flagWithRequiresVolContext(
 		createVolumeCmd.Flags(),
