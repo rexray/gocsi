@@ -13,7 +13,7 @@ import (
 var expandVolume struct {
 	reqBytes int64
 	limBytes int64
-	volCap   *volumeCapabilitySliceArg
+	volCap   volumeCapabilitySliceArg
 }
 
 var expandVolumeCmd = &cobra.Command{
@@ -29,8 +29,11 @@ USAGE
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		req := csi.ControllerExpandVolumeRequest{
-			Secrets:          root.secrets,
-			VolumeCapability: expandVolume.volCap.data[0],
+			Secrets: root.secrets,
+		}
+
+		if len(expandVolume.volCap.data) > 0 {
+			req.VolumeCapability = expandVolume.volCap.data[0]
 		}
 
 		if expandVolume.reqBytes > 0 || expandVolume.limBytes > 0 {
@@ -70,7 +73,7 @@ func init() {
 
 	flagLimitBytes(expandVolumeCmd.Flags(), &expandVolume.limBytes)
 
-	flagVolumeCapability(expandVolumeCmd.Flags(), expandVolume.volCap)
+	flagVolumeCapability(expandVolumeCmd.Flags(), &expandVolume.volCap)
 
 	flagWithRequiresCreds(
 		expandVolumeCmd.Flags(),
