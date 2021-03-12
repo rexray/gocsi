@@ -20,7 +20,7 @@ The quickest way to use the bleeding edge copy of GoCSI or one of its
 components is with the following command:
 
 ```shell
-$ go get -u github.com/rexray/gocsi
+$ go get -u github.com/dell/gocsi
 ```
 
 ## Running the tests

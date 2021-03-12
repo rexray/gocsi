@@ -5,8 +5,8 @@ package main
 import "C"
 
 import (
-	"github.com/rexray/gocsi/mock/provider"
-	"github.com/rexray/gocsi/mock/service"
+	"github.com/dell/gocsi/mock/provider"
+	"github.com/dell/gocsi/mock/service"
 )
 
 ////////////////////////////////////////////////////////////////////////////////

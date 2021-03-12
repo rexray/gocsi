@@ -26,8 +26,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	csictx "github.com/rexray/gocsi/context"
-	"github.com/rexray/gocsi/utils"
+	csictx "github.com/dell/gocsi/context"
+	"github.com/dell/gocsi/utils"
 )
 
 // Run launches a CSI storage plug-in.
@@ -192,6 +192,11 @@ type StoragePlugin struct {
 	// EnvVars is a list of default environment variables and values.
 	EnvVars []string
 
+	// RegisterAdditionalServers allows the driver to register additional
+	// grpc servers on the same grpc connection. These can be used
+	// for proprietary extensions.
+	RegisterAdditionalServers func(*grpc.Server)
+
 	serveOnce sync.Once
 	stopOnce  sync.Once
 	server    *grpc.Server
@@ -299,6 +304,11 @@ func (sp *StoragePlugin) Serve(ctx context.Context, lis net.Listener) error {
 			}
 			csi.RegisterNodeServer(sp.server, sp.Node)
 			log.Info("node service registered")
+		}
+
+		// Register any additional servers required.
+		if sp.RegisterAdditionalServers != nil {
+			sp.RegisterAdditionalServers(sp.server)
 		}
 
 		endpoint := fmt.Sprintf(
