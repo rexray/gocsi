@@ -14,7 +14,7 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	"github.com/rexray/gocsi/utils"
+	"github.com/dell/gocsi/utils"
 )
 
 // Option configures the spec validator interceptor.

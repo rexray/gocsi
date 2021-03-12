@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/rexray/gocsi/mock/provider"
+	"github.com/dell/gocsi/mock/provider"
 )
 
 func startMockServer(ctx context.Context) (*grpc.ClientConn, func(), error) {

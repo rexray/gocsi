@@ -22,7 +22,7 @@ const (
 
 // Manifest is the SP's manifest.
 var Manifest = map[string]string{
-	"url": "https://github.com/rexray/gocsi/tree/master/mock",
+	"url": "https://github.com/dell/gocsi/tree/master/mock",
 }
 
 // Service is the CSI Mock service provider.

@@ -12,8 +12,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	csictx "github.com/rexray/gocsi/context"
-	"github.com/rexray/gocsi/utils"
+	csictx "github.com/dell/gocsi/context"
+	"github.com/dell/gocsi/utils"
 )
 
 // Option configures the logging interceptor.
@@ -89,6 +89,11 @@ func (s *interceptor) handleServer(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
+	fmt.Printf("handleServer method: %s\n", info.FullMethod)
+	if !strings.HasPrefix(info.FullMethod, "/csi.") {
+		return handler(ctx, req)
+	}
+
 	return s.handle(ctx, info.FullMethod, req, func() (interface{}, error) {
 		return handler(ctx, req)
 	})
@@ -101,6 +106,11 @@ func (s *interceptor) handleClient(
 	cc *grpc.ClientConn,
 	invoker grpc.UnaryInvoker,
 	opts ...grpc.CallOption) error {
+
+	fmt.Printf("handleClient method: %s\n", method)
+	if !strings.HasPrefix(method, "/csi.") {
+		return nil
+	}
 
 	_, err := s.handle(ctx, method, req, func() (interface{}, error) {
 		return rep, invoker(ctx, method, req, rep, cc, opts...)
@@ -176,6 +186,9 @@ func (s *interceptor) rprintReqOrRep(w io.Writer, obj interface{}) {
 	printComma := false
 	for i := 0; i < nf; i++ {
 		name := tv.Field(i).Name
+		if tv.Field(i).PkgPath != "" {
+			continue
+		}
 		if strings.Contains(name, "Secrets") {
 			continue
 		}

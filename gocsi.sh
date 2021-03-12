@@ -28,7 +28,7 @@ package main
 import (
 	"context"
 
-	"github.com/rexray/gocsi"
+	"github.com/dell/gocsi"
 
 	"$SP_PATH/provider"
 	"$SP_PATH/service"
@@ -54,7 +54,7 @@ import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/rexray/gocsi"
+	"github.com/dell/gocsi"
 
 	"$SP_PATH/service"
 )
@@ -356,7 +356,7 @@ if [ "$BUILD_RESULT" -eq 0 ]; then
   echo "           $SP_DIR/$SP_NAME"
   echo
   echo "  help available online at"
-  echo "  https://github.com/rexray/gocsi#bootstrapping-a-storage-plug-in"
+  echo "  https://github.com/dell/gocsi#bootstrapping-a-storage-plug-in"
 else
   exit 1
 fi

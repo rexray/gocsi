@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/rexray/gocsi"
-	"github.com/rexray/gocsi/mock/service"
+	"github.com/dell/gocsi"
+	"github.com/dell/gocsi/mock/service"
 )
 
 // New returns a new Mock Storage Plug-in Provider.

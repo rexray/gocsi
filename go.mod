@@ -1,4 +1,4 @@
-module github.com/rexray/gocsi
+module github.com/dell/gocsi
 
 go 1.12
 

@@ -4,10 +4,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
-	"github.com/rexray/gocsi/middleware/logging"
-	"github.com/rexray/gocsi/middleware/requestid"
-	"github.com/rexray/gocsi/middleware/specvalidator"
-	"github.com/rexray/gocsi/utils"
+	"github.com/dell/gocsi/middleware/logging"
+	"github.com/dell/gocsi/middleware/requestid"
+	"github.com/dell/gocsi/middleware/specvalidator"
+	"github.com/dell/gocsi/utils"
 )
 
 func getClientInterceptorsDialOpt() grpc.DialOption {
