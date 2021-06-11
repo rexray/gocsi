@@ -138,7 +138,7 @@ func (s *service) ControllerUnpublishVolume(
 	} else {
 		// NodeID is blank, unpublish from all nodes, which can be identified by
 		// ending with "/dev"
-		for k, _ := range v.VolumeContext {
+		for k := range v.VolumeContext {
 			if strings.HasSuffix(k, devPathKey) {
 				delete(v.VolumeContext, k)
 			}
@@ -439,4 +439,12 @@ func (s *service) ControllerExpandVolume(
 		CapacityBytes:         v.CapacityBytes,
 		NodeExpansionRequired: false,
 	}, nil
+}
+
+func (s *service) ControllerGetVolume(
+	ctx context.Context,
+	req *csi.ControllerGetVolumeRequest) (
+	*csi.ControllerGetVolumeResponse, error) {
+
+	return nil, status.Error(codes.Unimplemented, "")
 }
