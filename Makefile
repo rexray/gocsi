@@ -122,9 +122,12 @@ endif
 GINKGO_RUN_OPTS := -ginkgo.slowSpecThreshold=$(GINKGO_SECS) -ginkgo.randomizeAllSpecs
 
 ETCD := ./etcd
+ETCD_VER=v3.5.0
+DOWNLOAD_URL=https://storage.googleapis.com/etcd
 $(ETCD):
-	go get -u -d github.com/coreos/etcd
-	go build -o $@ github.com/coreos/etcd
+	curl -L $(DOWNLOAD_URL)/$(ETCD_VER)/etcd-$(ETCD_VER)-linux-amd64.tar.gz -o /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz
+	tar xzvf /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz -C . --strip-components=1
+	rm -f /tmp/etcd-$(ETCD_VER)-linux-amd64.tar.gz
 
 # The test recipe executes the Go tests with the Ginkgo test
 # runner. This is the reason for the boolean OR condition

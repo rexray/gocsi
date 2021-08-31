@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/akutz/gosync"
-	etcd "github.com/coreos/etcd/clientv3"
-	etcdsync "github.com/coreos/etcd/clientv3/concurrency"
 	log "github.com/sirupsen/logrus"
+	etcd "go.etcd.io/etcd/client/v3"
+	etcdsync "go.etcd.io/etcd/client/v3/concurrency"
 
 	csictx "github.com/dell/gocsi/context"
 	mwtypes "github.com/dell/gocsi/middleware/serialvolume/types"

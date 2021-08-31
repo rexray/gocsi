@@ -89,11 +89,6 @@ func (s *interceptor) handleServer(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
-	fmt.Printf("handleServer method: %s\n", info.FullMethod)
-	if !strings.HasPrefix(info.FullMethod, "/csi.") {
-		return handler(ctx, req)
-	}
-
 	return s.handle(ctx, info.FullMethod, req, func() (interface{}, error) {
 		return handler(ctx, req)
 	})
@@ -106,11 +101,6 @@ func (s *interceptor) handleClient(
 	cc *grpc.ClientConn,
 	invoker grpc.UnaryInvoker,
 	opts ...grpc.CallOption) error {
-
-	fmt.Printf("handleClient method: %s\n", method)
-	if !strings.HasPrefix(method, "/csi.") {
-		return nil
-	}
 
 	_, err := s.handle(ctx, method, req, func() (interface{}, error) {
 		return rep, invoker(ctx, method, req, rep, cc, opts...)

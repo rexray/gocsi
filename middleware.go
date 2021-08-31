@@ -89,7 +89,7 @@ func (sp *StoragePlugin) initInterceptors(ctx context.Context) {
 
 		var (
 			loggingOpts []logging.Option
-			w           = newLogger(log.Debugf)
+			w           = newLogger(log.Infof)
 		)
 
 		if withDisableLogVolCtx {
