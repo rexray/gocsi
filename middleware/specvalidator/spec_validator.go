@@ -770,8 +770,9 @@ func validateVolumeCapabilitiesArg(
 }
 
 const (
-	maxFieldString = 192
+	maxFieldString = 128
 	maxFieldMap    = 4096
+	maxFieldNodeId = 256
 )
 
 func validateFieldSizes(msg interface{}) error {
@@ -782,11 +783,16 @@ func validateFieldSizes(msg interface{}) error {
 		f := rv.Field(i)
 		switch f.Kind() {
 		case reflect.String:
-			if l := f.Len(); l > maxFieldString {
+			maxFieldLen := maxFieldString
+			if tv.Field(i).Name == "NodeId" {
+				maxFieldLen = maxFieldNodeId
+			}
+
+			if l := f.Len(); l > maxFieldLen {
 				return status.Errorf(
 					codes.InvalidArgument,
 					"exceeds size limit: %s: max=%d, size=%d",
-					tv.Field(i).Name, maxFieldString, l)
+					tv.Field(i).Name, maxFieldLen, l)
 			}
 		case reflect.Map:
 			if f.Len() == 0 {
