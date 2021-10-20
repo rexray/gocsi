@@ -2,7 +2,7 @@
 
 HOME=${HOME:-/tmp}
 GOPATH=${GOPATH:-$HOME/go}
-GOPATH=$(echo "$GOPATH" | awk '{print $1}')
+GOPATH=$(echo "$GOPATH" | awk -F: '{print $NF}')
 
 if [ "$1" = "" ]; then
   echo "usage: $0 GO_IMPORT_PATH"
