@@ -343,6 +343,7 @@ EOF
 
 
 echo "building $SP_NAME:"
+go mod init $SP_PATH
 go mod download && go mod verify
 go build .
 BUILD_RESULT=$?
