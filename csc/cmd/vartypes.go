@@ -59,19 +59,19 @@ func (s *volumeCapabilitySliceArg) Type() string {
 func (s *volumeCapabilitySliceArg) Set(val string) error {
 	// The data can be split into a max of 4 components:
 	// 1. mode
-	// 2. cap
-	// 3. fsType (if cap is mount)
-	// 4. mntFlags (if cap is mount)
+	// 2. volCap
+	// 3. fsType (if volCap is mount)
+	// 4. mntFlags (if volCap is mount)
 	data := strings.SplitN(val, ",", 4)
 	if len(data) < 2 {
 		return fmt.Errorf("invalid volume capability: %s", val)
 	}
 
-	var cap csi.VolumeCapability
+	var volCap csi.VolumeCapability
 
 	szMode := data[0]
 	if i, ok := csi.VolumeCapability_AccessMode_Mode_value[szMode]; ok {
-		cap.AccessMode = &csi.VolumeCapability_AccessMode{
+		volCap.AccessMode = &csi.VolumeCapability_AccessMode{
 			Mode: csi.VolumeCapability_AccessMode_Mode(i),
 		}
 	} else {
@@ -80,7 +80,7 @@ func (s *volumeCapabilitySliceArg) Set(val string) error {
 			return fmt.Errorf("invalid access mode: %v: %v", szMode, err)
 		}
 		if _, ok := csi.VolumeCapability_AccessMode_Mode_name[int32(i)]; ok {
-			cap.AccessMode = &csi.VolumeCapability_AccessMode{
+			volCap.AccessMode = &csi.VolumeCapability_AccessMode{
 				Mode: csi.VolumeCapability_AccessMode_Mode(i),
 			}
 		}
@@ -90,10 +90,10 @@ func (s *volumeCapabilitySliceArg) Set(val string) error {
 
 	// Handle a block volume capability
 	if szType == "1" || strings.EqualFold(szType, "block") {
-		cap.AccessType = &csi.VolumeCapability_Block{
+		volCap.AccessType = &csi.VolumeCapability_Block{
 			Block: &csi.VolumeCapability_BlockVolume{},
 		}
-		s.data = append(s.data, &cap)
+		s.data = append(s.data, &volCap)
 		return nil
 	}
 
@@ -105,7 +105,7 @@ func (s *volumeCapabilitySliceArg) Set(val string) error {
 		mountCap := &csi.VolumeCapability_MountVolume{
 			FsType: data[2],
 		}
-		cap.AccessType = &csi.VolumeCapability_Mount{
+		volCap.AccessType = &csi.VolumeCapability_Mount{
 			Mount: mountCap,
 		}
 
@@ -114,7 +114,7 @@ func (s *volumeCapabilitySliceArg) Set(val string) error {
 			mountCap.MountFlags = strings.Split(data[3], ",")
 		}
 
-		s.data = append(s.data, &cap)
+		s.data = append(s.data, &volCap)
 		return nil
 	}
 
