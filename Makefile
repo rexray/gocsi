@@ -123,8 +123,8 @@ GINKGO_RUN_OPTS := -ginkgo.slowSpecThreshold=$(GINKGO_SECS) -ginkgo.randomizeAll
 
 ETCD := ./etcd
 $(ETCD):
-	go get -u -d github.com/coreos/etcd
-	go build -o $@ github.com/coreos/etcd
+	go get -u -d go.etcd.io/etcd
+	go build -o $@ go.etcd.io/etcd
 
 # The test recipe executes the Go tests with the Ginkgo test
 # runner. This is the reason for the boolean OR condition
