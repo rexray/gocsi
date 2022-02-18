@@ -16,5 +16,5 @@ require (
 	github.com/thecodeteam/gosync v0.1.0 // indirect
 	go.etcd.io/etcd/client/v3 v3.5.0
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
-	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.43.0
 )

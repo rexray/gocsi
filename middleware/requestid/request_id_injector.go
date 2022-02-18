@@ -2,12 +2,12 @@ package requestid
 
 import (
 	"fmt"
-	"strconv"
-	"sync/atomic"
-
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"strconv"
+	"strings"
+	"sync/atomic"
 
 	csictx "github.com/dell/gocsi/context"
 )
@@ -65,7 +65,8 @@ func (s *interceptor) handleServer(
 	// request ID and inject it into the metadata.
 	if !szIDOK || len(szID) != 1 {
 		szID = []string{fmt.Sprintf("%d", atomic.AddUint64(&s.id, 1))}
-		md[csictx.RequestIDKey] = szID
+		md.Append(csictx.RequestIDKey, strings.Join(szID, " "))
+		ctx = metadata.NewIncomingContext(ctx, md)
 		storeID = false
 	}
 
