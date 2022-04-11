@@ -147,36 +147,43 @@ const (
 	// EnvVarCreds is the name of the environment variable
 	// used to determine whether or not user credentials are required for
 	// all RPCs. This value may be overridden for specific RPCs.
+	/* #nosec G101 */
 	EnvVarCreds = "X_CSI_REQUIRE_CREDS"
 
 	// EnvVarCredsCreateVol is the name of the environment variable
 	// used to determine whether or not user credentials are required for
 	// the eponymous RPC.
+	/* #nosec G101 */
 	EnvVarCredsCreateVol = "X_CSI_REQUIRE_CREDS_CREATE_VOL"
 
 	// EnvVarCredsDeleteVol is the name of the environment variable
 	// used to determine whether or not user credentials are required for
 	// the eponymous RPC.
+	/* #nosec G101 */
 	EnvVarCredsDeleteVol = "X_CSI_REQUIRE_CREDS_DELETE_VOL"
 
 	// EnvVarCredsCtrlrPubVol is the name of the environment
 	// variable used to determine whether or not user credentials are required
 	// for the eponymous RPC.
+	/* #nosec G101 */
 	EnvVarCredsCtrlrPubVol = "X_CSI_REQUIRE_CREDS_CTRLR_PUB_VOL"
 
 	// EnvVarCredsCtrlrUnpubVol is the name of the
 	// environment variable used to determine whether or not user credentials
 	// are required for the eponymous RPC.
+	/* #nosec G101 */
 	EnvVarCredsCtrlrUnpubVol = "X_CSI_REQUIRE_CREDS_CTRLR_UNPUB_VOL"
 
 	// EnvVarCredsNodeStgVol is the name of the environment
 	// variable used to determine whether or not user credentials are required
 	// for the eponymous RPC.
+	/* #nosec G101 */
 	EnvVarCredsNodeStgVol = "X_CSI_REQUIRE_CREDS_NODE_STG_VOL"
 
 	// EnvVarCredsNodePubVol is the name of the environment
 	// variable used to determine whether or not user credentials are required
 	// for the eponymous RPC.
+	/* #nosec G101 */
 	EnvVarCredsNodePubVol = "X_CSI_REQUIRE_CREDS_NODE_PUB_VOL"
 
 	// EnvVarSerialVolAccess is the name of the environment variable
@@ -244,6 +251,7 @@ const (
 
 	// EnvVarSerialVolAccessEtcdPassword is the name of the environment
 	// variable that defines the password used for authentication.
+	/* #nosec G101 */
 	EnvVarSerialVolAccessEtcdPassword = "X_CSI_SERIAL_VOL_ACCESS_ETCD_PASSWORD"
 
 	// EnvVarSerialVolAccessEtcdRejectOldCluster is the name of the environment
@@ -296,6 +304,7 @@ func (sp *StoragePlugin) initEnvVars(ctx context.Context) {
 
 	// Check for the debug value.
 	if v, ok := csictx.LookupEnv(ctx, EnvVarDebug); ok {
+		/* #nosec G104 */
 		if ok, _ := strconv.ParseBool(v); ok {
 			csictx.Setenv(ctx, EnvVarReqLogging, "true")
 			csictx.Setenv(ctx, EnvVarRepLogging, "true")

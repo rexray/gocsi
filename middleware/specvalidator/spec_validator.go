@@ -772,7 +772,7 @@ func validateVolumeCapabilitiesArg(
 const (
 	maxFieldString = 128
 	maxFieldMap    = 4096
-	maxFieldNodeId = 256
+	maxFieldNodeID = 256
 )
 
 func validateFieldSizes(msg interface{}) error {
@@ -785,7 +785,7 @@ func validateFieldSizes(msg interface{}) error {
 		case reflect.String:
 			maxFieldLen := maxFieldString
 			if tv.Field(i).Name == "NodeId" {
-				maxFieldLen = maxFieldNodeId
+				maxFieldLen = maxFieldNodeID
 			}
 
 			if l := f.Len(); l > maxFieldLen {

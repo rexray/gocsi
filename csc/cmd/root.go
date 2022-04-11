@@ -58,6 +58,7 @@ var RootCmd = &cobra.Command{
 		// if the environment variable that controls deubg mode is set
 		// to a truthy value.
 		if debug {
+			/* #nosec G104 */
 			root.logLevel.Set(log.DebugLevel.String())
 			root.withReqLogging = true
 			root.withReqLogging = true

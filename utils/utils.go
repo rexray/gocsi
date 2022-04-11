@@ -88,7 +88,7 @@ func ParseProtoAddr(protoAddr string) (proto string, addr string, err error) {
 		if _, err := os.Stat(protoAddr); !os.IsNotExist(err) {
 			return "unix", protoAddr, nil
 		}
-
+		/* #nosec G304 */
 		f, err := os.Create(protoAddr)
 		if err != nil {
 			return "", "", fmt.Errorf(

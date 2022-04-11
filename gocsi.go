@@ -38,6 +38,7 @@ func Run(
 
 	// Check for the debug value.
 	if v, ok := csictx.LookupEnv(ctx, EnvVarDebug); ok {
+		/* #nosec G104 */
 		if ok, _ := strconv.ParseBool(v); ok {
 			csictx.Setenv(ctx, EnvVarLogLevel, "debug")
 			csictx.Setenv(ctx, EnvVarReqLogging, "true")
@@ -109,6 +110,7 @@ func Run(
 			if l == nil || l.Addr() == nil {
 				return
 			}
+			/* #nosec G104 */
 			if l.Addr().Network() == netUnix {
 				sockFile := l.Addr().String()
 				os.RemoveAll(sockFile)

@@ -125,6 +125,7 @@ func (s *service) NodeGetVolumeStats(
 	var f *csi.Volume
 	for _, v := range s.vols {
 		if v.VolumeId == req.VolumeId {
+			/* #nosec G601 */
 			f = &v
 		}
 	}

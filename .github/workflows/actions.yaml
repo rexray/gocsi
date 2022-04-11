@@ -1,0 +1,38 @@
+name: Workflow
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  code-check:
+    name: Check Go formatting, linting, vetting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v2
+      - name: Run the formatter, linter, and vetter
+        uses: dell/common-github-actions/go-code-formatter-linter-vetter@main
+        with:
+          directories: ./...
+  go_security_scan:
+    name: Go security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v2
+      - name: Run Go Security
+        uses: securego/gosec@master
+        with:
+          args: ./...
+  malware_security_scan:
+    name: Malware Scanner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v2
+      - name: Run malware scan
+        uses: dell/common-github-actions/malware-scanner@main
+        with:
+          directories: .
+          options: -ri

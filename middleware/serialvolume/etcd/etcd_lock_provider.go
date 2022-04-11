@@ -150,6 +150,7 @@ func initConfig(
 			return config, err
 		}
 		if b {
+			/* #nosec G402 */
 			config.TLS = &tls.Config{}
 			fields["serialvol.etcd.tls"] = b
 			if v, ok := csictx.LookupEnv(ctx, EnvVarTLSInsecure); ok {

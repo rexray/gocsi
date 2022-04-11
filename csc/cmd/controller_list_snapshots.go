@@ -14,8 +14,8 @@ import (
 var listSnapshots struct {
 	maxEntries     int32
 	startingToken  string
-	sourceVolumeId string
-	SnapshotId     string
+	sourceVolumeID string
+	SnapshotID     string
 	paging         bool
 }
 
@@ -30,8 +30,8 @@ var listSnapshotsCmd = &cobra.Command{
 		req := csi.ListSnapshotsRequest{
 			MaxEntries:     listSnapshots.maxEntries,
 			StartingToken:  listSnapshots.startingToken,
-			SnapshotId:     listSnapshots.SnapshotId,
-			SourceVolumeId: listSnapshots.sourceVolumeId,
+			SnapshotId:     listSnapshots.SnapshotID,
+			SourceVolumeId: listSnapshots.sourceVolumeID,
 			Secrets:        root.secrets,
 		}
 
@@ -86,13 +86,13 @@ func init() {
 		false,
 		"Enables auto-paging")
 	listSnapshotsCmd.Flags().StringVar(
-		&listSnapshots.sourceVolumeId,
+		&listSnapshots.sourceVolumeID,
 		"source-volume-id",
 		"",
 		"ID of volume to list snapshots for")
 
 	listSnapshotsCmd.Flags().StringVar(
-		&listSnapshots.SnapshotId,
+		&listSnapshots.SnapshotID,
 		"snapshot-id",
 		"",
 		"ID of snapshot to retrieve specific snapshot")

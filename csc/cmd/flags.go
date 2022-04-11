@@ -28,6 +28,7 @@ func flagEndpoint(fs *flag.FlagSet, addr *string, def string) {
 // flagLogLevel adds the -l,--log-level flag to the specified flagset.
 func flagLogLevel(fs *flag.FlagSet, addr *logLevelArg, def string) {
 	if def != "" {
+		/* #nosec G104 */
 		addr.Set(def)
 	}
 	fs.VarP(

@@ -58,6 +58,7 @@ const (
 
 	// EnvVarPassword is the name of the environment
 	// variable that defines the password used for authentication.
+	/* #nosec G101 */
 	EnvVarPassword = "X_CSI_SERIAL_VOL_ACCESS_ETCD_PASSWORD"
 
 	// EnvVarRejectOldCluster is the name of the environment
