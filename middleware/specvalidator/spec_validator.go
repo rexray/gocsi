@@ -1,8 +1,10 @@
 package specvalidator
 
 import (
+	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"sync"
 
 	"github.com/golang/protobuf/proto"
@@ -773,6 +775,8 @@ const (
 	maxFieldString = 128
 	maxFieldMap    = 4096
 	maxFieldNodeID = 256
+	//MaxPathLimit parameter is used to limit the length of the path and is configurable.
+	maxPathLimit = EnvVarMaxPathLimit
 )
 
 func validateFieldSizes(msg interface{}) error {
@@ -799,24 +803,30 @@ func validateFieldSizes(msg interface{}) error {
 				continue
 			}
 			size := 0
+			maxFieldLen := maxFieldString
 			for _, k := range f.MapKeys() {
 				if k.Kind() == reflect.String {
+					if k.String() == "Path" {
+						maxFieldLen = setPathLimit(maxFieldString)
+					} else {
+						maxFieldLen = maxFieldString
+					}
 					kl := k.Len()
-					if kl > maxFieldString {
+					if kl > maxFieldLen {
 						return status.Errorf(
 							codes.InvalidArgument,
 							"exceeds size limit: %s[%s]: max=%d, size=%d",
-							tv.Field(i).Name, k.String(), maxFieldString, kl)
+							tv.Field(i).Name, k.String(), maxFieldLen, kl)
 					}
 					size = size + kl
 				}
 				if v := f.MapIndex(k); v.Kind() == reflect.String {
 					vl := v.Len()
-					if vl > maxFieldString {
+					if vl > maxFieldLen {
 						return status.Errorf(
 							codes.InvalidArgument,
 							"exceeds size limit: %s[%s]=: max=%d, size=%d",
-							tv.Field(i).Name, k.String(), maxFieldString, vl)
+							tv.Field(i).Name, k.String(), maxFieldLen, vl)
 					}
 					size = size + vl
 				}
@@ -830,4 +840,19 @@ func validateFieldSizes(msg interface{}) error {
 		}
 	}
 	return nil
+}
+
+func setPathLimit(defaultValue int) int {
+	pathLimit := defaultValue
+	maxPathLimitStr, found := os.LookupEnv(maxPathLimit)
+	if found && maxPathLimitStr != "" {
+		maxPathLimit, err := strconv.Atoi(maxPathLimitStr)
+		if err == nil {
+			log.Debug("PathLimit: ", maxPathLimit)
+			return maxPathLimit
+		}
+		log.Errorf("Unable to convert maxPathLimit, using the default value for pathLimit: %d", pathLimit)
+	}
+	log.Debug("PathLimit: ", pathLimit)
+	return pathLimit
 }
