@@ -849,6 +849,11 @@ func setPathLimit(defaultValue int) int {
 	if found && maxPathLimitStr != "" {
 		maxPathLimit, err := strconv.Atoi(maxPathLimitStr)
 		if err == nil {
+			if maxPathLimit < pathLimit {
+				maxPathLimit = pathLimit
+				log.Debug("PathLimit set is less than the default value, using the default value for pathLimit: ", maxPathLimit)
+				return maxPathLimit
+			}
 			log.Debug("PathLimit: ", maxPathLimit)
 			return maxPathLimit
 		}
