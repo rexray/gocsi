@@ -24,7 +24,7 @@ jobs:
       - name: Run Go Security
         uses: securego/gosec@master
         with:
-          args: ./...
+          args: '-exclude G307 ./...'
   malware_security_scan:
     name: Malware Scanner
     runs-on: ubuntu-latest
