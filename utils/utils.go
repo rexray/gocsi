@@ -227,7 +227,7 @@ func ParseMapWS(line string) map[string]string {
 			}
 		case '=':
 			// If the word buffer is currently the key buffer,
-			// quoting is not enabled, and the preceeding character
+			// quoting is not enabled, and the preceding character
 			// is not the escape character then the equal sign indicates
 			// a transition from key to value.
 			if word == keyb && quot == 0 && !escp {
@@ -237,7 +237,7 @@ func ParseMapWS(line string) map[string]string {
 				continue
 			}
 		case ' ', '\t':
-			// If quoting is not enabled and the preceeding character is
+			// If quoting is not enabled and the preceding character is
 			// not the escape character then record the value into the
 			// map and fast-forward the cursor to the next, non-whitespace
 			// character.
