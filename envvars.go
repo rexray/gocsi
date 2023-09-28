@@ -124,7 +124,7 @@ const (
 
 	// EnvVarDisableFieldLen is the name of the environment variable used
 	// to determine whether or not to disable validation of CSI request and
-	// response field lengths against the permitted lenghts defined in the spec
+	// response field lengths against the permitted lengths defined in the spec
 	EnvVarDisableFieldLen = "X_CSI_SPEC_DISABLE_LEN_CHECK"
 
 	// EnvVarRequireStagingTargetPath is the name of the environment variable
